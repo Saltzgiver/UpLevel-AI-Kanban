@@ -68,39 +68,47 @@ export function ColumnHeader({
   };
 
   return (
-    <div className="flex items-center justify-between mb-2" {...provided.dragHandleProps}>
-      {isEditingTitle ? (
-        <div className="flex-1">
-          <Input
-            ref={inputRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="h-8 text-sm"
-            disabled={isSaving}
-            onBlur={handleTitleSave}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleTitleSave();
-              } else if (e.key === "Escape") {
-                e.preventDefault();
-                setTitle(column.name);
-                setIsEditingTitle(false);
-              }
-            }}
-          />
-        </div>
-      ) : (
-        <h2 className="font-semibold text-sm text-foreground px-2 py-1 flex items-center">
-          <span>{column.name}</span>
-          <span className="ml-2 text-muted-foreground text-xs">{column.cards?.length || 0}</span>
-        </h2>
-      )}
+    <div className="flex items-center justify-between mb-2">
+      {/* Make only the title draggable for column dragging */}
+      <div className="flex-1 flex items-center" {...provided.dragHandleProps}>
+        {isEditingTitle ? (
+          <div className="flex-1">
+            <Input
+              ref={inputRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="h-8 text-sm"
+              disabled={isSaving}
+              onBlur={handleTitleSave}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleTitleSave();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  setTitle(column.name);
+                  setIsEditingTitle(false);
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <h2 className="font-semibold text-sm text-foreground px-2 py-1 flex items-center">
+            <span>{column.name}</span>
+            <span className="ml-2 text-muted-foreground text-xs">{column.cards?.length || 0}</span>
+          </h2>
+        )}
+      </div>
       
+      {/* Menu button - not draggable */}
       <div className="flex">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground hover:text-foreground rounded"
+            >
               <MoreVertical className="h-5 w-5" />
               <span className="sr-only">Column options</span>
             </Button>
