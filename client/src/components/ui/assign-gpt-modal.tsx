@@ -18,7 +18,6 @@ interface AssignGPTModalProps {
 }
 
 const GPT_OPTIONS = [
-  { value: "", label: "Select a GPT..." },
   { value: "brainstorming", label: "Brainstorming GPT" },
   { value: "content-writer", label: "Content Writer GPT" },
   { value: "design-assistant", label: "Design Assistant GPT" },
@@ -98,7 +97,7 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
           
           <div className="grid gap-2">
             <Label htmlFor="gpt-select">Select GPT</Label>
-            <Select onValueChange={handleSelectGPT} defaultValue="">
+            <Select onValueChange={handleSelectGPT}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a GPT..." />
               </SelectTrigger>
