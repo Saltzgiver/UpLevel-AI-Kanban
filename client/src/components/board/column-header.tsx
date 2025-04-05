@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ColumnHeaderProps {
   column: Column & { cards?: any[] };
-  provided: any;
   isEditingTitle: boolean;
   setIsEditingTitle: (value: boolean) => void;
   onDeleteColumn: (columnId: number) => void;
@@ -19,7 +18,6 @@ interface ColumnHeaderProps {
 
 export function ColumnHeader({ 
   column, 
-  provided, 
   isEditingTitle, 
   setIsEditingTitle,
   onDeleteColumn
@@ -68,9 +66,9 @@ export function ColumnHeader({
   };
 
   return (
-    <div className="flex items-center justify-between mb-2">
-      {/* Make only the title draggable for column dragging */}
-      <div className="flex-1 flex items-center" {...provided.dragHandleProps}>
+    <div className="flex items-center justify-between">
+      {/* Column title area */}
+      <div className="flex-1">
         {isEditingTitle ? (
           <div className="flex-1">
             <Input
@@ -100,7 +98,7 @@ export function ColumnHeader({
         )}
       </div>
       
-      {/* Menu button - not draggable */}
+      {/* Menu button */}
       <div className="flex">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
