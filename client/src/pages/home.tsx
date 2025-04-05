@@ -27,7 +27,7 @@ export default function Home() {
         try {
           await apiRequest("POST", "/api/boards", { 
             name: "GPT-Enabled Kanban Board",
-            userId: 1 // Default user ID
+            userId: null // No user ID required
           });
           toast({
             title: "Welcome!",

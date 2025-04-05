@@ -4,11 +4,19 @@ import {
   Card, InsertCard, 
   User, InsertUser,
   Chat, InsertChat,
-  Attachment, InsertAttachment
+  Attachment, InsertAttachment,
+  boards,
+  columns,
+  cards,
+  users,
+  chats,
+  attachments
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
-// modify the interface with any CRUD methods
-// you might need
+// Interface for storage operations
 export interface IStorage {
   // Board operations
   getBoards(): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] })[]>;
@@ -47,58 +55,40 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
 }
 
-export class MemStorage implements IStorage {
-  private boards: Map<number, Board>;
-  private columns: Map<number, Column>;
-  private cards: Map<number, Card>;
-  private users: Map<number, User>;
-  private chats: Map<number, Chat>;
-  private attachments: Map<number, Attachment>;
-  
-  private boardIdCounter: number;
-  private columnIdCounter: number;
-  private cardIdCounter: number;
-  private userIdCounter: number;
-  private chatIdCounter: number;
-  private attachmentIdCounter: number;
-
-  constructor() {
-    this.boards = new Map();
-    this.columns = new Map();
-    this.cards = new Map();
-    this.users = new Map();
-    this.chats = new Map();
-    this.attachments = new Map();
-    
-    this.boardIdCounter = 1;
-    this.columnIdCounter = 1;
-    this.cardIdCounter = 1;
-    this.userIdCounter = 1;
-    this.chatIdCounter = 1;
-    this.attachmentIdCounter = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   // Board Methods
   async getBoards(): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] })[]> {
-    const boards = Array.from(this.boards.values());
+    const boardList = await db.select().from(boards).orderBy(asc(boards.id));
+
     return Promise.all(
-      boards.map(async (board) => {
-        const columns = await this.getBoardColumns(board.id);
+      boardList.map(async (board) => {
+        const boardColumns = await db
+          .select()
+          .from(columns)
+          .where(eq(columns.boardId, board.id))
+          .orderBy(asc(columns.order));
+
         return {
           ...board,
           columns: await Promise.all(
-            columns.map(async (column) => {
-              const cards = await this.getColumnCards(column.id);
+            boardColumns.map(async (column) => {
+              const columnCards = await db
+                .select()
+                .from(cards)
+                .where(eq(cards.columnId, column.id))
+                .orderBy(asc(cards.order));
+
               return {
                 ...column,
                 cards: await Promise.all(
-                  cards.map(async (card) => {
-                    const chats = await this.getChatsByCardId(card.id);
-                    const attachments = await this.getAttachmentsByCardId(card.id);
+                  columnCards.map(async (card) => {
+                    const cardChats = await this.getChatsByCardId(card.id);
+                    const cardAttachments = await this.getAttachmentsByCardId(card.id);
+                    
                     return {
                       ...card,
-                      chats,
-                      attachments
+                      chats: cardChats,
+                      attachments: cardAttachments
                     };
                   })
                 )
@@ -111,25 +101,36 @@ export class MemStorage implements IStorage {
   }
 
   async getBoardById(id: number): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] }) | undefined> {
-    const board = this.boards.get(id);
+    const [board] = await db.select().from(boards).where(eq(boards.id, id));
     if (!board) return undefined;
 
-    const columns = await this.getBoardColumns(id);
+    const boardColumns = await db
+      .select()
+      .from(columns)
+      .where(eq(columns.boardId, id))
+      .orderBy(asc(columns.order));
+
     return {
       ...board,
       columns: await Promise.all(
-        columns.map(async (column) => {
-          const cards = await this.getColumnCards(column.id);
+        boardColumns.map(async (column) => {
+          const columnCards = await db
+            .select()
+            .from(cards)
+            .where(eq(cards.columnId, column.id))
+            .orderBy(asc(cards.order));
+
           return {
             ...column,
             cards: await Promise.all(
-              cards.map(async (card) => {
-                const chats = await this.getChatsByCardId(card.id);
-                const attachments = await this.getAttachmentsByCardId(card.id);
+              columnCards.map(async (card) => {
+                const cardChats = await this.getChatsByCardId(card.id);
+                const cardAttachments = await this.getAttachmentsByCardId(card.id);
+                
                 return {
                   ...card,
-                  chats,
-                  attachments
+                  chats: cardChats,
+                  attachments: cardAttachments
                 };
               })
             )
@@ -140,185 +141,208 @@ export class MemStorage implements IStorage {
   }
 
   async createBoard(board: InsertBoard): Promise<Board> {
-    const id = this.boardIdCounter++;
-    const now = new Date();
-    const newBoard: Board = {
-      id,
-      name: board.name,
-      userId: board.userId || null,
-      createdAt: now
-    };
+    // If a userId is provided but doesn't exist in the database, set it to null
+    let userId = board.userId;
+    if (userId) {
+      const user = await this.getUser(userId);
+      if (!user) {
+        userId = null;
+      }
+    }
     
-    this.boards.set(id, newBoard);
+    const [newBoard] = await db
+      .insert(boards)
+      .values({
+        name: board.name,
+        userId: userId
+      })
+      .returning();
+    
     return newBoard;
   }
 
   async updateBoard(id: number, data: Partial<Board>): Promise<Board | undefined> {
-    const board = this.boards.get(id);
-    if (!board) return undefined;
-
-    const updatedBoard = { ...board, ...data };
-    this.boards.set(id, updatedBoard);
+    const [updatedBoard] = await db
+      .update(boards)
+      .set(data)
+      .where(eq(boards.id, id))
+      .returning();
+    
     return updatedBoard;
   }
 
   async deleteBoard(id: number): Promise<void> {
-    // Delete all columns and cards associated with this board
-    const columns = Array.from(this.columns.values()).filter(c => c.boardId === id);
-    for (const column of columns) {
+    // Get all columns associated with this board
+    const boardColumns = await db
+      .select()
+      .from(columns)
+      .where(eq(columns.boardId, id));
+
+    // Delete all cards in each column
+    for (const column of boardColumns) {
       await this.deleteColumn(column.id);
     }
-    
-    this.boards.delete(id);
-  }
 
-  private async getBoardColumns(boardId: number): Promise<Column[]> {
-    const columns = Array.from(this.columns.values())
-      .filter(column => column.boardId === boardId)
-      .sort((a, b) => a.order - b.order);
-    
-    return columns;
+    // Delete the board
+    await db
+      .delete(boards)
+      .where(eq(boards.id, id));
   }
 
   // Column Methods
   async getColumnById(id: number): Promise<Column | undefined> {
-    return this.columns.get(id);
+    const [column] = await db
+      .select()
+      .from(columns)
+      .where(eq(columns.id, id));
+    
+    return column;
   }
 
   async createColumn(column: InsertColumn): Promise<Column> {
-    const id = this.columnIdCounter++;
-    
     // Find the highest order in this board
-    const boardColumns = Array.from(this.columns.values())
-      .filter(c => c.boardId === column.boardId);
+    const [maxOrderResult] = await db
+      .select({ maxOrder: sql<number>`COALESCE(MAX(${columns.order}), -1)` })
+      .from(columns)
+      .where(eq(columns.boardId, column.boardId));
     
-    const order = boardColumns.length > 0
-      ? Math.max(...boardColumns.map(c => c.order)) + 1
-      : 0;
+    const order = (maxOrderResult?.maxOrder ?? -1) + 1;
     
-    const newColumn: Column = {
-      id,
-      name: column.name,
-      boardId: column.boardId,
-      order,
-      gptAssigned: column.gptAssigned || false,
-      gptName: column.gptName || null,
-      gptInstructions: column.gptInstructions || null,
-      autoTrigger: column.autoTrigger !== false,
-      apiKey: column.apiKey || null
-    };
+    const [newColumn] = await db
+      .insert(columns)
+      .values({
+        name: column.name,
+        boardId: column.boardId,
+        order,
+        gptAssigned: column.gptAssigned || false,
+        gptName: column.gptName || null,
+        gptInstructions: column.gptInstructions || null,
+        autoTrigger: column.autoTrigger !== false,
+        apiKey: column.apiKey || null
+      })
+      .returning();
     
-    this.columns.set(id, newColumn);
     return newColumn;
   }
 
   async updateColumn(id: number, data: Partial<Column>): Promise<Column | undefined> {
-    const column = this.columns.get(id);
-    if (!column) return undefined;
-
-    const updatedColumn = { ...column, ...data };
-    this.columns.set(id, updatedColumn);
+    const [updatedColumn] = await db
+      .update(columns)
+      .set(data)
+      .where(eq(columns.id, id))
+      .returning();
+    
     return updatedColumn;
   }
 
   async deleteColumn(id: number): Promise<void> {
-    // Delete all cards in this column
-    const cards = Array.from(this.cards.values()).filter(c => c.columnId === id);
-    for (const card of cards) {
+    // Get all cards in this column
+    const columnCards = await db
+      .select()
+      .from(cards)
+      .where(eq(cards.columnId, id));
+
+    // Delete all cards
+    for (const card of columnCards) {
       await this.deleteCard(card.id);
     }
-    
-    this.columns.delete(id);
+
+    // Delete the column
+    await db
+      .delete(columns)
+      .where(eq(columns.id, id));
   }
 
   async reorderColumns(boardId: number, updates: { id: number, order: number }[]): Promise<void> {
     for (const update of updates) {
-      const column = this.columns.get(update.id);
-      if (column && column.boardId === boardId) {
-        column.order = update.order;
-        this.columns.set(update.id, column);
-      }
+      await db
+        .update(columns)
+        .set({ order: update.order })
+        .where(and(
+          eq(columns.id, update.id),
+          eq(columns.boardId, boardId)
+        ));
     }
-  }
-
-  private async getColumnCards(columnId: number): Promise<Card[]> {
-    const cards = Array.from(this.cards.values())
-      .filter(card => card.columnId === columnId)
-      .sort((a, b) => a.order - b.order);
-    
-    return cards;
   }
 
   // Card Methods
   async getCardById(id: number): Promise<(Card & { chats?: Chat[], attachments?: Attachment[] }) | undefined> {
-    const card = this.cards.get(id);
+    const [card] = await db
+      .select()
+      .from(cards)
+      .where(eq(cards.id, id));
+    
     if (!card) return undefined;
 
-    const chats = await this.getChatsByCardId(id);
-    const attachments = await this.getAttachmentsByCardId(id);
+    const cardChats = await this.getChatsByCardId(id);
+    const cardAttachments = await this.getAttachmentsByCardId(id);
 
     return {
       ...card,
-      chats,
-      attachments
+      chats: cardChats,
+      attachments: cardAttachments
     };
   }
 
   async createCard(card: InsertCard): Promise<Card> {
-    const id = this.cardIdCounter++;
-    const now = new Date();
-    
     // Find the highest order in this column
-    const columnCards = Array.from(this.cards.values())
-      .filter(c => c.columnId === card.columnId);
+    const [maxOrderResult] = await db
+      .select({ maxOrder: sql<number>`COALESCE(MAX(${cards.order}), -1)` })
+      .from(cards)
+      .where(eq(cards.columnId, card.columnId));
     
-    const order = columnCards.length > 0
-      ? Math.max(...columnCards.map(c => c.order)) + 1
-      : 0;
+    const order = (maxOrderResult?.maxOrder ?? -1) + 1;
     
-    const newCard: Card = {
-      id,
-      title: card.title,
-      description: card.description || "",
-      columnId: card.columnId,
-      order,
-      gptOutput: null,
-      gptTags: null,
-      processing: false,
-      createdAt: now
-    };
+    const [newCard] = await db
+      .insert(cards)
+      .values({
+        title: card.title,
+        description: card.description || "",
+        columnId: card.columnId,
+        order,
+        gptOutput: null,
+        gptTags: null,
+        processing: false
+      })
+      .returning();
     
-    this.cards.set(id, newCard);
     return newCard;
   }
 
   async updateCard(id: number, data: Partial<Card>): Promise<Card | undefined> {
-    const card = this.cards.get(id);
-    if (!card) return undefined;
-
-    const updatedCard = { ...card, ...data };
-    this.cards.set(id, updatedCard);
+    const [updatedCard] = await db
+      .update(cards)
+      .set(data)
+      .where(eq(cards.id, id))
+      .returning();
+    
     return updatedCard;
   }
 
   async deleteCard(id: number): Promise<void> {
     // Delete all chats associated with this card
-    const chats = Array.from(this.chats.values()).filter(c => c.cardId === id);
-    for (const chat of chats) {
-      this.chats.delete(chat.id);
-    }
+    await db
+      .delete(chats)
+      .where(eq(chats.cardId, id));
     
     // Delete all attachments associated with this card
-    const attachments = Array.from(this.attachments.values()).filter(a => a.cardId === id);
-    for (const attachment of attachments) {
-      this.attachments.delete(attachment.id);
-    }
+    await db
+      .delete(attachments)
+      .where(eq(attachments.cardId, id));
     
-    this.cards.delete(id);
+    // Delete the card
+    await db
+      .delete(cards)
+      .where(eq(cards.id, id));
   }
 
   async moveCard(cardId: number, destinationColumnId: number, position?: number): Promise<Card | undefined> {
-    const card = this.cards.get(cardId);
+    // Get the card
+    const [card] = await db
+      .select()
+      .from(cards)
+      .where(eq(cards.id, cardId));
+    
     if (!card) return undefined;
     
     const sourceColumnId = card.columnId;
@@ -329,117 +353,163 @@ export class MemStorage implements IStorage {
     }
     
     // Update the card's column
-    card.columnId = destinationColumnId;
+    let updatedCard;
     
-    // Update orders if position is specified
     if (position !== undefined) {
       // Get cards in destination column
-      const destinationCards = Array.from(this.cards.values())
-        .filter(c => c.columnId === destinationColumnId && c.id !== cardId)
-        .sort((a, b) => a.order - b.order);
+      const destinationCards = await db
+        .select()
+        .from(cards)
+        .where(and(
+          eq(cards.columnId, destinationColumnId),
+          sql`${cards.id} != ${cardId}`
+        ))
+        .orderBy(asc(cards.order));
       
-      // Insert card at specified position
-      destinationCards.splice(position, 0, card);
+      // Calculate new orders
+      let newOrders: { id: number, order: number }[] = [];
       
-      // Update order of all cards
-      destinationCards.forEach((c, i) => {
-        c.order = i;
-        this.cards.set(c.id, c);
-      });
+      // Create a copy to insert the moved card
+      const reorderedCards = [...destinationCards];
+      reorderedCards.splice(position, 0, { ...card, columnId: destinationColumnId });
+      
+      // Generate new orders
+      newOrders = reorderedCards.map((c, index) => ({
+        id: c.id,
+        order: index
+      }));
+      
+      // First update the card's column
+      [updatedCard] = await db
+        .update(cards)
+        .set({ columnId: destinationColumnId })
+        .where(eq(cards.id, cardId))
+        .returning();
+      
+      // Then update all cards' orders
+      for (const orderUpdate of newOrders) {
+        await db
+          .update(cards)
+          .set({ order: orderUpdate.order })
+          .where(eq(cards.id, orderUpdate.id));
+      }
     } else {
-      // Add to the end of the destination column
-      const maxOrder = Math.max(
-        ...Array.from(this.cards.values())
-          .filter(c => c.columnId === destinationColumnId && c.id !== cardId)
-          .map(c => c.order),
-        -1
-      );
+      // Find the highest order in destination column
+      const [maxOrderResult] = await db
+        .select({ maxOrder: sql<number>`COALESCE(MAX(${cards.order}), -1)` })
+        .from(cards)
+        .where(and(
+          eq(cards.columnId, destinationColumnId),
+          sql`${cards.id} != ${cardId}`
+        ));
       
-      card.order = maxOrder + 1;
+      const newOrder = (maxOrderResult?.maxOrder ?? -1) + 1;
+      
+      // Update both column and order
+      [updatedCard] = await db
+        .update(cards)
+        .set({ 
+          columnId: destinationColumnId,
+          order: newOrder
+        })
+        .where(eq(cards.id, cardId))
+        .returning();
     }
     
-    this.cards.set(cardId, card);
-    return card;
+    return updatedCard;
   }
 
   async reorderCards(columnId: number, updates: { id: number, order: number }[]): Promise<void> {
     for (const update of updates) {
-      const card = this.cards.get(update.id);
-      if (card && card.columnId === columnId) {
-        card.order = update.order;
-        this.cards.set(update.id, card);
-      }
+      await db
+        .update(cards)
+        .set({ order: update.order })
+        .where(and(
+          eq(cards.id, update.id),
+          eq(cards.columnId, columnId)
+        ));
     }
   }
 
   // Chat Methods
   async getChatsByCardId(cardId: number): Promise<Chat[]> {
-    return Array.from(this.chats.values())
-      .filter(chat => chat.cardId === cardId)
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    return db
+      .select()
+      .from(chats)
+      .where(eq(chats.cardId, cardId))
+      .orderBy(asc(chats.timestamp));
   }
 
   async createChat(chat: InsertChat): Promise<Chat> {
-    const id = this.chatIdCounter++;
-    const now = new Date();
+    const [newChat] = await db
+      .insert(chats)
+      .values({
+        cardId: chat.cardId,
+        role: chat.role,
+        content: chat.content
+      })
+      .returning();
     
-    const newChat: Chat = {
-      id,
-      cardId: chat.cardId,
-      role: chat.role,
-      content: chat.content,
-      timestamp: now
-    };
-    
-    this.chats.set(id, newChat);
     return newChat;
   }
 
   // Attachment Methods
   async getAttachmentsByCardId(cardId: number): Promise<Attachment[]> {
-    return Array.from(this.attachments.values())
-      .filter(attachment => attachment.cardId === cardId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.cardId, cardId))
+      .orderBy(asc(attachments.createdAt));
   }
 
   async createAttachment(attachment: InsertAttachment): Promise<Attachment> {
-    const id = this.attachmentIdCounter++;
-    const now = new Date();
+    const [newAttachment] = await db
+      .insert(attachments)
+      .values({
+        cardId: attachment.cardId,
+        filename: attachment.filename,
+        fileType: attachment.fileType,
+        content: attachment.content
+      })
+      .returning();
     
-    const newAttachment: Attachment = {
-      id,
-      cardId: attachment.cardId,
-      filename: attachment.filename,
-      fileType: attachment.fileType,
-      content: attachment.content,
-      createdAt: now
-    };
-    
-    this.attachments.set(id, newAttachment);
     return newAttachment;
   }
 
   async deleteAttachment(id: number): Promise<void> {
-    this.attachments.delete(id);
+    await db
+      .delete(attachments)
+      .where(eq(attachments.id, id));
   }
 
   // User Methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    
     return user;
   }
 }
 
-export const storage = new MemStorage();
+// Create a single instance of the storage
+export const storage = new DatabaseStorage();
