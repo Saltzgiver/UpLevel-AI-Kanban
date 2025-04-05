@@ -1,4 +1,4 @@
-import { Check, Edit } from "lucide-react";
+import { Sparkles, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AssignGPTModal } from "@/components/ui/assign-gpt-modal";
@@ -13,11 +13,16 @@ export function GPTBanner({ column }: GPTBannerProps) {
 
   if (column.gptAssigned) {
     return (
-      <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-purple-200 rounded mb-2 p-2 text-sm shadow-sm">
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded mb-2 p-2 text-sm shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Check className="h-4 w-4 mr-1 text-purple-700" />
-            <span className="font-medium text-purple-700">{column.gptName}</span>
+            <Sparkles className="h-4 w-4 mr-1 text-green-600" />
+            <span className="font-medium text-green-700">{column.gptName}</span>
+            <span className="ml-2 text-xs text-muted-foreground">
+              {column.gptInstructions && column.gptInstructions.length > 30 
+                ? column.gptInstructions.substring(0, 30) + "..."
+                : column.gptInstructions}
+            </span>
           </div>
           <Button
             variant="ghost"
@@ -41,13 +46,13 @@ export function GPTBanner({ column }: GPTBannerProps) {
   return (
     <div className="bg-white border border-border rounded mb-2 p-2 text-sm shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">No GPT Assigned</span>
+        <span className="text-xs text-muted-foreground">Add custom prompt to this column</span>
         <Button
           size="sm"
-          className="bg-primary text-white text-xs px-2 py-1 h-7 rounded hover:bg-primary/90 transition-colors"
+          className="bg-green-600 text-white text-xs px-2 py-1 h-7 rounded hover:bg-green-700 transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
-          Assign GPT
+          Set Prompt
         </Button>
       </div>
       

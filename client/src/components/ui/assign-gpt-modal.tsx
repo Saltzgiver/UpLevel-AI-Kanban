@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -17,34 +16,19 @@ interface AssignGPTModalProps {
   onClose: () => void;
 }
 
-const GPT_OPTIONS = [
-  { value: "brainstorming", label: "Brainstorming GPT" },
-  { value: "content-writer", label: "Content Writer GPT" },
-  { value: "design-assistant", label: "Design Assistant GPT" },
-  { value: "code-reviewer", label: "Code Reviewer GPT" },
-  { value: "market-researcher", label: "Market Researcher GPT" }
-];
-
 export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps) {
-  const [gptName, setGptName] = useState<string>(column.gptName || "");
+  const [gptName, setGptName] = useState<string>(column.gptName || "GPT Assistant");
   const [apiKey, setApiKey] = useState<string>(column.apiKey || "");
   const [instructions, setInstructions] = useState<string>(column.gptInstructions || "");
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
 
-  const handleSelectGPT = (value: string) => {
-    const selected = GPT_OPTIONS.find(option => option.value === value);
-    if (selected) {
-      setGptName(selected.label);
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!gptName) {
+    if (!instructions.trim()) {
       toast({
         title: "Error",
-        description: "Please select a GPT",
+        description: "Please enter custom instructions for the GPT",
         variant: "destructive"
       });
       return;
@@ -65,7 +49,7 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       
       toast({
         title: "Success",
-        description: `${gptName} assigned to ${column.name}`,
+        description: `GPT assigned to ${column.name}`,
       });
       
       onClose();
@@ -84,7 +68,8 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Assign GPT to Column</DialogTitle>
+          <DialogTitle>Set GPT Prompt for Column</DialogTitle>
+          <DialogDescription>Cards in this column will be processed with the instructions you provide</DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -96,24 +81,21 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="gpt-select">Select GPT</Label>
-            <Select onValueChange={handleSelectGPT}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a GPT..." />
-              </SelectTrigger>
-              <SelectContent>
-                {GPT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="gpt-name">Custom Name (Optional)</Label>
+            <Input 
+              id="gpt-name" 
+              placeholder="GPT Assistant" 
+              value={gptName}
+              onChange={(e) => setGptName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              This name will appear in chats and outputs
+            </p>
           </div>
           
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="api-key">Custom API Key (Optional)</Label>
+              <Label htmlFor="api-key">API Key (Optional)</Label>
               <Button variant="link" className="h-auto p-0" onClick={() => setApiKey("")}>
                 Use default
               </Button>
@@ -126,29 +108,32 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
               onChange={(e) => setApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Leave blank to use your default API key
+              Leave blank to use your default OpenAI API key
             </p>
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="instructions">Custom Instructions</Label>
+            <Label htmlFor="instructions">Custom Instructions (Required)</Label>
             <Textarea 
               id="instructions" 
-              placeholder="Enter any specific instructions for this GPT when processing cards..." 
-              rows={3}
+              placeholder="Write detailed instructions for how GPT should process cards in this column..." 
+              rows={5}
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Example: "Generate a poem based on the card title and description"
+            </p>
           </div>
           
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="auto-trigger" 
               checked={autoTrigger}
-              onCheckedChange={(checked) => setAutoTrigger(checked as boolean)}
+              onCheckedChange={(checked) => setAutoTrigger(!!checked)}
             />
             <Label htmlFor="auto-trigger" className="text-sm">
-              Auto-trigger when cards are moved
+              Auto-process cards when moved to this column
             </Label>
           </div>
         </div>
@@ -162,7 +147,7 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
             disabled={isSubmitting}
             className="bg-green-600 hover:bg-green-700"
           >
-            {isSubmitting ? "Assigning..." : "Assign GPT"}
+            {isSubmitting ? "Saving..." : "Save Configuration"}
           </Button>
         </DialogFooter>
       </DialogContent>
