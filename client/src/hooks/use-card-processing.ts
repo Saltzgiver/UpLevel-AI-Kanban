@@ -1,0 +1,66 @@
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Chat, Attachment } from "@shared/schema";
+
+interface ProcessingStatus {
+  processing: boolean;
+  gptOutput: string | null;
+  chats: Chat[];
+  attachments: Attachment[];
+}
+
+/**
+ * Hook to monitor processing status of a card
+ * Automatically polls for updates while processing
+ */
+export function useCardProcessing(cardId: number) {
+  const queryClient = useQueryClient();
+  const [isPolling, setIsPolling] = useState(false);
+  
+  // Query for processing status
+  const { data, isLoading, error } = useQuery<ProcessingStatus>({
+    queryKey: [`/api/cards/${cardId}/processing-status`],
+    enabled: Boolean(cardId),
+    // Don't refetch on window focus to avoid interrupting the polling
+    refetchOnWindowFocus: false,
+    // Shorter stale time for real-time processing updates
+    staleTime: 1000,
+  });
+
+  // Handle polling while processing
+  useEffect(() => {
+    // Start polling if card is processing
+    if (data?.processing && !isPolling) {
+      setIsPolling(true);
+      
+      // Check status every 2 seconds
+      const intervalId = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
+      }, 2000);
+      
+      return () => {
+        clearInterval(intervalId);
+        setIsPolling(false);
+      };
+    }
+    
+    // Stop polling if processing is complete
+    if (!data?.processing && isPolling) {
+      setIsPolling(false);
+      
+      // Refetch board data to update the card info in the main view
+      queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+    }
+    
+    return undefined;
+  }, [data?.processing, isPolling, cardId, queryClient]);
+
+  return {
+    isProcessing: data?.processing || false,
+    gptOutput: data?.gptOutput || null,
+    chats: data?.chats || [],
+    attachments: data?.attachments || [],
+    isLoading,
+    error,
+  };
+}

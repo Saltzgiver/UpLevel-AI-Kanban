@@ -1,6 +1,7 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { MessageSquare } from "lucide-react";
 import { Card as CardType } from "@shared/schema";
+import { useCardProcessing } from "@/hooks/use-card-processing";
 
 interface CardProps {
   card: CardType & { commentCount?: number };
@@ -9,6 +10,12 @@ interface CardProps {
 }
 
 export function Card({ card, index, onClick }: CardProps) {
+  // Monitor processing status with real-time updates
+  const { isProcessing } = useCardProcessing(card.id);
+  
+  // Use the real-time processing status if available, fall back to card.processing
+  const showProcessing = isProcessing || card.processing;
+  
   return (
     <Draggable draggableId={card.id.toString()} index={index}>
       {(provided, snapshot) => (
@@ -25,7 +32,7 @@ export function Card({ card, index, onClick }: CardProps) {
             <div className="text-sm text-foreground mb-2">{card.title}</div>
             
             {/* GPT Processing Indicator */}
-            {card.processing && (
+            {showProcessing && (
               <div className="bg-yellow-50 border border-yellow-100 rounded p-2 mb-2 text-xs">
                 <div className="flex items-center text-yellow-700">
                   <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -38,7 +45,7 @@ export function Card({ card, index, onClick }: CardProps) {
             )}
             
             {/* Show snippet of GPT output if it exists */}
-            {card.gptOutput && !card.processing && (
+            {card.gptOutput && !showProcessing && (
               <div className="border-t border-border mt-2 pt-2 text-xs text-muted-foreground">
                 <div className="line-clamp-2">{card.gptOutput}</div>
               </div>

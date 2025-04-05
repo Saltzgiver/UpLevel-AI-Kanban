@@ -266,9 +266,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Mark card as processing
         await storage.updateCard(cardId, { processing: true });
         
-        // Trigger GPT processing (asynchronously)
-        triggerGPTProcessing(cardId, column)
-          .catch(error => console.error("Error processing card with GPT:", error));
+        // Return response immediately so UI isn't blocked
+        res.json(card);
+        
+        // Trigger GPT processing after response is sent
+        try {
+          await triggerGPTProcessing(cardId, column);
+        } catch (error) {
+          console.error("Error processing card with GPT:", error);
+        }
+        
+        return; // Already sent response
       }
       
       return res.json(card);
@@ -296,11 +304,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark card as processing
       await storage.updateCard(cardId, { processing: true });
       
-      // Trigger GPT processing (asynchronously)
-      triggerGPTProcessing(cardId, column)
-        .catch(error => console.error("Error processing card with GPT:", error));
+      // Return response immediately
+      res.json({ message: "GPT processing triggered" });
       
-      return res.json({ message: "GPT processing triggered" });
+      // Trigger GPT processing after response is sent
+      try {
+        await triggerGPTProcessing(cardId, column);
+      } catch (error) {
+        console.error("Error processing card with GPT:", error);
+      }
+      
+      return;
     } catch (error) {
       console.error("Error triggering GPT processing:", error);
       return res.status(500).json({ message: "Error triggering GPT processing" });
@@ -326,11 +340,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Column has no GPT assigned" });
       }
       
-      // Process the chat message with GPT (asynchronously)
-      processChat(chatData.cardId, chatData.content, column)
-        .catch(error => console.error("Error processing chat with GPT:", error));
+      // Return response immediately
+      res.status(201).json(chat);
       
-      return res.status(201).json(chat);
+      // Process the chat message with GPT after response is sent
+      try {
+        await processChat(chatData.cardId, chatData.content, column);
+      } catch (error) {
+        console.error("Error processing chat with GPT:", error);
+      }
+      
+      return;
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({ 
@@ -352,6 +372,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting attachment:", error);
       return res.status(500).json({ message: "Error deleting attachment" });
+    }
+  });
+  
+  // CARD PROCESSING STATUS ENDPOINT
+  app.get("/api/cards/:id/processing-status", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const card = await storage.getCardById(cardId);
+      
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      return res.json({ 
+        processing: card.processing || false,
+        gptOutput: card.gptOutput,
+        chats: card.chats || [],
+        attachments: card.attachments || []
+      });
+    } catch (error) {
+      console.error("Error getting card processing status:", error);
+      return res.status(500).json({ message: "Error getting card processing status" });
     }
   });
 

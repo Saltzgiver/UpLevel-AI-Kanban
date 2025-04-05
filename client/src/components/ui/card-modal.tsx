@@ -10,6 +10,7 @@ import { GPTChat } from "@/components/gpt/gpt-chat";
 import { AttachmentItem } from "@/components/gpt/attachment-item";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useCardProcessing } from "@/hooks/use-card-processing";
 import { Card as CardType, Column, Chat, Attachment } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -42,6 +43,8 @@ export function CardModal({
   const [showMoveOptions, setShowMoveOptions] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  // Get real-time processing status
+  const { isProcessing, gptOutput, chats, attachments } = useCardProcessing(card.id);
 
   useEffect(() => {
     if (isOpen) {
@@ -206,14 +209,14 @@ export function CardModal({
                   size="sm"
                   className="text-xs text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
                   onClick={handleRetriggerGPT}
-                  disabled={!!card.processing}
+                  disabled={isProcessing}
                 >
                   <Zap className="h-3 w-3 mr-1" />
                   Retrigger
                 </Button>
               </div>
               
-              {!!card.processing ? (
+              {isProcessing ? (
                 <div className="flex items-center justify-center p-4">
                   <div className="flex items-center text-yellow-700">
                     <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
