@@ -78,25 +78,16 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
     <Draggable draggableId={column.id.toString()} index={index}>
       {(provided) => (
         <div
-          className="column bg-muted rounded-md shadow-sm w-72 flex-shrink-0 relative"
+          className="column bg-muted rounded-md shadow-sm w-72 flex-shrink-0"
           ref={provided.innerRef}
           {...provided.draggableProps}
         >
-          {/* This is an invisible drag handle that spans most of the column header */}
-          <div 
-            {...provided.dragHandleProps} 
-            className="h-12 left-0 right-8 top-0 absolute cursor-grab active:cursor-grabbing z-10"
-            style={{ 
-              touchAction: 'none',  // Prevents touch events from scrolling
-              pointerEvents: 'auto' // Makes the element capture events
-            }}
-            // Stop propagation to prevent interfering with card dragging
-            onClick={(e) => e.stopPropagation()}
-          />
-
           <div className="p-2 flex flex-col h-full">
-            {/* Column Header - regular header without drag behavior */}
-            <div className="column-header flex items-center justify-between mb-2 relative z-0">
+            {/* Column Header - put drag handle on the header */}
+            <div 
+              className="column-header flex items-center justify-between mb-2" 
+              {...provided.dragHandleProps}
+            >
               {/* Column title area */}
               <div className="flex-1">
                 {isEditingTitle ? (
@@ -128,7 +119,7 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
                 )}
               </div>
               
-              {/* Menu button */}
+              {/* Menu button - must NOT have dragHandleProps */}
               <div className="flex">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -136,18 +127,25 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
                       variant="ghost" 
                       size="icon" 
                       className="h-8 w-8 text-muted-foreground hover:text-foreground rounded"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <MoreVertical className="h-5 w-5" />
                       <span className="sr-only">Column options</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingTitle(true);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       <span>Rename</span>
                     </DropdownMenuItem>
                     
-                    <DropdownMenuItem onClick={() => setIsGPTModalOpen(true)}>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      setIsGPTModalOpen(true);
+                    }}>
                       <svg
                         className="mr-2 h-4 w-4"
                         fill="none"
@@ -171,7 +169,10 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
                     </DropdownMenuItem>
 
                     <DropdownMenuItem 
-                      onClick={() => onDeleteColumn(column.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteColumn(column.id);
+                      }}
                       className="text-destructive focus:text-destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />

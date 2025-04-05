@@ -1,6 +1,6 @@
 import { useState, createContext, useContext, ReactNode } from "react";
 import { DragDropContext, Droppable, DropResult } from "@hello-pangea/dnd";
-import { Column } from "./column";
+import { Column } from "./column-wrapper";
 import { AddColumn } from "./add-column";
 import { CardModal } from "../ui/card-modal";
 import { ConfirmDialog } from "../ui/confirm-dialog";
