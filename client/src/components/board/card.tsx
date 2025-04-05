@@ -27,6 +27,11 @@ export function Card({ card, index, onClick }: CardProps) {
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           onClick={onClick}
+          style={{ 
+            ...provided.draggableProps.style,
+            // Ensure this element doesn't interact with column dragging
+            zIndex: snapshot.isDragging ? 1000 : 1,
+          }}
         >
           <div className="p-2">
             <div className="text-sm text-foreground mb-2">{card.title}</div>

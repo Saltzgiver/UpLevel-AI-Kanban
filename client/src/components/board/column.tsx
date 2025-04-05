@@ -78,16 +78,25 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
     <Draggable draggableId={column.id.toString()} index={index}>
       {(provided) => (
         <div
-          className="column bg-muted rounded-md shadow-sm w-72 flex-shrink-0"
+          className="column bg-muted rounded-md shadow-sm w-72 flex-shrink-0 relative"
           ref={provided.innerRef}
           {...provided.draggableProps}
         >
+          {/* This is an invisible drag handle that spans most of the column header */}
+          <div 
+            {...provided.dragHandleProps} 
+            className="h-12 left-0 right-8 top-0 absolute cursor-grab active:cursor-grabbing z-10"
+            style={{ 
+              touchAction: 'none',  // Prevents touch events from scrolling
+              pointerEvents: 'auto' // Makes the element capture events
+            }}
+            // Stop propagation to prevent interfering with card dragging
+            onClick={(e) => e.stopPropagation()}
+          />
+
           <div className="p-2 flex flex-col h-full">
-            {/* Column Header - with drag handle */}
-            <div 
-              {...provided.dragHandleProps} 
-              className="column-header flex items-center justify-between mb-2 cursor-grab active:cursor-grabbing"
-            >
+            {/* Column Header - regular header without drag behavior */}
+            <div className="column-header flex items-center justify-between mb-2 relative z-0">
               {/* Column title area */}
               <div className="flex-1">
                 {isEditingTitle ? (
