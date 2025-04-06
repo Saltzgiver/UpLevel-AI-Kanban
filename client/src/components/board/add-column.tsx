@@ -97,7 +97,7 @@ export function AddColumn({ boardId }: AddColumnProps) {
   }
 
   return (
-    <div className="column bg-muted/50 rounded-md shadow-sm w-72 flex-shrink-0 border-2 border-dashed border-border flex items-center justify-center">
+    <div className="column bg-muted/50 rounded-md shadow-sm w-72 flex-shrink-0 border-2 border-dashed border-border flex items-center justify-center min-h-[100px] max-h-[150px]">
       <Button
         variant="ghost"
         className="text-muted-foreground hover:text-foreground p-4 w-full h-full"
