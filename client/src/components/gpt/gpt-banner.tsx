@@ -1,4 +1,4 @@
-import { Sparkles, Edit } from "lucide-react";
+import { Sparkles, Edit, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AssignGPTModal } from "@/components/ui/assign-gpt-modal";
@@ -45,24 +45,21 @@ export function GPTBanner({ column }: GPTBannerProps) {
   }
 
   return (
-    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-blue-100 rounded-lg mb-3 p-3 text-sm shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <Sparkles className="h-5 w-5 mr-2 text-green-500" />
-          <span className="font-semibold text-gray-600">GPT Assistant</span>
+    <div className="bg-muted/50 border border-border/70 border-dashed rounded-lg mb-3 p-3 text-sm">
+      <div className="flex items-center justify-center flex-col text-center gap-2">
+        <div className="flex items-center mt-1">
+          <Sparkles className="h-5 w-5 mr-2 text-muted-foreground/60" />
+          <span className="text-muted-foreground">GPT not assigned</span>
         </div>
+        
         <Button
           size="sm"
-          className="bg-primary text-white text-xs px-3 py-1 h-7 rounded-md hover:bg-primary/90 transition-colors"
+          className="bg-primary text-white text-xs h-8 rounded-md hover:bg-primary/90 transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
-          <Edit className="h-4 w-4 mr-1" />
-          Set Prompt
+          <Plus className="h-4 w-4 mr-1" />
+          Automate this column
         </Button>
-      </div>
-      
-      <div className="mt-1 pl-7 text-xs text-gray-500">
-        Write a paragraph about this
       </div>
       
       <AssignGPTModal
