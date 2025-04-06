@@ -30,12 +30,12 @@ export function GPTChat({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change or processing status changes
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chats]);
+  }, [chats, isProcessing, finalOutput]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -64,7 +64,7 @@ export function GPTChat({
 
   // Chat messages component - separated for cleaner structure
   const ChatMessages = () => {
-    if (chats.length === 0 && !finalOutput && !isProcessing) {
+    if (chats.length === 0 && !isProcessing) {
       return (
         <div className="text-sm text-center text-muted-foreground p-4 mt-auto">
           No messages yet. Ask the AI a question to start the conversation.
@@ -78,41 +78,25 @@ export function GPTChat({
       .filter(item => item.chat.role === 'assistant')
       .pop()?.index;
     
-    // Special case: If we have a finalOutput, display it first as the highlighted output
-    const chatContent = (
-      <div className="space-y-4 mt-auto">
-        {/* Display the finalOutput if available */}
-        {finalOutput && !isProcessing && (
-          <div className="flex flex-col items-start self-start max-w-[90%] mb-4">
-            <div className="flex items-start">
-              <div className="w-6 h-6 rounded-full bg-green-500 mr-2 flex-shrink-0 flex items-center justify-center">
-                <Sparkles className="h-3 w-3 text-white" />
-              </div>
-              <div className="bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200 py-2 px-3 shadow-sm">
-                <div className="flex items-center mb-1">
-                  <span className="text-xs font-medium text-green-800 mr-2">Final Output</span>
-                  <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] px-1 py-0 h-4">
-                    Moves to next column
-                  </Badge>
-                </div>
-                <div className="whitespace-pre-line">{finalOutput}</div>
-              </div>
-            </div>
-          </div>
-        )}
-        
+    // Processing indicator
+    const processingIndicator = isProcessing && (
+      <div className="flex items-center justify-center py-3">
+        <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
+        <span className="text-sm text-green-700">Processing with AI...</span>
+      </div>
+    );
+    
+    return (
+      <div className="space-y-4 flex flex-col justify-end min-h-[200px]">
         {/* Display processing indicator if applicable */}
-        {isProcessing && (
-          <div className="flex items-center justify-center py-3">
-            <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
-            <span className="text-sm text-green-700">Processing with AI...</span>
-          </div>
-        )}
+        {processingIndicator}
         
         {/* Display all chat messages */}
         {chats.map((chat, index) => {
           // Determine if this is the most recent AI message (for highlighting)
           const isLastAIMessage = chat.role === 'assistant' && index === lastAssistantIndex;
+          // Display final output badge only on the last message and if finalOutput is available
+          const isOutputMessage = isLastAIMessage && finalOutput && !isProcessing;
           
           return (
             <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'}`}>
@@ -134,7 +118,15 @@ export function GPTChat({
                       : 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border border-green-100'
                     : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100'
                 } py-2 px-3 shadow-sm`}>
-                  {isLastAIMessage && !finalOutput && (
+                  {isOutputMessage && (
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs font-medium text-green-800 mr-2">Final Output</span>
+                      <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] px-1 py-0 h-4">
+                        Moves to next column
+                      </Badge>
+                    </div>
+                  )}
+                  {isLastAIMessage && !finalOutput && !isProcessing && (
                     <div className="text-xs font-medium text-green-800 mb-1">Latest AI Response</div>
                   )}
                   {chat.content}
@@ -157,14 +149,15 @@ export function GPTChat({
                 {chat.timestamp ? 
                   new Date(chat.timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 
                   ''}
+                {isOutputMessage && (
+                  <span className="ml-1 font-medium text-green-600">• Final output</span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
     );
-    
-    return chatContent;
   };
 
   // If embedded in another component (specifically the card modal), 
@@ -172,7 +165,12 @@ export function GPTChat({
   if (embedded) {
     return (
       <>
-        <ChatMessages />
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto px-0 py-2 flex flex-col"
+        >
+          <ChatMessages />
+        </div>
         
         {/* Chat Input */}
         <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 mt-auto">
