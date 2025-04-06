@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-gradient-to-b from-slate-50 to-slate-100 text-foreground;
   }
 }
 
@@ -21,8 +21,27 @@
   
   /* Improved column appearance */
   .column {
-    background-color: #f1f2f4;
-    border-radius: 0.5rem;
+    background-color: #f8fafc;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Card styling */
+  .card {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Column Header */
+  .column-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
   
   /* Fix horizontal scrolling */
@@ -31,13 +50,17 @@
   }
   
   .board-container::-webkit-scrollbar-track {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.03);
     border-radius: 5px;
   }
   
   .board-container::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.15);
     border-radius: 5px;
+  }
+  
+  .board-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.25);
   }
   
   /* Fix column vertical scrolling */
@@ -50,7 +73,20 @@
   }
   
   .column-content::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.15);
     border-radius: 2px;
+  }
+  
+  .column-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.25);
+  }
+  
+  /* Add Card buttons */
+  .add-btn {
+    transition: all 0.2s ease;
+  }
+  
+  .add-btn:hover {
+    background-color: rgba(0, 0, 0, 0.04);
   }
 }

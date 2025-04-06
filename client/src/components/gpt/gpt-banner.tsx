@@ -13,11 +13,11 @@ export function GPTBanner({ column }: GPTBannerProps) {
 
   if (column.gptAssigned) {
     return (
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded mb-2 p-2 text-sm shadow-sm">
+      <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-md mb-2 p-2 text-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Sparkles className="h-4 w-4 mr-1 text-green-600" />
-            <span className="font-medium text-green-700">{column.gptName}</span>
+            <Sparkles className="h-4 w-4 mr-1 text-primary" />
+            <span className="font-medium text-primary">{column.gptName}</span>
             <span className="ml-2 text-xs text-muted-foreground">
               {column.gptInstructions && column.gptInstructions.length > 30 
                 ? column.gptInstructions.substring(0, 30) + "..."
@@ -27,7 +27,7 @@ export function GPTBanner({ column }: GPTBannerProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-foreground p-1 rounded"
+            className="h-6 w-6 text-primary/70 hover:text-primary hover:bg-primary/10 p-1 rounded-full"
             onClick={() => setIsModalOpen(true)}
           >
             <Edit className="h-4 w-4" />
@@ -44,15 +44,18 @@ export function GPTBanner({ column }: GPTBannerProps) {
   }
 
   return (
-    <div className="bg-white border border-border rounded mb-2 p-2 text-sm shadow-sm">
+    <div className="bg-muted/30 border border-border/50 rounded-md mb-2 p-2 text-sm">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Add custom prompt to this column</span>
+        <span className="text-xs text-muted-foreground flex items-center">
+          <Sparkles className="h-3 w-3 mr-1 text-muted-foreground" />
+          Add automation to this column
+        </span>
         <Button
           size="sm"
-          className="bg-green-600 text-white text-xs px-2 py-1 h-7 rounded hover:bg-green-700 transition-colors"
+          className="bg-primary/90 text-white text-xs px-3 py-1 h-7 rounded-full hover:bg-primary transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
-          Set Prompt
+          Add GPT
         </Button>
       </div>
       

@@ -62,12 +62,13 @@ export function AddColumn({ boardId }: AddColumnProps) {
 
   if (isAdding) {
     return (
-      <div className="column bg-muted/50 rounded-md shadow-sm w-72 flex-shrink-0 p-2">
-        <div className="mb-2">
+      <div className="column bg-white rounded-md shadow-sm w-72 flex-shrink-0 p-3">
+        <div className="mb-3">
           <Input
             placeholder="Enter column name..."
             value={columnName}
             onChange={(e) => setColumnName(e.target.value)}
+            className="border-primary/20 focus-visible:ring-primary/30"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -84,11 +85,18 @@ export function AddColumn({ boardId }: AddColumnProps) {
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-primary hover:bg-primary/90 text-white rounded-full px-4"
+            size="sm"
           >
             Add Column
           </Button>
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+          <Button 
+            variant="outline" 
+            onClick={handleCancel} 
+            disabled={isSubmitting}
+            className="text-muted-foreground rounded-full"
+            size="sm"
+          >
             Cancel
           </Button>
         </div>
@@ -97,10 +105,10 @@ export function AddColumn({ boardId }: AddColumnProps) {
   }
 
   return (
-    <div className="column bg-muted/50 rounded-md shadow-sm w-72 flex-shrink-0 border-2 border-dashed border-border flex items-center justify-center">
+    <div className="column bg-primary/5 rounded-md w-72 flex-shrink-0 border border-dashed border-primary/30 flex items-center justify-center hover:bg-primary/10 transition-colors">
       <Button
         variant="ghost"
-        className="text-muted-foreground hover:text-foreground p-4 w-full h-full"
+        className="text-primary hover:text-primary/80 p-4 w-full h-full"
         onClick={handleAddClick}
       >
         <div className="flex flex-col items-center">
