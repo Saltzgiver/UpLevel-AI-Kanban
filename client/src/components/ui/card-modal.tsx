@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   X, FileText, Users, Paperclip, Calendar, 
-  Zap, Settings, Copy, Move, Trash2, MessageSquare 
+  Zap, Settings, Copy, Move, Trash2, MessageSquare, AlignLeft 
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
@@ -14,6 +14,8 @@ import { useCardProcessing } from "@/hooks/use-card-processing";
 import { Card as CardType, Column, Chat, Attachment } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 interface CardModalProps {
   card: CardType & { 
@@ -152,90 +154,89 @@ export function CardModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
       <div 
         ref={modalRef}
-        className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-xl"
       >
-        {/* Modal Header */}
-        <div className="p-4 border-b border-trello-border flex justify-between items-start">
-          <div className="flex-1 pr-4">
-            <div className="flex items-center mb-2">
-              <FileText className="h-5 w-5 text-muted-foreground mr-2" />
-              <div className="flex-1">
-                <Textarea 
-                  className="w-full text-lg font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none overflow-hidden" 
-                  rows={1}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-                {title !== card.title && (
-                  <div className="mt-2 flex justify-end">
-                    <Button 
-                      size="sm" 
-                      variant="default" 
-                      onClick={handleSaveTitle}
-                      disabled={isSaving || title.trim() === ""}
-                    >
-                      Save Title
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              In list <span className="underline cursor-pointer">{column.name}</span>
-            </div>
+        {/* Header - Fixed at the top with prominent title */}
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+          <div className="flex-1 flex items-center gap-3">
+            <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
+              {column.name}
+            </Badge>
+            <Textarea 
+              className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent resize-none overflow-hidden py-0 px-0" 
+              rows={1}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
+            <X className="h-5 w-5" />
           </Button>
         </div>
         
-        {/* Modal Content */}
-        <div className="p-4 overflow-y-auto flex-1 max-h-[calc(90vh-8rem)]">
-          {/* Card Description */}
+        {/* Save title button appears if title is edited */}
+        {title !== card.title && (
+          <div className="px-6 py-2 bg-gray-50 flex justify-end border-b border-gray-100">
+            <Button 
+              size="sm" 
+              variant="default" 
+              onClick={handleSaveTitle}
+              disabled={isSaving || title.trim() === ""}
+            >
+              Save Title
+            </Button>
+          </div>
+        )}
+        
+        {/* Main Content Area - Scrollable */}
+        <div className="overflow-y-auto flex-1 px-6 pt-5 pb-6">
+          {/* Description Section - Prompt Context */}
           <div className="mb-6">
-            <div className="flex items-center mb-2">
-              <FileText className="h-5 w-5 text-muted-foreground mr-2" />
-              <h3 className="text-sm font-medium">Description</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
             </div>
-            <div className="pl-7">
+            <div className="pl-6">
               <Textarea
-                className="text-sm text-foreground min-h-[80px]"
+                className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-300/20 min-h-[100px] resize-y"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add a more detailed description..."
+                placeholder="Add context for the AI to understand your task..."
               />
               {description !== (card.description || "") && (
                 <div className="mt-2 flex justify-end">
                   <Button 
                     size="sm" 
-                    variant="default" 
+                    variant="outline" 
                     onClick={handleSaveDescription}
                     disabled={isSaving}
                   >
-                    Save Description
+                    Save Context
                   </Button>
                 </div>
               )}
             </div>
           </div>
           
-          {/* GPT Content */}
+          <Separator className="my-6" />
+          
+          {/* GPT Content & Chat Interface - Expanded and prominent */}
           {column.gptAssigned && (
-            <div className="mb-6 bg-gray-50 rounded-md p-3 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center mr-2">
-                    <span className="text-xs font-bold text-green-700">G</span>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-xs font-bold text-green-700">AI</span>
                   </div>
-                  <h3 className="text-sm font-medium">{column.gptName} Output</h3>
+                  <h3 className="font-medium text-gray-800">{column.gptName || "AI Assistant"}</h3>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="text-xs text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
+                  className="text-xs text-green-700 hover:bg-green-50 border-green-200"
                   onClick={handleRetriggerGPT}
                   disabled={isProcessing}
                 >
@@ -244,54 +245,84 @@ export function CardModal({
                 </Button>
               </div>
               
+              {/* Processing Indicator */}
               {isProcessing ? (
-                <div className="flex items-center justify-center p-4">
+                <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-center p-6 my-4">
                   <div className="flex items-center text-yellow-700">
                     <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    GPT is processing...
+                    AI is working on your request...
                   </div>
                 </div>
               ) : (
-                <GPTOutput 
-                  output={gptOutput} 
-                  attachments={attachments} 
-                />
+                // Output with stronger visual highlighting
+                gptOutput && (
+                  <div className="rounded-lg border border-green-100 bg-green-50/50 p-4 mb-4">
+                    <div className="text-sm mb-1 font-medium text-green-800">AI Output</div>
+                    <div className="text-sm text-gray-800 whitespace-pre-line bg-white p-3 rounded border border-green-100 shadow-sm">
+                      {gptOutput}
+                    </div>
+                  </div>
+                )
               )}
               
-              {/* Chat Interface */}
-              <GPTChat 
-                cardId={card.id} 
-                chats={chats} 
-                gptName={column.gptName || ""}
-              />
+              {/* Enhanced Chat Interface */}
+              <div className="mt-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <GPTChat 
+                  cardId={card.id} 
+                  chats={chats} 
+                  gptName={column.gptName || "AI Assistant"}
+                />
+              </div>
+              
+              {/* Attachments Section - Clear separation and grouping */}
+              {attachments.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <div className="flex items-center mb-3 gap-2">
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-medium">Attachments</h3>
+                  </div>
+                  <div className="grid gap-2 pl-6">
+                    {attachments.map((attachment) => (
+                      <AttachmentItem 
+                        key={attachment.id} 
+                        attachment={attachment} 
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          
-          <div className="flex items-center justify-end gap-2 mt-4">
-            <div className="relative mr-auto">
+        </div>
+        
+        {/* Footer Actions - Fixed at bottom */}
+        <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+          {/* Actions on the left */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
               <Button 
                 variant="ghost" 
                 size="sm"
-                className="text-sm"
+                className="text-sm text-gray-600"
                 onClick={() => setShowMoveOptions(!showMoveOptions)}
               >
-                <Move className="h-4 w-4 mr-2" />
+                <Move className="h-4 w-4 mr-1" />
                 Move
               </Button>
               
               {showMoveOptions && (
-                <div className="absolute top-full left-0 bg-white shadow-lg rounded-md border border-border z-10 mt-1 w-48">
+                <div className="absolute bottom-full left-0 bg-white shadow-lg rounded-md border border-gray-200 z-10 mb-1 w-48">
                   <div className="p-2">
-                    <div className="text-xs font-medium mb-2">Move to column:</div>
+                    <div className="text-xs font-medium mb-2 text-gray-500">Move to column:</div>
                     {columns.map((col) => (
                       <div 
                         key={col.id} 
                         className={`
-                          text-sm p-2 rounded cursor-pointer hover:bg-gray-100
-                          ${col.id === column.id ? 'bg-gray-100 text-muted-foreground' : ''}
+                          text-sm p-2 rounded cursor-pointer hover:bg-gray-50
+                          ${col.id === column.id ? 'bg-gray-50 text-muted-foreground' : ''}
                         `}
                         onClick={() => handleMove(col.id)}
                       >
@@ -302,17 +333,18 @@ export function CardModal({
                 </div>
               )}
             </div>
-            
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="text-sm text-destructive hover:bg-destructive/10"
-              onClick={handleDelete}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
           </div>
+          
+          {/* Delete button on the right */}
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
         </div>
       </div>
     </div>
