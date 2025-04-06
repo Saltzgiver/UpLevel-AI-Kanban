@@ -158,13 +158,26 @@ export function CardModal({
           <div className="flex-1 pr-4">
             <div className="flex items-center mb-2">
               <FileText className="h-5 w-5 text-muted-foreground mr-2" />
-              <Textarea 
-                className="w-full text-lg font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none overflow-hidden" 
-                rows={1}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onBlur={handleSaveTitle}
-              />
+              <div className="flex-1">
+                <Textarea 
+                  className="w-full text-lg font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none overflow-hidden" 
+                  rows={1}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+                {title !== card.title && (
+                  <div className="mt-2 flex justify-end">
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      onClick={handleSaveTitle}
+                      disabled={isSaving || title.trim() === ""}
+                    >
+                      Save Title
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="text-sm text-muted-foreground">
               In list <span className="underline cursor-pointer">{column.name}</span>
@@ -188,9 +201,20 @@ export function CardModal({
                 className="text-sm text-foreground min-h-[80px]"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                onBlur={handleSaveDescription}
                 placeholder="Add a more detailed description..."
               />
+              {description !== (card.description || "") && (
+                <div className="mt-2 flex justify-end">
+                  <Button 
+                    size="sm" 
+                    variant="default" 
+                    onClick={handleSaveDescription}
+                    disabled={isSaving}
+                  >
+                    Save Description
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           
