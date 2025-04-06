@@ -45,20 +45,19 @@ export function GPTBanner({ column }: GPTBannerProps) {
   }
 
   return (
-    <div className="bg-muted/50 border border-border/70 border-dashed rounded-lg mb-3 p-3 text-sm">
-      <div className="flex items-center justify-center flex-col text-center gap-2">
-        <div className="flex items-center mt-1">
-          <Sparkles className="h-5 w-5 mr-2 text-muted-foreground/60" />
-          <span className="text-muted-foreground">GPT not assigned</span>
+    <div className="bg-muted/50 border border-border/70 border-dashed rounded-lg mb-3 px-3 py-2 text-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <Sparkles className="h-4 w-4 mr-2 text-muted-foreground/60" />
+          <span className="text-muted-foreground text-xs">GPT not assigned</span>
         </div>
         
         <Button
           size="sm"
-          className="bg-primary text-white text-xs h-8 rounded-md hover:bg-primary/90 transition-colors"
+          className="bg-primary text-white text-xs py-1 px-3 h-7 rounded-md hover:bg-primary/90 transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
-          <Plus className="h-4 w-4 mr-1" />
-          Automate this column
+          Automate
         </Button>
       </div>
       
