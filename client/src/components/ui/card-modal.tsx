@@ -256,15 +256,15 @@ export function CardModal({
                 </div>
               ) : (
                 <GPTOutput 
-                  output={card.gptOutput} 
-                  attachments={card.attachments || []} 
+                  output={gptOutput} 
+                  attachments={attachments} 
                 />
               )}
               
               {/* Chat Interface */}
               <GPTChat 
                 cardId={card.id} 
-                chats={card.chats || []} 
+                chats={chats} 
                 gptName={column.gptName || ""}
               />
             </div>

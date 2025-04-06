@@ -264,16 +264,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (column && column.gptAssigned && column.autoTrigger) {
         // Mark card as processing
-        await storage.updateCard(cardId, { processing: true });
+        await storage.updateCard(cardId, { 
+          processing: true,
+          gptOutput: null // Clear previous output while processing
+        });
         
         // Return response immediately so UI isn't blocked
         res.json(card);
         
         // Trigger GPT processing after response is sent
         try {
-          await triggerGPTProcessing(cardId, column);
+          // Use setTimeout to allow the transaction to commit fully before starting processing
+          setTimeout(async () => {
+            try {
+              await triggerGPTProcessing(cardId, column);
+            } catch (error) {
+              console.error("Error processing card with GPT:", error);
+              // Ensure the card is marked as not processing even if there's an error
+              await storage.updateCard(cardId, { processing: false });
+            }
+          }, 100);
         } catch (error) {
-          console.error("Error processing card with GPT:", error);
+          console.error("Error scheduling GPT processing:", error);
+          // Ensure the card is marked as not processing if scheduling fails
+          await storage.updateCard(cardId, { processing: false });
         }
         
         return; // Already sent response
@@ -301,17 +315,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Column has no GPT assigned" });
       }
       
-      // Mark card as processing
-      await storage.updateCard(cardId, { processing: true });
+      // Mark card as processing and clear previous output
+      await storage.updateCard(cardId, { 
+        processing: true,
+        gptOutput: null
+      });
       
       // Return response immediately
       res.json({ message: "GPT processing triggered" });
       
       // Trigger GPT processing after response is sent
       try {
-        await triggerGPTProcessing(cardId, column);
+        // Use setTimeout to allow the transaction to commit fully before starting processing
+        setTimeout(async () => {
+          try {
+            await triggerGPTProcessing(cardId, column);
+          } catch (error) {
+            console.error("Error processing card with GPT:", error);
+            // Ensure the card is marked as not processing even if there's an error
+            await storage.updateCard(cardId, { processing: false });
+          }
+        }, 100);
       } catch (error) {
-        console.error("Error processing card with GPT:", error);
+        console.error("Error scheduling GPT processing:", error);
+        // Ensure the card is marked as not processing if scheduling fails
+        await storage.updateCard(cardId, { processing: false });
       }
       
       return;

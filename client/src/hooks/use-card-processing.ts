@@ -33,10 +33,10 @@ export function useCardProcessing(cardId: number) {
     if (data?.processing && !isPolling) {
       setIsPolling(true);
       
-      // Check status every 2 seconds
+      // Check status more frequently (1 second) for better responsiveness
       const intervalId = setInterval(() => {
         queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
-      }, 2000);
+      }, 1000);
       
       return () => {
         clearInterval(intervalId);
