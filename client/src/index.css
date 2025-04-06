@@ -11,3 +11,46 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Better scrolling for the board container */
+  .board-container {
+    height: calc(100vh - 7rem);
+    padding-bottom: 1rem !important;
+  }
+  
+  /* Improved column appearance */
+  .column {
+    background-color: #f1f2f4;
+    border-radius: 0.5rem;
+  }
+  
+  /* Fix horizontal scrolling */
+  .board-container::-webkit-scrollbar {
+    height: 10px;
+  }
+  
+  .board-container::-webkit-scrollbar-track {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 5px;
+  }
+  
+  .board-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+  }
+  
+  /* Fix column vertical scrolling */
+  .column-content::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .column-content::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  
+  .column-content::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+}
