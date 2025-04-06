@@ -199,7 +199,7 @@ export function GPTChat({
   // just return the messages and input without header/container
   if (embedded) {
     return (
-      <>
+      <div className="flex flex-col h-full">
         {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
         {chats.length > 3 && !userHasScrolled && (
           <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
@@ -210,13 +210,13 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-0 py-2 flex flex-col min-h-[240px] max-h-[300px]"
+          className="flex-1 overflow-y-auto px-0 py-2 flex flex-col min-h-[180px] max-h-[260px]"
         >
           <ChatMessages />
         </div>
         
-        {/* Chat Input */}
-        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 mt-auto">
+        {/* Chat Input - Always at the bottom */}
+        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
           <Input
             type="text"
             placeholder={`Ask ${gptName || 'AI'} a question...`}
@@ -248,7 +248,7 @@ export function GPTChat({
             )}
           </Button>
         </div>
-      </>
+      </div>
     );
   }
 

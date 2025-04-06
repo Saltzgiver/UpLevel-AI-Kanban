@@ -172,10 +172,7 @@ export function CardModal({
       >
         {/* Header - Fixed at the top with single-line title */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-          <div className="flex-1 flex items-center gap-3 overflow-hidden">
-            <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 flex-shrink-0">
-              {column.name}
-            </Badge>
+          <div className="flex-1 flex items-center overflow-hidden">
             <input 
               className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent overflow-hidden py-0 px-0" 
               value={title}
@@ -186,6 +183,13 @@ export function CardModal({
           <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
+        </div>
+        
+        {/* Column tag below title - moved from header */}
+        <div className="px-6 pt-2 pb-0 flex">
+          <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
+            {column.name}
+          </Badge>
         </div>
         
         {/* Save title button appears if title is edited */}
@@ -205,8 +209,8 @@ export function CardModal({
         {/* Main Content Area - Scrollable */}
         <div className="overflow-y-auto flex-1 px-6 pt-5 pb-6">
           {/* Description Section - Prompt Context */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-1">
               <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
             </div>
@@ -274,7 +278,7 @@ export function CardModal({
             </div>
           </div>
           
-          <Separator className="my-6" />
+          <Separator className="my-3" />
           
           {/* GPT Content & Chat Interface - Expanded and prominent */}
           {column.gptAssigned && (
@@ -312,24 +316,17 @@ export function CardModal({
               ) : null}
               
               {/* Unified Chat Interface with Output */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="px-3 py-2 border-b border-gray-100">
-                  <div className="text-sm font-medium text-gray-700 flex items-center">
-                    <div className="flex items-center mr-auto">
-                      Conversation with {column.gptName || 'AI Assistant'}
-                    </div>
-                    {gptOutput && (
-                      <Badge variant="outline" className="ml-auto text-xs font-normal py-0 h-5 bg-green-50 border-green-200 text-green-700">
-                        Output Ready
-                      </Badge>
-                    )}
-                  </div>
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                <div className="flex items-center px-3 py-2 border-b border-gray-100 justify-end">
+                  {gptOutput && (
+                    <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-green-50 border-green-200 text-green-700">
+                      Output Ready
+                    </Badge>
+                  )}
                 </div>
                 
-                <div 
-                  className="flex-1 overflow-y-auto px-4 py-3 space-y-4 flex flex-col min-h-[240px] max-h-[300px]"
-                >                  
-                  {/* Chat Messages */}
+                <div className="flex-grow flex flex-col"> 
+                  {/* GPTChat component contains both the message area and the input */}
                   <GPTChat 
                     cardId={card.id} 
                     chats={chats} 
@@ -339,8 +336,6 @@ export function CardModal({
                     isProcessing={isProcessing}
                   />
                 </div>
-                
-                {/* Chat Input Box will be part of GPTChat component */}
               </div>
               
               {/* Attachments Section - Clear separation and grouping */}
