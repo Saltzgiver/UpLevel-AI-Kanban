@@ -52,7 +52,7 @@ export function Header({ board }: HeaderProps) {
   };
 
   return (
-    <header className="bg-gradient-to-r from-primary to-primary/90 text-white py-3 px-4 shadow-md">
+    <header className="bg-primary text-white py-3 px-4 shadow-md">
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center">
           {isEditingTitle ? (
@@ -91,7 +91,7 @@ export function Header({ board }: HeaderProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-4 bg-white/20 border-white/30 rounded-full px-3 py-1 text-sm hover:bg-white/30 transition-colors h-8"
+                className="ml-4 bg-white/20 rounded px-2 py-1 text-sm hover:bg-white/30 transition-colors h-8"
                 onClick={() => setIsEditingTitle(true)}
               >
                 <span className="flex items-center">
@@ -106,14 +106,14 @@ export function Header({ board }: HeaderProps) {
           <Button
             variant="outline"
             size="sm"
-            className="bg-white/20 border-white/30 rounded-full px-3 py-1 text-sm hover:bg-white/30 transition-colors h-8 mr-3"
+            className="bg-white/20 rounded px-3 py-1 text-sm hover:bg-white/30 transition-colors h-8 mr-3"
           >
             <span className="flex items-center">
               <Plus className="h-4 w-4 mr-1" />
               Create
             </span>
           </Button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 flex items-center justify-center text-white font-medium shadow-sm">
+          <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-medium">
             <User className="h-5 w-5" />
           </div>
         </div>

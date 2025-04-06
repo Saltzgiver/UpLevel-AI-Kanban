@@ -67,7 +67,7 @@ export function AddCard({ columnId }: AddCardProps) {
           placeholder="Enter a title for this card..."
           value={cardTitle}
           onChange={(e) => setCardTitle(e.target.value)}
-          className="min-h-[60px] mb-2 border-primary/20 focus-visible:ring-primary/30"
+          className="min-h-[60px] mb-2"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -83,18 +83,11 @@ export function AddCard({ columnId }: AddCardProps) {
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-primary hover:bg-primary/90 text-white rounded-full px-4"
-            size="sm"
+            className="bg-green-600 hover:bg-green-700"
           >
             Add Card
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleCancel} 
-            disabled={isSubmitting}
-            className="text-muted-foreground rounded-full"
-            size="sm"
-          >
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         </div>
@@ -105,7 +98,7 @@ export function AddCard({ columnId }: AddCardProps) {
   return (
     <Button
       variant="ghost"
-      className="w-full text-left p-2 text-sm text-muted-foreground hover:bg-primary/5 rounded-md transition-colors mt-1"
+      className="w-full text-left p-2 text-sm text-muted-foreground hover:bg-card hover:bg-opacity-80 rounded transition-colors"
       onClick={handleAddClick}
     >
       <span className="flex items-center">

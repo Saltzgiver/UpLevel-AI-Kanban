@@ -66,7 +66,7 @@ export function ColumnHeader({
   };
 
   return (
-    <div className="flex items-center justify-between p-2 column-header">
+    <div className="flex items-center justify-between">
       {/* Column title area */}
       <div className="flex-1">
         {isEditingTitle ? (
@@ -75,7 +75,7 @@ export function ColumnHeader({
               ref={inputRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="h-8 text-sm border border-primary/20 focus-visible:ring-primary/30"
+              className="h-8 text-sm"
               disabled={isSaving}
               onBlur={handleTitleSave}
               onKeyDown={(e) => {
@@ -91,9 +91,9 @@ export function ColumnHeader({
             />
           </div>
         ) : (
-          <h2 className="font-semibold text-sm text-foreground flex items-center">
+          <h2 className="font-semibold text-sm text-foreground px-2 py-1 flex items-center">
             <span>{column.name}</span>
-            <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">{column.cards?.length || 0}</span>
+            <span className="ml-2 text-muted-foreground text-xs">{column.cards?.length || 0}</span>
           </h2>
         )}
       </div>
@@ -105,9 +105,9 @@ export function ColumnHeader({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-full hover:bg-primary/10"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground rounded"
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="h-5 w-5" />
               <span className="sr-only">Column options</span>
             </Button>
           </DropdownMenuTrigger>
