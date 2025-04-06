@@ -79,6 +79,8 @@ export function CardModal({
     try {
       await apiRequest("PATCH", `/api/cards/${card.id}`, { title });
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      // Update the card reference in state to match what's saved
+      card.title = title;
       toast({
         title: "Success",
         description: "Card title updated",
@@ -101,6 +103,8 @@ export function CardModal({
     try {
       await apiRequest("PATCH", `/api/cards/${card.id}`, { description });
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      // Update the card reference in state to match what's saved
+      card.description = description;
       toast({
         title: "Success",
         description: "Card description updated",
