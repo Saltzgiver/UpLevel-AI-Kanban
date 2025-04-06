@@ -125,23 +125,108 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
       }));
 
       try {
+        // Optimistically update local query data to avoid UI flickering
+        queryClient.setQueryData([`/api/boards`], (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          // Create deep copy of the data to avoid mutating the cache directly
+          const newData = JSON.parse(JSON.stringify(oldData));
+          
+          // Find the board and update the column's cards order
+          const boardIndex = newData.findIndex((b: any) => b.id === board.id);
+          if (boardIndex !== -1) {
+            const columnIndex = newData[boardIndex].columns.findIndex(
+              (col: any) => col.id === sourceColId
+            );
+            if (columnIndex !== -1) {
+              newData[boardIndex].columns[columnIndex].cards = newCards;
+            }
+          }
+          
+          return newData;
+        });
+        
         await apiRequest("PATCH", `/api/columns/${sourceColId}/reorder-cards`, { updates });
-        queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+        
+        // Quietly refresh data in the background without causing UI jumps
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/boards`],
+          refetchType: 'none' // Don't trigger an immediate refetch
+        });
+        
+        // Schedule a quiet refetch after a short delay
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+        }, 1000);
       } catch (error) {
         toast({
           title: "Error",
           description: "Failed to reorder cards",
           variant: "destructive",
         });
+        // Refresh the data to revert to the correct state if the operation failed
+        queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       }
     } else {
       // Moving card to another column
       try {
+        // Get the card that's being moved
+        const movedCard = sourceColumn.cards.find(card => card.id === cardId);
+        if (!movedCard) return;
+        
+        // Create a copy of the card for the destination column
+        const cardCopy = { ...movedCard, columnId: destColId };
+        
+        // Optimistically update local query data to avoid UI flickering
+        queryClient.setQueryData([`/api/boards`], (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          // Create deep copy of the data to avoid mutating the cache directly
+          const newData = JSON.parse(JSON.stringify(oldData));
+          
+          // Find the board
+          const boardIndex = newData.findIndex((b: any) => b.id === board.id);
+          if (boardIndex !== -1) {
+            // Remove the card from source column
+            const sourceColumnIndex = newData[boardIndex].columns.findIndex(
+              (col: any) => col.id === sourceColId
+            );
+            if (sourceColumnIndex !== -1) {
+              newData[boardIndex].columns[sourceColumnIndex].cards = 
+                newData[boardIndex].columns[sourceColumnIndex].cards.filter(
+                  (c: any) => c.id !== cardId
+                );
+            }
+            
+            // Add the card to destination column
+            const destColumnIndex = newData[boardIndex].columns.findIndex(
+              (col: any) => col.id === destColId
+            );
+            if (destColumnIndex !== -1) {
+              const destCards = [...newData[boardIndex].columns[destColumnIndex].cards];
+              
+              // Update card's column ID
+              const updatedCard = { ...cardCopy };
+              
+              // If moving to a GPT column, mark as processing if needed
+              if (destColumn.gptAssigned && destColumn.autoTrigger) {
+                updatedCard.processing = true;
+              }
+              
+              // Insert at the specified position
+              destCards.splice(destination.index, 0, updatedCard);
+              newData[boardIndex].columns[destColumnIndex].cards = destCards;
+            }
+          }
+          
+          return newData;
+        });
+        
+        // Make the actual API request
         await apiRequest("PATCH", `/api/cards/${cardId}/move`, {
           destinationColumnId: destColId,
           position: destination.index,
         });
-        queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
         
         // If the destination column has a GPT assigned and auto-trigger is enabled
         if (destColumn.gptAssigned && destColumn.autoTrigger) {
@@ -160,7 +245,8 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
                 // If processing is complete, stop checking and refresh data
                 if (!data.processing) {
                   clearInterval(timer);
-                  queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+                  // Quietly refetch to update the data without disrupting the UI
+                  queryClient.refetchQueries({ queryKey: [`/api/boards`] });
                 }
               } catch (err) {
                 console.error("Error checking processing status:", err);
@@ -173,6 +259,11 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
           
           // Start checking after a short delay
           setTimeout(checkProcessingStatus, 500);
+        } else {
+          // Quietly refetch data in the background after a short delay
+          setTimeout(() => {
+            queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+          }, 1000);
         }
       } catch (error) {
         toast({
@@ -180,6 +271,8 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
           description: "Failed to move card",
           variant: "destructive",
         });
+        // Refresh the data to revert to the correct state if the operation failed
+        queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       }
     }
   };
@@ -251,15 +344,74 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
 
   const handleMoveCard = async (cardId: number, sourceColumnId: number, destinationColumnId: number) => {
     try {
+      // Find the card and columns
+      const sourceColumn = columns.find(col => col.id === sourceColumnId);
+      const destColumn = columns.find(col => col.id === destinationColumnId);
+      
+      if (!sourceColumn || !destColumn) return;
+      
+      // Find the card that's being moved
+      const movedCard = sourceColumn.cards.find(card => card.id === cardId);
+      if (!movedCard) return;
+      
+      // Create a copy of the card for the destination column
+      const cardCopy = { ...movedCard, columnId: destinationColumnId };
+      
+      // Optimistically update local query data to avoid UI flickering
+      queryClient.setQueryData([`/api/boards`], (oldData: any) => {
+        if (!oldData) return oldData;
+        
+        // Create deep copy of the data to avoid mutating the cache directly
+        const newData = JSON.parse(JSON.stringify(oldData));
+        
+        // Find the board
+        const boardIndex = newData.findIndex((b: any) => b.id === board.id);
+        if (boardIndex !== -1) {
+          // Remove the card from source column
+          const sourceColumnIndex = newData[boardIndex].columns.findIndex(
+            (col: any) => col.id === sourceColumnId
+          );
+          if (sourceColumnIndex !== -1) {
+            newData[boardIndex].columns[sourceColumnIndex].cards = 
+              newData[boardIndex].columns[sourceColumnIndex].cards.filter(
+                (c: any) => c.id !== cardId
+              );
+          }
+          
+          // Add the card to destination column at the top (position 0)
+          const destColumnIndex = newData[boardIndex].columns.findIndex(
+            (col: any) => col.id === destinationColumnId
+          );
+          if (destColumnIndex !== -1) {
+            const destCards = [...newData[boardIndex].columns[destColumnIndex].cards];
+            
+            // Update card's column ID
+            const updatedCard = { ...cardCopy };
+            
+            // If moving to a GPT column, mark as processing if needed
+            if (destColumn.gptAssigned && destColumn.autoTrigger) {
+              updatedCard.processing = true;
+            }
+            
+            // Insert at the top (position 0)
+            destCards.unshift(updatedCard);
+            newData[boardIndex].columns[destColumnIndex].cards = destCards;
+          }
+        }
+        
+        return newData;
+      });
+      
+      // Close the modal immediately after the optimistic update
+      handleCloseCardModal();
+      
+      // Make the actual API request
       await apiRequest("PATCH", `/api/cards/${cardId}/move`, {
         destinationColumnId,
         position: 0, // Place at the top of the destination column
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      handleCloseCardModal();
       
       // If the destination column has a GPT assigned and auto-trigger is enabled
-      const destColumn = columns.find(col => col.id === destinationColumnId);
       if (destColumn?.gptAssigned && destColumn?.autoTrigger) {
         toast({
           title: "GPT Processing",
@@ -276,7 +428,8 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
               // If processing is complete, stop checking and refresh data
               if (!data.processing) {
                 clearInterval(timer);
-                queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+                // Quietly refetch to update the data without disrupting the UI
+                queryClient.refetchQueries({ queryKey: [`/api/boards`] });
               }
             } catch (err) {
               console.error("Error checking processing status:", err);
@@ -289,6 +442,11 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
         
         // Start checking after a short delay
         setTimeout(checkProcessingStatus, 500);
+      } else {
+        // Quietly refetch data in the background after a short delay
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+        }, 1000);
       }
     } catch (error) {
       toast({
@@ -296,6 +454,8 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
         description: "Failed to move card",
         variant: "destructive",
       });
+      // Refresh the data to revert to the correct state if the operation failed
+      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
     }
   };
 
