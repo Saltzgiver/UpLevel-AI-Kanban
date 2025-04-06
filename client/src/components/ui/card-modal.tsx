@@ -228,13 +228,13 @@ export function CardModal({
                   }}
                 >
                   {!description && (
-                    <div className="absolute inset-0 flex items-center text-gray-400 p-3 text-sm pointer-events-none">
+                    <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-2 text-sm pointer-events-none">
                       Add context for the AI to understand your task...
                     </div>
                   )}
                   <textarea
                     ref={textAreaRef}
-                    className={`w-full text-sm py-3 px-3 overflow-hidden bg-transparent ${
+                    className={`w-full text-sm py-2 px-3 overflow-hidden bg-transparent ${
                       description ? 'border-0 focus:outline-none focus:ring-0' : 'opacity-0'
                     }`}
                     value={description}
@@ -251,7 +251,7 @@ export function CardModal({
                       e.target.classList.remove('opacity-0');
                       // Auto-adjust height
                       e.target.style.height = 'auto';
-                      e.target.style.height = Math.max(e.target.scrollHeight, 80) + 'px';
+                      e.target.style.height = e.target.scrollHeight + 'px';
                     }}
                     onBlur={(e) => {
                       if (!description) {
@@ -263,8 +263,10 @@ export function CardModal({
                       }
                     }}
                     style={{
-                      height: description ? 'auto' : '80px',
-                      resize: 'none'
+                      height: description ? 'auto' : '36px', // Single line height
+                      resize: 'none',
+                      lineHeight: '1.5',
+                      minHeight: '36px' // Ensure minimum single line height
                     }}
                   />
                 </div>
