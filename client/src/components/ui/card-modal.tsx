@@ -48,12 +48,23 @@ export function CardModal({
   // Get real-time processing status
   const { isProcessing, gptOutput, chats, attachments } = useCardProcessing(card.id);
 
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Initialize state when the modal opens
   useEffect(() => {
     if (isOpen) {
       setTitle(card.title);
       setDescription(card.description || "");
     }
   }, [isOpen, card]);
+
+  // Handle auto-height for text area after description is set
+  useEffect(() => {
+    if (textAreaRef.current && description) {
+      textAreaRef.current.style.height = 'auto';
+      textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
+    }
+  }, [description, isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -159,20 +170,20 @@ export function CardModal({
         ref={modalRef}
         className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-xl"
       >
-        {/* Header - Fixed at the top with prominent title */}
+        {/* Header - Fixed at the top with single-line title */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-          <div className="flex-1 flex items-center gap-3">
-            <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
+          <div className="flex-1 flex items-center gap-3 overflow-hidden">
+            <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 flex-shrink-0">
               {column.name}
             </Badge>
-            <Textarea 
-              className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent resize-none overflow-hidden py-0 px-0" 
-              rows={1}
+            <input 
+              className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent overflow-hidden py-0 px-0" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleSaveTitle}
             />
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -200,24 +211,64 @@ export function CardModal({
               <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
             </div>
             <div className="pl-6">
-              <Textarea
-                className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-300/20 min-h-[100px] resize-y"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add context for the AI to understand your task..."
-              />
-              {description !== (card.description || "") && (
-                <div className="mt-2 flex justify-end">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleSaveDescription}
-                    disabled={isSaving}
-                  >
-                    Save Context
-                  </Button>
+              {/* Dynamic height text area that adapts to content and is read-only until clicked */}
+              <div 
+                className={`rounded-md ${
+                  description ? 
+                    'border-0 focus-within:border focus-within:border-gray-200' : 
+                    'border border-dashed border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div 
+                  className={`min-h-0 w-full relative ${description ? '' : 'cursor-text'}`}
+                  onClick={(e) => {
+                    // Find the textarea and focus it when the container is clicked
+                    const textarea = e.currentTarget.querySelector('textarea');
+                    if (textarea) textarea.focus();
+                  }}
+                >
+                  {!description && (
+                    <div className="absolute inset-0 flex items-center text-gray-400 p-3 text-sm pointer-events-none">
+                      Add context for the AI to understand your task...
+                    </div>
+                  )}
+                  <textarea
+                    ref={textAreaRef}
+                    className={`w-full text-sm py-3 px-3 overflow-hidden bg-transparent ${
+                      description ? 'border-0 focus:outline-none focus:ring-0' : 'opacity-0'
+                    }`}
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      // Auto-adjust height
+                      e.target.style.height = 'auto';
+                      e.target.style.height = e.target.scrollHeight + 'px';
+                    }}
+                    onFocus={(e) => {
+                      // Show border on focus
+                      e.target.parentElement?.classList.add('border');
+                      e.target.parentElement?.classList.add('border-gray-200');
+                      e.target.classList.remove('opacity-0');
+                      // Auto-adjust height
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.max(e.target.scrollHeight, 80) + 'px';
+                    }}
+                    onBlur={(e) => {
+                      if (!description) {
+                        e.target.classList.add('opacity-0');
+                        e.target.parentElement?.classList.remove('border');
+                      }
+                      if (description !== (card.description || "")) {
+                        handleSaveDescription();
+                      }
+                    }}
+                    style={{
+                      height: description ? 'auto' : '80px',
+                      resize: 'none'
+                    }}
+                  />
                 </div>
-              )}
+              </div>
             </div>
           </div>
           
