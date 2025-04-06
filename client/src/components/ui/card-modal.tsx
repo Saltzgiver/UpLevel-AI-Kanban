@@ -152,7 +152,7 @@ export function CardModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-hidden">
       <div 
         ref={modalRef}
         className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
@@ -193,7 +193,7 @@ export function CardModal({
         </div>
         
         {/* Modal Content */}
-        <div className="p-4 overflow-y-auto flex-1">
+        <div className="p-4 overflow-y-auto flex-1 max-h-[calc(90vh-8rem)]">
           {/* Card Description */}
           <div className="mb-6">
             <div className="flex items-center mb-2">

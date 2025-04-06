@@ -92,9 +92,9 @@ export default function Home() {
   const activeBoard = boards[0];
 
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-screen h-screen flex flex-col overflow-hidden bg-muted">
       <Header board={activeBoard} />
-      <main className="w-full py-6 px-1">
+      <main className="w-full py-6 px-1 flex-1 overflow-hidden">
         <BoardComponent 
           board={activeBoard}
           columns={activeBoard.columns || []}

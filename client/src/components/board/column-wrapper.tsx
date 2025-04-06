@@ -74,8 +74,8 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
   };
   
   return (
-    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 max-h-[calc(100vh-11rem)]">
-      <div className="p-2 flex flex-col h-full">
+    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 h-full flex">
+      <div className="p-2 flex flex-col h-full w-full">
         {/* Column header */}
         <div className="column-header flex items-center justify-between mb-3">
           {/* Column title - No longer draggable */}
@@ -169,7 +169,7 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
         <Droppable droppableId={column.id.toString()} type="card">
           {(provided, snapshot) => (
             <div
-              className={`column-content flex-1 overflow-y-auto min-h-[100px] pr-1 ${
+              className={`column-content flex-1 overflow-y-auto min-h-[100px] pr-1 max-h-[calc(100vh-15rem)] ${
                 snapshot.isDraggingOver ? "bg-primary/5" : ""
               }`}
               ref={provided.innerRef}

@@ -460,10 +460,10 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   };
 
   return (
-    <div className="board-container pb-4 flex w-full overflow-x-auto">
+    <div className="board-container pb-4 flex w-full h-full overflow-hidden">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
         {/* No more droppable for columns - columns can't be reordered */}
-        <div className="flex gap-3 min-w-full pl-1">
+        <div className="flex gap-3 min-w-full pl-1 overflow-x-auto h-full">
           {columns.map((column, index) => (
             <Column
               key={column.id}
