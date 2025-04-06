@@ -75,10 +75,10 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
   };
   
   return (
-    <div className="column bg-muted rounded-md shadow-sm w-72 flex-shrink-0">
-      <div className="p-2 flex flex-col h-full">
+    <div className="column bg-muted rounded-lg shadow-sm w-72 flex-shrink-0">
+      <div className="p-3 flex flex-col h-full">
         {/* Column Header - no more dragHandleProps */}
-        <div className="column-header flex items-center justify-between mb-2">
+        <div className="column-header flex items-center justify-between mb-3">
           {/* Column title area */}
           <div className="flex-1">
             {isEditingTitle ? (
@@ -103,7 +103,7 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
                 />
               </div>
             ) : (
-              <h2 className="font-semibold text-sm text-foreground px-2 py-1 flex items-center">
+              <h2 className="font-semibold text-sm text-foreground px-1 py-1 flex items-center">
                 <span>{column.name}</span>
                 <span className="ml-2 text-muted-foreground text-xs">{column.cards?.length || 0}</span>
               </h2>
@@ -179,7 +179,7 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
         <Droppable droppableId={column.id.toString()} type="card">
           {(provided, snapshot) => (
             <div
-              className={`column-content flex-1 overflow-y-auto min-h-[100px] ${
+              className={`column-content flex-1 overflow-y-auto min-h-[100px] pr-1 ${
                 snapshot.isDraggingOver ? "bg-primary/5" : ""
               }`}
               ref={provided.innerRef}
@@ -194,10 +194,13 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
                 />
               ))}
               {provided.placeholder}
-              <AddCard columnId={column.id} />
             </div>
           )}
         </Droppable>
+        
+        <div className="mt-2">
+          <AddCard columnId={column.id} />
+        </div>
         
         <AssignGPTModal
           column={column}

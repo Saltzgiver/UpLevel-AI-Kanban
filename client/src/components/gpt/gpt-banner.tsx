@@ -13,16 +13,11 @@ export function GPTBanner({ column }: GPTBannerProps) {
 
   if (column.gptAssigned) {
     return (
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded mb-2 p-2 text-sm shadow-sm">
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-100 rounded-lg mb-3 p-3 text-sm shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Sparkles className="h-4 w-4 mr-1 text-green-600" />
-            <span className="font-medium text-green-700">{column.gptName}</span>
-            <span className="ml-2 text-xs text-muted-foreground">
-              {column.gptInstructions && column.gptInstructions.length > 30 
-                ? column.gptInstructions.substring(0, 30) + "..."
-                : column.gptInstructions}
-            </span>
+            <Sparkles className="h-5 w-5 mr-2 text-green-600" />
+            <span className="font-semibold text-green-700">GPT Assistant</span>
           </div>
           <Button
             variant="ghost"
@@ -32,6 +27,12 @@ export function GPTBanner({ column }: GPTBannerProps) {
           >
             <Edit className="h-4 w-4" />
           </Button>
+        </div>
+        
+        <div className="mt-1 pl-7 text-xs text-gray-600">
+          {column.gptInstructions && column.gptInstructions.length > 60 
+            ? column.gptInstructions.substring(0, 60) + "..."
+            : column.gptInstructions || "Write a paragraph about this"}
         </div>
         
         <AssignGPTModal
@@ -44,16 +45,24 @@ export function GPTBanner({ column }: GPTBannerProps) {
   }
 
   return (
-    <div className="bg-white border border-border rounded mb-2 p-2 text-sm shadow-sm">
+    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-blue-100 rounded-lg mb-3 p-3 text-sm shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Add custom prompt to this column</span>
+        <div className="flex items-center">
+          <Sparkles className="h-5 w-5 mr-2 text-green-500" />
+          <span className="font-semibold text-gray-600">GPT Assistant</span>
+        </div>
         <Button
           size="sm"
-          className="bg-green-600 text-white text-xs px-2 py-1 h-7 rounded hover:bg-green-700 transition-colors"
+          className="bg-primary text-white text-xs px-3 py-1 h-7 rounded-md hover:bg-primary/90 transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
+          <Edit className="h-4 w-4 mr-1" />
           Set Prompt
         </Button>
+      </div>
+      
+      <div className="mt-1 pl-7 text-xs text-gray-500">
+        Write a paragraph about this
       </div>
       
       <AssignGPTModal

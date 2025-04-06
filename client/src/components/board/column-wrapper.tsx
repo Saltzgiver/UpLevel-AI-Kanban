@@ -74,10 +74,10 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
   };
   
   return (
-    <div className="column bg-muted rounded-md shadow-sm w-72 flex-shrink-0 max-h-[calc(100vh-11rem)]">
+    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 max-h-[calc(100vh-11rem)]">
       <div className="p-2 flex flex-col h-full">
         {/* Column header */}
-        <div className="column-header flex items-center justify-between mb-2">
+        <div className="column-header flex items-center justify-between mb-3">
           {/* Column title - No longer draggable */}
           <div className="flex-1">
             {isEditingTitle ? (
@@ -102,7 +102,7 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
                 />
               </div>
             ) : (
-              <h2 className="font-semibold text-sm text-foreground px-2 py-1 flex items-center">
+              <h2 className="font-bold text-neutral-800 text-lg px-2 py-1 flex items-center uppercase tracking-wide">
                 <span>{column.name}</span>
                 <span className="ml-2 text-muted-foreground text-xs">{column.cards?.length || 0}</span>
               </h2>
