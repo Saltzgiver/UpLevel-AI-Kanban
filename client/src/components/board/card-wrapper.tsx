@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { MessageSquare } from "lucide-react";
 import { Card as CardType, Chat, Attachment } from "@shared/schema";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -57,6 +56,13 @@ export function Card({ card, index, onClick }: CardProps) {
   
   const showProcessing = isProcessing;
   
+  const [expanded, setExpanded] = useState(false);
+  
+  const handleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(!expanded);
+  };
+
   return (
     <Draggable draggableId={card.id.toString()} index={index}>
       {(provided, snapshot) => (
@@ -90,17 +96,25 @@ export function Card({ card, index, onClick }: CardProps) {
               </div>
             )}
             
-            {/* Show snippet of GPT output if it exists */}
+            {/* Show GPT output if it exists */}
             {card.gptOutput && !showProcessing && (
               <div className="border-t border-border mt-2 pt-2 text-xs text-muted-foreground">
-                <div className="line-clamp-2">{card.gptOutput}</div>
+                <div 
+                  className={expanded ? "" : "line-clamp-2"}
+                  onClick={handleExpand}
+                >
+                  {card.gptOutput}
+                </div>
+                {card.gptOutput.length > 100 && (
+                  <button 
+                    className="text-xs text-primary mt-1 hover:underline"
+                    onClick={handleExpand}
+                  >
+                    {expanded ? "Show less" : "Show more"}
+                  </button>
+                )}
               </div>
             )}
-            
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <MessageSquare className="h-3 w-3 mr-1" />
-              <span>{card.commentCount || 0}</span>
-            </div>
           </div>
         </div>
       )}
