@@ -1,4 +1,4 @@
-import { Sparkles, Edit, Plus } from "lucide-react";
+import { Sparkles, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AssignGPTModal } from "@/components/ui/assign-gpt-modal";
