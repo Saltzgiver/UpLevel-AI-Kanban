@@ -60,9 +60,12 @@ export function CardModal({
 
   // Handle auto-height for text area after description is set
   useEffect(() => {
-    if (textAreaRef.current && description) {
-      textAreaRef.current.style.height = 'auto';
-      textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
+    if (textAreaRef.current) {
+      // Reset height to minimal value first
+      textAreaRef.current.style.height = '24px';
+      // Then set it to scrollHeight to fit content exactly
+      const scrollHeight = textAreaRef.current.scrollHeight;
+      textAreaRef.current.style.height = scrollHeight + 'px';
     }
   }, [description, isOpen]);
 
@@ -232,20 +235,20 @@ export function CardModal({
                   }}
                 >
                   {!description && (
-                    <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-2 text-sm pointer-events-none">
+                    <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
                       Add context for the AI to understand your task...
                     </div>
                   )}
                   <textarea
                     ref={textAreaRef}
-                    className={`w-full text-sm py-2 px-3 overflow-hidden bg-transparent ${
+                    className={`w-full text-sm py-1 px-3 overflow-hidden bg-transparent ${
                       description ? 'border-0 focus:outline-none focus:ring-0' : 'opacity-0'
                     }`}
                     value={description}
                     onChange={(e) => {
                       setDescription(e.target.value);
-                      // Auto-adjust height
-                      e.target.style.height = 'auto';
+                      // Auto-adjust height - start with minimal height
+                      e.target.style.height = '24px';
                       e.target.style.height = e.target.scrollHeight + 'px';
                     }}
                     onFocus={(e) => {
@@ -254,7 +257,7 @@ export function CardModal({
                       e.target.parentElement?.classList.add('border-gray-200');
                       e.target.classList.remove('opacity-0');
                       // Auto-adjust height
-                      e.target.style.height = 'auto';
+                      e.target.style.height = '24px';
                       e.target.style.height = e.target.scrollHeight + 'px';
                     }}
                     onBlur={(e) => {
@@ -267,10 +270,10 @@ export function CardModal({
                       }
                     }}
                     style={{
-                      height: description ? 'auto' : '36px', // Single line height
+                      height: description ? 'auto' : '24px', // Single line height
                       resize: 'none',
                       lineHeight: '1.5',
-                      minHeight: '36px' // Ensure minimum single line height
+                      minHeight: '24px' // Minimal single line height
                     }}
                   />
                 </div>
