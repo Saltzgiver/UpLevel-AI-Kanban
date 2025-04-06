@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { MessageSquare } from "lucide-react";
 import { Card as CardType, Chat, Attachment } from "@shared/schema";
-import { useCardProcessing } from "@/hooks/use-card-processing";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CardProps {
   card: CardType & { commentCount?: number };
@@ -11,10 +11,51 @@ interface CardProps {
 }
 
 export function Card({ card, index, onClick }: CardProps) {
-  const { isProcessing } = useCardProcessing(card.id);
+  const [isProcessing, setIsProcessing] = useState(card.processing || false);
+  const queryClient = useQueryClient();
+  const pollingRef = useRef<number | null>(null);
   
-  // Use the real-time processing status if available, fall back to card.processing
-  const showProcessing = isProcessing || card.processing;
+  // A simpler approach without full useCardProcessing to avoid re-render loops
+  useEffect(() => {
+    // Update initial processing state from card prop
+    setIsProcessing(card.processing || false);
+    
+    // If card is processing, set up polling
+    if (card.processing) {
+      // Start polling for status updates
+      const pollStatus = () => {
+        fetch(`/api/cards/${card.id}/processing-status`)
+          .then(res => res.json())
+          .then(data => {
+            setIsProcessing(data.processing);
+            
+            // If processing is complete, stop polling and invalidate queries
+            if (!data.processing && card.processing) {
+              if (pollingRef.current) {
+                window.clearInterval(pollingRef.current);
+                pollingRef.current = null;
+              }
+              // Refresh board data
+              queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+            }
+          })
+          .catch(err => console.error("Error polling card status:", err));
+      };
+      
+      // Poll every second
+      pollingRef.current = window.setInterval(pollStatus, 1000);
+      
+      // Clean up on unmount
+      return () => {
+        if (pollingRef.current) {
+          window.clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+      };
+    }
+  }, [card.id, card.processing, queryClient]);
+  
+  const showProcessing = isProcessing;
   
   return (
     <Draggable draggableId={card.id.toString()} index={index}>

@@ -149,6 +149,30 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
             title: "GPT Processing",
             description: `Card will be processed by ${destColumn.gptName}`,
           });
+          
+          // Set up a timer to check for updates and refresh the board data
+          const checkProcessingStatus = () => {
+            const timer = setInterval(async () => {
+              try {
+                const response = await fetch(`/api/cards/${cardId}/processing-status`);
+                const data = await response.json();
+                
+                // If processing is complete, stop checking and refresh data
+                if (!data.processing) {
+                  clearInterval(timer);
+                  queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+                }
+              } catch (err) {
+                console.error("Error checking processing status:", err);
+              }
+            }, 1000);
+            
+            // Stop checking after 30 seconds as a failsafe
+            setTimeout(() => clearInterval(timer), 30000);
+          };
+          
+          // Start checking after a short delay
+          setTimeout(checkProcessingStatus, 500);
         }
       } catch (error) {
         toast({
@@ -241,6 +265,30 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
           title: "GPT Processing",
           description: `Card will be processed by ${destColumn.gptName}`,
         });
+        
+        // Set up a timer to check for updates and refresh the board data
+        const checkProcessingStatus = () => {
+          const timer = setInterval(async () => {
+            try {
+              const response = await fetch(`/api/cards/${cardId}/processing-status`);
+              const data = await response.json();
+              
+              // If processing is complete, stop checking and refresh data
+              if (!data.processing) {
+                clearInterval(timer);
+                queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+              }
+            } catch (err) {
+              console.error("Error checking processing status:", err);
+            }
+          }, 1000);
+          
+          // Stop checking after 30 seconds as a failsafe
+          setTimeout(() => clearInterval(timer), 30000);
+        };
+        
+        // Start checking after a short delay
+        setTimeout(checkProcessingStatus, 500);
       }
     } catch (error) {
       toast({
