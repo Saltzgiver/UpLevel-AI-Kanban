@@ -49,12 +49,12 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-muted">
         <div className="bg-primary text-white py-3 px-4 shadow-md">
-          <div className="container mx-auto flex items-center justify-between">
+          <div className="w-full flex items-center justify-between">
             <Skeleton className="h-8 w-64 bg-white/20" />
             <Skeleton className="h-8 w-32 bg-white/20" />
           </div>
         </div>
-        <main className="container mx-auto py-6 px-1">
+        <main className="w-full py-6 px-1">
           <div className="flex space-x-4">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[70vh] w-72 rounded-md" />
@@ -94,7 +94,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-muted">
       <Header board={activeBoard} />
-      <main className="container mx-auto py-6 px-1">
+      <main className="w-full py-6 px-1">
         <BoardComponent 
           board={activeBoard}
           columns={activeBoard.columns || []}

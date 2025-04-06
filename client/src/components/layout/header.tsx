@@ -53,7 +53,7 @@ export function Header({ board }: HeaderProps) {
 
   return (
     <header className="bg-primary text-white py-3 px-4 shadow-md">
-      <div className="container mx-auto flex items-center justify-between">
+      <div className="w-full flex items-center justify-between">
         <div className="flex items-center">
           {isEditingTitle ? (
             <div className="flex items-center">
