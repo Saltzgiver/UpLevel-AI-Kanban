@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   X, FileText, Users, Paperclip, Calendar, 
-  Zap, Settings, Copy, Move, Trash2, MessageSquare, AlignLeft 
+  Zap, Settings, Copy, Move, Trash2, MessageSquare, AlignLeft, Sparkles 
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
@@ -247,7 +247,7 @@ export function CardModal({
               
               {/* Processing Indicator */}
               {isProcessing ? (
-                <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-center p-6 my-4">
+                <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-center p-6 mb-4">
                   <div className="flex items-center text-yellow-700">
                     <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -256,25 +256,54 @@ export function CardModal({
                     AI is working on your request...
                   </div>
                 </div>
-              ) : (
-                // Output with stronger visual highlighting
-                gptOutput && (
-                  <div className="rounded-lg border border-green-100 bg-green-50/50 p-4 mb-4">
-                    <div className="text-sm mb-1 font-medium text-green-800">AI Output</div>
-                    <div className="text-sm text-gray-800 whitespace-pre-line bg-white p-3 rounded border border-green-100 shadow-sm">
-                      {gptOutput}
-                    </div>
-                  </div>
-                )
-              )}
+              ) : null}
               
-              {/* Enhanced Chat Interface */}
-              <div className="mt-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-                <GPTChat 
-                  cardId={card.id} 
-                  chats={chats} 
-                  gptName={column.gptName || "AI Assistant"}
-                />
+              {/* Unified Chat Interface with Output */}
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="px-3 py-2 border-b border-gray-100">
+                  <div className="text-sm font-medium text-gray-700 flex items-center">
+                    <div className="flex items-center mr-auto">
+                      Conversation with {column.gptName || 'AI Assistant'}
+                    </div>
+                    {gptOutput && (
+                      <Badge variant="outline" className="ml-auto text-xs font-normal py-0 h-5 bg-green-50 border-green-200 text-green-700">
+                        Output Ready
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div 
+                  className="flex-1 overflow-y-auto px-4 py-3 space-y-4 flex flex-col min-h-[240px] max-h-[300px]"
+                >
+                  {/* Final AI Output (highlighted special) */}
+                  {gptOutput && !isProcessing && (
+                    <div className="flex flex-col items-start self-start max-w-[90%] mt-2">
+                      <div className="flex items-start">
+                        <div className="w-6 h-6 rounded-full bg-green-500 mr-2 flex-shrink-0 flex items-center justify-center">
+                          <Sparkles className="h-3 w-3 text-white" />
+                        </div>
+                        <div className="bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200 py-2 px-3 shadow-sm">
+                          <div className="text-xs font-medium text-green-800 mb-1">Final Output</div>
+                          <div className="whitespace-pre-line">{gptOutput}</div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-green-600 font-medium mt-1 px-2 ml-8">
+                        This output will be passed to the next column
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Chat Messages */}
+                  <GPTChat 
+                    cardId={card.id} 
+                    chats={chats} 
+                    gptName={column.gptName || "AI Assistant"}
+                    embedded={true}
+                  />
+                </div>
+                
+                {/* Chat Input Box will be part of GPTChat component */}
               </div>
               
               {/* Attachments Section - Clear separation and grouping */}
