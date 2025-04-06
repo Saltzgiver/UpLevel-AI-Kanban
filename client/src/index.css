@@ -17,32 +17,21 @@
 }
 
 @layer components {
-  /* Better scrolling for the board container */
+  /* Board container styling */
   .board-container {
     padding-bottom: 1rem !important;
     width: 100%;
     margin: 0 auto;
+    /* Let browser handle scrolling */
+    overflow-x: visible;
   }
   
   /* Improved column appearance */
   .column {
     background-color: #f1f2f4;
     border-radius: 0.5rem;
-  }
-  
-  /* Fix horizontal scrolling */
-  .board-container::-webkit-scrollbar {
-    height: 10px;
-  }
-  
-  .board-container::-webkit-scrollbar-track {
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 5px;
-  }
-  
-  .board-container::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
+    min-width: 280px; /* Minimum width for columns */
+    max-width: 280px; /* Maximum width for columns */
   }
   
   /* Fix column vertical scrolling */
