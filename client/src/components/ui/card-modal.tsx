@@ -275,31 +275,15 @@ export function CardModal({
                 
                 <div 
                   className="flex-1 overflow-y-auto px-4 py-3 space-y-4 flex flex-col min-h-[240px] max-h-[300px]"
-                >
-                  {/* Final AI Output (highlighted special) */}
-                  {gptOutput && !isProcessing && (
-                    <div className="flex flex-col items-start self-start max-w-[90%] mt-2">
-                      <div className="flex items-start">
-                        <div className="w-6 h-6 rounded-full bg-green-500 mr-2 flex-shrink-0 flex items-center justify-center">
-                          <Sparkles className="h-3 w-3 text-white" />
-                        </div>
-                        <div className="bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200 py-2 px-3 shadow-sm">
-                          <div className="text-xs font-medium text-green-800 mb-1">Final Output</div>
-                          <div className="whitespace-pre-line">{gptOutput}</div>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-green-600 font-medium mt-1 px-2 ml-8">
-                        This output will be passed to the next column
-                      </div>
-                    </div>
-                  )}
-                  
+                >                  
                   {/* Chat Messages */}
                   <GPTChat 
                     cardId={card.id} 
                     chats={chats} 
                     gptName={column.gptName || "AI Assistant"}
                     embedded={true}
+                    finalOutput={gptOutput}
+                    isProcessing={isProcessing}
                   />
                 </div>
                 

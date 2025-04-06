@@ -1,20 +1,30 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Send, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Send, Loader2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Chat } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
 
 interface GPTChatProps {
   cardId: number;
   chats: Chat[];
   gptName: string;
   embedded?: boolean;
+  finalOutput?: string | null;
+  isProcessing?: boolean;
 }
 
-export function GPTChat({ cardId, chats, gptName, embedded = false }: GPTChatProps) {
+export function GPTChat({ 
+  cardId, 
+  chats, 
+  gptName, 
+  embedded = false,
+  finalOutput = null,
+  isProcessing = false
+}: GPTChatProps) {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +64,7 @@ export function GPTChat({ cardId, chats, gptName, embedded = false }: GPTChatPro
 
   // Chat messages component - separated for cleaner structure
   const ChatMessages = () => {
-    if (chats.length === 0) {
+    if (chats.length === 0 && !finalOutput && !isProcessing) {
       return (
         <div className="text-sm text-center text-muted-foreground p-4 mt-auto">
           No messages yet. Ask the AI a question to start the conversation.
@@ -62,43 +72,99 @@ export function GPTChat({ cardId, chats, gptName, embedded = false }: GPTChatPro
       );
     }
     
-    return (
+    // Find the last assistant message index
+    const lastAssistantIndex = chats
+      .map((chat, index) => ({ chat, index }))
+      .filter(item => item.chat.role === 'assistant')
+      .pop()?.index;
+    
+    // Special case: If we have a finalOutput, display it first as the highlighted output
+    const chatContent = (
       <div className="space-y-4 mt-auto">
-        {chats.map((chat, index) => (
-          <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'}`}>
+        {/* Display the finalOutput if available */}
+        {finalOutput && !isProcessing && (
+          <div className="flex flex-col items-start self-start max-w-[90%] mb-4">
             <div className="flex items-start">
-              {chat.role === 'assistant' && (
-                <div className="w-6 h-6 rounded-full bg-green-100 mr-2 flex-shrink-0 flex items-center justify-center">
-                  <span className="text-xs font-bold text-green-700">AI</span>
-                </div>
-              )}
-              
-              <div className={`text-sm ${
-                chat.role === 'assistant' 
-                  ? 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border border-green-100' 
-                  : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100'
-              } py-2 px-3 shadow-sm`}>
-                {chat.content}
+              <div className="w-6 h-6 rounded-full bg-green-500 mr-2 flex-shrink-0 flex items-center justify-center">
+                <Sparkles className="h-3 w-3 text-white" />
               </div>
-              
-              {chat.role === 'user' && (
-                <div className="w-6 h-6 rounded-full bg-blue-100 ml-2 flex-shrink-0 flex items-center justify-center">
-                  <span className="text-xs font-bold text-blue-700">You</span>
+              <div className="bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200 py-2 px-3 shadow-sm">
+                <div className="flex items-center mb-1">
+                  <span className="text-xs font-medium text-green-800 mr-2">Final Output</span>
+                  <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] px-1 py-0 h-4">
+                    Moves to next column
+                  </Badge>
                 </div>
-              )}
-            </div>
-            
-            <div className={`text-[10px] text-gray-400 mt-1 px-2 ${
-              chat.role === 'assistant' ? 'ml-8' : 'mr-8 text-right'
-            }`}>
-              {chat.timestamp ? 
-                new Date(chat.timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 
-                ''}
+                <div className="whitespace-pre-line">{finalOutput}</div>
+              </div>
             </div>
           </div>
-        ))}
+        )}
+        
+        {/* Display processing indicator if applicable */}
+        {isProcessing && (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
+            <span className="text-sm text-green-700">Processing with AI...</span>
+          </div>
+        )}
+        
+        {/* Display all chat messages */}
+        {chats.map((chat, index) => {
+          // Determine if this is the most recent AI message (for highlighting)
+          const isLastAIMessage = chat.role === 'assistant' && index === lastAssistantIndex;
+          
+          return (
+            <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'}`}>
+              <div className="flex items-start">
+                {chat.role === 'assistant' && (
+                  <div className={`w-6 h-6 rounded-full ${isLastAIMessage ? 'bg-green-500' : 'bg-green-100'} mr-2 flex-shrink-0 flex items-center justify-center`}>
+                    {isLastAIMessage ? (
+                      <Sparkles className="h-3 w-3 text-white" />
+                    ) : (
+                      <span className="text-xs font-bold text-green-700">AI</span>
+                    )}
+                  </div>
+                )}
+                
+                <div className={`text-sm ${
+                  chat.role === 'assistant' 
+                    ? isLastAIMessage
+                      ? 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200' 
+                      : 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border border-green-100'
+                    : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100'
+                } py-2 px-3 shadow-sm`}>
+                  {isLastAIMessage && !finalOutput && (
+                    <div className="text-xs font-medium text-green-800 mb-1">Latest AI Response</div>
+                  )}
+                  {chat.content}
+                </div>
+                
+                {chat.role === 'user' && (
+                  <div className="w-6 h-6 rounded-full bg-blue-100 ml-2 flex-shrink-0 flex items-center justify-center">
+                    <span className="text-xs font-bold text-blue-700">You</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className={`text-[10px] ${
+                chat.role === 'assistant' 
+                  ? isLastAIMessage ? 'text-green-600 font-medium' : 'text-gray-400'
+                  : 'text-gray-400'
+              } mt-1 px-2 ${
+                chat.role === 'assistant' ? 'ml-8' : 'mr-8 text-right'
+              }`}>
+                {chat.timestamp ? 
+                  new Date(chat.timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 
+                  ''}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
+    
+    return chatContent;
   };
 
   // If embedded in another component (specifically the card modal), 
