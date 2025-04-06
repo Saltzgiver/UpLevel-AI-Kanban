@@ -47,14 +47,14 @@ export default function Home() {
 
   if (isLoadingBoards) {
     return (
-      <div className="min-h-screen bg-muted">
-        <div className="bg-primary text-white py-3 px-4 shadow-md">
+      <div className="min-h-screen bg-muted flex flex-col">
+        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
           <div className="w-full flex items-center justify-between">
-            <Skeleton className="h-8 w-64 bg-white/20" />
-            <Skeleton className="h-8 w-32 bg-white/20" />
+            <Skeleton className="h-8 w-64 bg-gray-200" />
+            <Skeleton className="h-8 w-32 bg-gray-200" />
           </div>
         </div>
-        <main className="w-full py-6 px-1">
+        <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow">
           <div className="flex space-x-4">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[70vh] w-72 rounded-md" />
@@ -67,11 +67,25 @@ export default function Home() {
 
   if (isErrorBoards) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Boards</h1>
-          <p className="text-muted-foreground">{boardsError?.message || "Something went wrong"}</p>
+      <div className="min-h-screen bg-muted flex flex-col">
+        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded bg-primary/90 flex items-center justify-center text-white mr-2">
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 12H20M12 4V20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="font-semibold text-gray-900">Kanban</span>
+            </div>
+          </div>
         </div>
+        <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Boards</h1>
+            <p className="text-muted-foreground">{boardsError?.message || "Something went wrong"}</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -79,11 +93,25 @@ export default function Home() {
   // If no boards yet, show loading while we create the default one
   if (!boards || boards.length === 0) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-xl font-bold mb-2">Creating your board...</h1>
-          <p className="text-muted-foreground">This will just take a moment</p>
+      <div className="min-h-screen bg-muted flex flex-col">
+        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded bg-primary/90 flex items-center justify-center text-white mr-2">
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 12H20M12 4V20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="font-semibold text-gray-900">Kanban</span>
+            </div>
+          </div>
         </div>
+        <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-xl font-bold mb-2">Creating your board...</h1>
+            <p className="text-muted-foreground">This will just take a moment</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -92,9 +120,9 @@ export default function Home() {
   const activeBoard = boards[0];
 
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-screen bg-muted flex flex-col">
       <Header board={activeBoard} />
-      <main className="w-full py-6 px-4 sm:px-6 md:px-8">
+      <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow">
         <BoardComponent 
           board={activeBoard}
           columns={activeBoard.columns || []}

@@ -52,7 +52,7 @@ export function Header({ board }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 py-2.5 px-4">
+    <header className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center space-x-5">
           {/* Logo */}
