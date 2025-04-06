@@ -1,5 +1,5 @@
 import { useState, createContext, useContext, ReactNode } from "react";
-import { DragDropContext, Droppable, DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { Column } from "./column-wrapper";
 import { AddColumn } from "./add-column";
 import { CardModal } from "../ui/card-modal";
@@ -254,27 +254,19 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   return (
     <div className="board-container pb-4 flex space-x-4 overflow-x-auto">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
-        <Droppable droppableId="board" type="column" direction="horizontal">
-          {(provided) => (
-            <div 
-              className="flex space-x-4"
-              ref={provided.innerRef} 
-              {...provided.droppableProps}
-            >
-              {columns.map((column, index) => (
-                <Column
-                  key={column.id}
-                  column={column}
-                  index={index}
-                  onCardClick={handleCardClick}
-                  onDeleteColumn={handleDeleteColumn}
-                />
-              ))}
-              {provided.placeholder}
-              <AddColumn boardId={board.id} />
-            </div>
-          )}
-        </Droppable>
+        {/* No more droppable for columns - columns can't be reordered */}
+        <div className="flex space-x-4">
+          {columns.map((column, index) => (
+            <Column
+              key={column.id}
+              column={column}
+              index={index}
+              onCardClick={handleCardClick}
+              onDeleteColumn={handleDeleteColumn}
+            />
+          ))}
+          <AddColumn boardId={board.id} />
+        </div>
       </DragDropContext>
 
       {selectedCard && selectedColumn && (
