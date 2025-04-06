@@ -47,17 +47,17 @@ export default function Home() {
 
   if (isLoadingBoards) {
     return (
-      <div className="min-h-screen bg-muted flex flex-col">
-        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
+      <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
+        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 left-0 right-0 z-50 shadow-sm w-full">
           <div className="w-full flex items-center justify-between">
             <Skeleton className="h-8 w-64 bg-gray-200" />
             <Skeleton className="h-8 w-32 bg-gray-200" />
           </div>
         </div>
-        <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow">
-          <div className="flex space-x-4">
+        <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8">
+          <div className="py-6 flex space-x-4">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[70vh] w-72 rounded-md" />
+              <Skeleton key={i} className="h-[70vh] w-72 rounded-md flex-shrink-0" />
             ))}
           </div>
         </main>
@@ -67,8 +67,8 @@ export default function Home() {
 
   if (isErrorBoards) {
     return (
-      <div className="min-h-screen bg-muted flex flex-col">
-        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
+      <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
+        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 left-0 right-0 z-50 shadow-sm w-full">
           <div className="w-full flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-8 h-8 rounded bg-primary/90 flex items-center justify-center text-white mr-2">
@@ -80,7 +80,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow flex items-center justify-center">
+        <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Boards</h1>
             <p className="text-muted-foreground">{boardsError?.message || "Something went wrong"}</p>
@@ -93,8 +93,8 @@ export default function Home() {
   // If no boards yet, show loading while we create the default one
   if (!boards || boards.length === 0) {
     return (
-      <div className="min-h-screen bg-muted flex flex-col">
-        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 z-10 shadow-sm">
+      <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
+        <div className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 left-0 right-0 z-50 shadow-sm w-full">
           <div className="w-full flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-8 h-8 rounded bg-primary/90 flex items-center justify-center text-white mr-2">
@@ -106,7 +106,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow flex items-center justify-center">
+        <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-xl font-bold mb-2">Creating your board...</h1>
             <p className="text-muted-foreground">This will just take a moment</p>
@@ -120,14 +120,16 @@ export default function Home() {
   const activeBoard = boards[0];
 
   return (
-    <div className="min-h-screen bg-muted flex flex-col">
+    <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
       <Header board={activeBoard} />
-      <main className="w-full py-6 px-4 sm:px-6 md:px-8 flex-grow">
-        <BoardComponent 
-          board={activeBoard}
-          columns={activeBoard.columns || []}
-          isLoading={false}
-        />
+      <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8">
+        <div className="py-6">
+          <BoardComponent 
+            board={activeBoard}
+            columns={activeBoard.columns || []}
+            isLoading={false}
+          />
+        </div>
       </main>
     </div>
   );

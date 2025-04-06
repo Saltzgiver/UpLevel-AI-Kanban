@@ -7,16 +7,18 @@
     @apply border-border;
   }
 
-  html, body {
-    @apply h-full;
+  html {
+    @apply h-full w-full;
   }
-
+  
   body {
-    @apply font-sans antialiased bg-background text-foreground h-full;
+    @apply font-sans antialiased bg-muted text-foreground min-h-full h-full w-full overflow-x-hidden;
+    margin: 0;
+    padding: 0;
   }
   
   #root {
-    @apply h-full;
+    @apply flex flex-col min-h-full h-full w-full;
   }
 }
 
