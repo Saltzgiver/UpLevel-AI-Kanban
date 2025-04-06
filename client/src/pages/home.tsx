@@ -94,7 +94,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-muted">
       <Header board={activeBoard} />
-      <main className="w-full py-6 px-4">
+      <main className="w-full py-6 px-4 sm:px-6 md:px-8">
         <BoardComponent 
           board={activeBoard}
           columns={activeBoard.columns || []}

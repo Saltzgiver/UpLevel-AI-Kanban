@@ -463,7 +463,7 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
     <div className="board-container pb-4">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
         {/* Use flex-wrap to allow columns to wrap on smaller screens */}
-        <div className="flex flex-nowrap gap-3 pl-1 pb-2">
+        <div className="flex flex-nowrap gap-3 pl-1 pr-1 pb-2">
           {columns.map((column, index) => (
             <Column
               key={column.id}
@@ -474,6 +474,8 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
             />
           ))}
           <AddColumn boardId={board.id} />
+          {/* Add an invisible spacer at the end to ensure the last column has some space to the right */}
+          <div className="w-1 flex-shrink-0"></div>
         </div>
       </DragDropContext>
 
