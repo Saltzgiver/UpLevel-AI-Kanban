@@ -8,7 +8,7 @@
   }
 
   html, body {
-    @apply overflow-hidden h-screen;
+    @apply h-full;
   }
 
   body {
@@ -19,10 +19,8 @@
 @layer components {
   /* Better scrolling for the board container */
   .board-container {
-    height: calc(100vh - 7rem);
     padding-bottom: 1rem !important;
     width: 100%;
-    max-width: calc(100vw - 2rem);
     margin: 0 auto;
   }
   
