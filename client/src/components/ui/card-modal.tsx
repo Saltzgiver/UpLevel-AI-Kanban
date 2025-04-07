@@ -57,6 +57,7 @@ export function CardModal({
   const [description, setDescription] = useState(card.description || "");
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveOptions, setShowMoveOptions] = useState(false);
+  const [descriptionChanged, setDescriptionChanged] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   // Get real-time processing status with more frequent polling for chat messages
@@ -159,6 +160,8 @@ export function CardModal({
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       // Update the card reference in state to match what's saved
       card.description = description;
+      // Reset the descriptionChanged state after saving successfully
+      setDescriptionChanged(false);
       toast({
         title: "Success",
         description: "Card description updated",
@@ -300,46 +303,66 @@ export function CardModal({
                       Add context for the AI to understand your task...
                     </div>
                   )}
-                  <textarea
-                    ref={textAreaRef}
-                    className={`w-full text-sm py-2 px-3 bg-transparent ${
-                      description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
-                    }`}
-                    value={description}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
-                      // Only auto-adjust height up to a point
-                      e.target.style.height = '24px';
-                      const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
-                      e.target.style.height = newHeight + 'px';
-                    }}
-                    onFocus={(e) => {
-                      // Show border on focus
-                      e.target.parentElement?.classList.add('border');
-                      e.target.parentElement?.classList.add('border-gray-200');
-                      e.target.classList.remove('opacity-0');
-                      // Auto-adjust height with max
-                      e.target.style.height = '24px';
-                      const newHeight = Math.min(e.target.scrollHeight, 120);
-                      e.target.style.height = newHeight + 'px';
-                    }}
-                    onBlur={(e) => {
-                      if (!description) {
-                        e.target.classList.add('opacity-0');
-                        e.target.parentElement?.classList.remove('border');
-                      }
-                      if (description !== (card.description || "")) {
-                        handleSaveDescription();
-                      }
-                    }}
-                    style={{
-                      height: description ? 'auto' : '24px', // Single line height
-                      resize: 'none',
-                      lineHeight: '1.5',
-                      minHeight: '24px', // Minimal single line height
-                      maxHeight: '120px' // Maximum height before scrolling
-                    }}
-                  />
+                  <div className="relative">
+                    <textarea
+                      ref={textAreaRef}
+                      className={`w-full text-sm py-2 px-3 bg-transparent ${
+                        description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
+                      }`}
+                      value={description}
+                      onChange={(e) => {
+                        setDescription(e.target.value);
+                        // Set descriptionChanged to true if the content has changed from the original
+                        setDescriptionChanged(e.target.value !== (card.description || ""));
+                        // Only auto-adjust height up to a point
+                        e.target.style.height = '24px';
+                        const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
+                        e.target.style.height = newHeight + 'px';
+                      }}
+                      onFocus={(e) => {
+                        // Show border on focus
+                        e.target.parentElement?.parentElement?.classList.add('border');
+                        e.target.parentElement?.parentElement?.classList.add('border-gray-200');
+                        e.target.classList.remove('opacity-0');
+                        // Auto-adjust height with max
+                        e.target.style.height = '24px';
+                        const newHeight = Math.min(e.target.scrollHeight, 120);
+                        e.target.style.height = newHeight + 'px';
+                      }}
+                      onBlur={(e) => {
+                        if (!description) {
+                          e.target.classList.add('opacity-0');
+                          e.target.parentElement?.parentElement?.classList.remove('border');
+                        }
+                        // Check if description has changed but don't automatically save
+                        setDescriptionChanged(description !== (card.description || ""));
+                      }}
+                      style={{
+                        height: description ? 'auto' : '24px', // Single line height
+                        resize: 'none',
+                        lineHeight: '1.5',
+                        minHeight: '24px', // Minimal single line height
+                        maxHeight: '120px' // Maximum height before scrolling
+                      }}
+                    />
+                    
+                    {/* Minimalist save button that appears only when changes are made */}
+                    {descriptionChanged && (
+                      <div className="absolute right-2 bottom-2 transition-opacity opacity-100">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-3 rounded-full bg-primary text-white hover:bg-primary/90 hover:text-white border-none shadow-sm"
+                          onClick={() => {
+                            handleSaveDescription();
+                          }}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
