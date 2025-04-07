@@ -427,6 +427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? card.gptOutput 
         : null;
       
+      // Get column information for this card to provide default GPT name/color for older messages
+      const column = await storage.getColumnById(card.columnId);
+      
       // Enhanced response with error status
       const response = { 
         processing: card.processing || false,
@@ -435,7 +438,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chats: chats.map(chat => ({
           ...chat,
           // Ensure timestamp is present for all chats
-          timestamp: chat.timestamp || new Date().toISOString()
+          timestamp: chat.timestamp || new Date().toISOString(),
+          // For assistant messages with missing GPT info, provide the column's GPT info
+          // This ensures older messages (created before the schema update) display with the correct GPT info
+          gptName: chat.role === 'assistant' && !chat.gptName ? (column?.gptName || 'AI Assistant') : chat.gptName,
+          gptColor: chat.role === 'assistant' && !chat.gptColor ? column?.gptColor : chat.gptColor
         })),
         attachments: card.attachments || [],
         updatedAt: new Date().toISOString() // Add timestamp for clients to track freshness
