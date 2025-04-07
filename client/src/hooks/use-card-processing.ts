@@ -39,6 +39,7 @@ export function useCardProcessing(cardId: number) {
       // If no start time recorded, set it now
       if (startTimeRef.current === null) {
         startTimeRef.current = Date.now();
+        console.log(`Starting processing timer for card ${cardId}`);
       }
       
       // Check if we've been processing for more than 2 minutes (120000ms)
@@ -49,6 +50,13 @@ export function useCardProcessing(cardId: number) {
         setProcessingTimeout(true);
         // Force-update state to not processing to prevent UI from hanging
         setIsPolling(false);
+        
+        // Even though we timed out, we'll allow viewing any partial data that was processed
+        // This recovers the UI even if the backend got stuck
+        
+        // Notify about the UI recovering from a timeout
+        console.info(`UI recovered from processing timeout for card ${cardId}. Displaying available data.`);
+        
         return;
       }
       
@@ -74,6 +82,11 @@ export function useCardProcessing(cardId: number) {
       
       // Refetch board data to update the card info in the main view
       queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+      
+      // If we have data but the process timed out, log this edge case
+      if (processingTimeout && (data?.gptOutput || (data?.chats && data.chats.length > 0))) {
+        console.info(`Card ${cardId} processing timed out but data is available and being displayed.`);
+      }
     }
     
     return undefined;
@@ -99,12 +112,26 @@ export function useCardProcessing(cardId: number) {
     };
   }, [cardId, queryClient, isPolling]);
 
+  // Function to manually reset processing state if it gets stuck
+  const resetProcessingState = () => {
+    console.log(`Manually resetting processing state for card ${cardId}`);
+    setProcessingTimeout(true);
+    setIsPolling(false);
+    startTimeRef.current = null;
+    
+    // Force refresh data
+    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
+    queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+  };
+
   return {
     isProcessing: data?.processing || false,
+    isProcessingTimedOut: processingTimeout,
     gptOutput: data?.gptOutput || null,
     chats: data?.chats || [],
     attachments: data?.attachments || [],
     isLoading,
     error,
+    resetProcessingState,
   };
 }

@@ -36,17 +36,40 @@ export async function apiRequest(
   const fullUrl = getFullUrl(url);
   
   try {
-    const res = await fetch(fullUrl, {
+    // Add a timeout to prevent infinite hanging requests
+    let timeoutId: NodeJS.Timeout | null = null;
+    const controller = new AbortController();
+    
+    // Create a promise that will resolve with the fetch result or reject after timeout
+    const fetchPromise = fetch(fullUrl, {
       method,
       headers: data ? { "Content-Type": "application/json" } : {},
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
+      signal: controller.signal
     });
+    
+    // Create a timeout promise
+    const timeoutPromise = new Promise<Response>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Request timed out after 15 seconds'));
+        controller.abort(); // Abort the fetch
+      }, 15000); // 15 second timeout for mutations (longer than queries)
+    });
+    
+    // Race the fetch against the timeout
+    const res = await Promise.race([fetchPromise, timeoutPromise])
+      .finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
 
     await throwIfResNotOk(res);
     return res;
   } catch (error) {
     console.error(`API request failed for ${method} ${fullUrl}:`, error);
+    
+    // For API mutations, we still want to throw errors since the UI needs to handle these
+    // differently than query errors (showing error toasts, etc.)
     throw error;
   }
 }
@@ -61,13 +84,28 @@ export const getQueryFn: <T>(options: {
     
     try {
       // Add a timeout to prevent infinite hanging requests
+      let timeoutId: NodeJS.Timeout | null = null;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const res = await fetch(url, {
+      // Create a promise that will resolve with the fetch result or reject after timeout
+      const fetchPromise = fetch(url, {
         credentials: "include",
         signal: controller.signal
-      }).finally(() => clearTimeout(timeoutId));
+      });
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise<Response>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Request timed out after 10 seconds'));
+          controller.abort(); // Abort the fetch
+        }, 10000); // 10 second timeout - increased from 5sec
+      });
+      
+      // Race the fetch against the timeout
+      const res = await Promise.race([fetchPromise, timeoutPromise])
+        .finally(() => {
+          if (timeoutId) clearTimeout(timeoutId);
+        });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         return null;
@@ -76,18 +114,20 @@ export const getQueryFn: <T>(options: {
       await throwIfResNotOk(res);
       return await res.json();
     } catch (err: unknown) {
-      const error = err as Error;
-      console.error(`Query failed for ${url}:`, error);
+      console.error(`Query failed for ${url}:`, err);
       
-      // For aborted requests or network errors, return a default value
-      // to prevent UI from breaking completely
-      if (error && error.name && 
-          (error.name === 'AbortError' || error.name === 'TypeError' || error.name === 'NetworkError')) {
-        console.warn(`Request to ${url} was aborted or had a network error. Returning empty data.`);
-        return { processing: false, gptOutput: null, chats: [], attachments: [] };
-      }
+      // For any error, return a safe default value to prevent UI from breaking
+      // This way users still see something usable even if there's a network error
+      // Error messages are logged to console for debugging
+      console.warn(`Request to ${url} failed. Returning empty data to maintain application stability.`);
       
-      throw error;
+      // Return a safe empty result data structure
+      return { 
+        processing: false, 
+        gptOutput: null, 
+        chats: [], 
+        attachments: [] 
+      };
     }
   };
 

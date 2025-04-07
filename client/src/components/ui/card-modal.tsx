@@ -2,8 +2,21 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  X, FileText, Users, Paperclip, Calendar, RefreshCw,
-  Zap, Settings, Copy, Move, Trash2, MessageSquare, AlignLeft, Sparkles 
+  X, 
+  FileText, 
+  Users, 
+  Paperclip, 
+  Calendar, 
+  RefreshCw,
+  Zap, 
+  Settings, 
+  Copy, 
+  Move, 
+  Trash2, 
+  MessageSquare, 
+  AlignLeft, 
+  Sparkles,
+  AlertTriangle
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
@@ -46,7 +59,14 @@ export function CardModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   // Get real-time processing status with more frequent polling for chat messages
-  const { isProcessing, gptOutput, chats, attachments } = useCardProcessing(card.id);
+  const { 
+    isProcessing, 
+    isProcessingTimedOut,
+    gptOutput, 
+    chats, 
+    attachments,
+    resetProcessingState 
+  } = useCardProcessing(card.id);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -328,7 +348,7 @@ export function CardModal({
                 </Button>
               </div>
               
-              {/* Processing Indicator */}
+              {/* Processing Indicator - Regular or Timed Out */}
               {isProcessing ? (
                 <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-between py-3 px-4 mb-3">
                   <div className="flex items-center text-yellow-700">
@@ -347,6 +367,23 @@ export function CardModal({
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
                     Reset
+                  </Button>
+                </div>
+              ) : isProcessingTimedOut ? (
+                <div className="rounded-lg border border-orange-100 bg-orange-50 flex items-center justify-between py-3 px-4 mb-3">
+                  <div className="flex items-center text-orange-700">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    <span className="text-sm">Processing timed out. You can still view any available results.</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-orange-700 hover:bg-orange-100 border-orange-200 h-7 px-2 ml-2"
+                    onClick={resetProcessingState}
+                    title="Reset the processing state and try again"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Reset State
                   </Button>
                 </div>
               ) : null}
