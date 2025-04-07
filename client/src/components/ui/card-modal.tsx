@@ -394,10 +394,10 @@ export function CardModal({
                 </Button>
               </div>
               
-              {/* Use the unified ProcessingIndicator component with rawProcessingStatus */}
-              <ProcessingIndicator 
+              {/* Processing indicator is now completely hidden in the card detail view as per user requirement */}
+              {/* <ProcessingIndicator 
                 isProcessing={rawProcessingStatus}
-              />
+              /> */}
               
               {/* Unified Chat Interface with Output */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
