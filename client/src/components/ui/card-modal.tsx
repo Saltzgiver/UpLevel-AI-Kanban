@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  X, FileText, Users, Paperclip, Calendar, 
+  X, FileText, Users, Paperclip, Calendar, RefreshCw,
   Zap, Settings, Copy, Move, Trash2, MessageSquare, AlignLeft, Sparkles 
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
@@ -148,6 +148,29 @@ export function CardModal({
       toast({
         title: "Error",
         description: "Failed to trigger GPT processing",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle manually resetting a card's processing status
+  // Useful when a card is stuck in processing
+  const handleResetProcessing = async () => {
+    try {
+      await apiRequest("PATCH", `/api/cards/${card.id}`, { 
+        processing: false
+      });
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${card.id}/processing-status`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      toast({
+        title: "Processing Reset",
+        description: "Card processing status has been reset",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reset processing status",
         variant: "destructive",
       });
     }
@@ -307,7 +330,7 @@ export function CardModal({
               
               {/* Processing Indicator */}
               {isProcessing ? (
-                <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-center py-3 px-4 mb-3">
+                <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-between py-3 px-4 mb-3">
                   <div className="flex items-center text-yellow-700">
                     <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -315,6 +338,16 @@ export function CardModal({
                     </svg>
                     <span className="text-sm">AI is working on your request...</span>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-amber-700 hover:bg-amber-50 border-amber-200 h-7 px-2 ml-2"
+                    onClick={handleResetProcessing}
+                    title="If processing is stuck, click to reset it"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Reset
+                  </Button>
                 </div>
               ) : null}
               

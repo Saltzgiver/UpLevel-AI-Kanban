@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Chat, Attachment } from "@shared/schema";
 
@@ -16,6 +16,8 @@ interface ProcessingStatus {
 export function useCardProcessing(cardId: number) {
   const queryClient = useQueryClient();
   const [isPolling, setIsPolling] = useState(false);
+  const [processingTimeout, setProcessingTimeout] = useState(false);
+  const startTimeRef = useRef<number | null>(null);
   
   // Query for processing status
   const { data, isLoading, error } = useQuery<ProcessingStatus>({
@@ -25,12 +27,31 @@ export function useCardProcessing(cardId: number) {
     refetchOnWindowFocus: !isPolling,
     // Use a consistent stale time
     staleTime: 2000,
+    // Add some retry settings
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Handle polling while processing
   useEffect(() => {
-    // Start polling if card is processing
-    if (data?.processing && !isPolling) {
+    // Start polling if card is processing and not timed out
+    if (data?.processing && !isPolling && !processingTimeout) {
+      // If no start time recorded, set it now
+      if (startTimeRef.current === null) {
+        startTimeRef.current = Date.now();
+      }
+      
+      // Check if we've been processing for more than 2 minutes (120000ms)
+      // This prevents infinite processing states
+      const processingDuration = Date.now() - (startTimeRef.current || 0);
+      if (processingDuration > 120000) {
+        console.warn(`Processing timeout reached for card ${cardId} after ${processingDuration}ms`);
+        setProcessingTimeout(true);
+        // Force-update state to not processing to prevent UI from hanging
+        setIsPolling(false);
+        return;
+      }
+      
       setIsPolling(true);
       
       // Check status more frequently (1 second) for better responsiveness
@@ -44,16 +65,19 @@ export function useCardProcessing(cardId: number) {
       };
     }
     
-    // Stop polling if processing is complete
-    if (!data?.processing && isPolling) {
+    // Stop polling if processing is complete or we hit timeout
+    if ((!data?.processing && isPolling) || processingTimeout) {
       setIsPolling(false);
+      
+      // Reset the start time
+      startTimeRef.current = null;
       
       // Refetch board data to update the card info in the main view
       queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
     }
     
     return undefined;
-  }, [data?.processing, isPolling, cardId, queryClient]);
+  }, [data?.processing, isPolling, cardId, queryClient, processingTimeout]);
   
   // Single initial fetch when the hook is first used
   useEffect(() => {

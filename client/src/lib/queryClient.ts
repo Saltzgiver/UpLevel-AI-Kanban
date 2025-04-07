@@ -60,9 +60,14 @@ export const getQueryFn: <T>(options: {
     const url = getFullUrl(queryKey[0] as string);
     
     try {
+      // Add a timeout to prevent infinite hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const res = await fetch(url, {
         credentials: "include",
-      });
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         return null;
@@ -70,8 +75,18 @@ export const getQueryFn: <T>(options: {
 
       await throwIfResNotOk(res);
       return await res.json();
-    } catch (error) {
+    } catch (err: unknown) {
+      const error = err as Error;
       console.error(`Query failed for ${url}:`, error);
+      
+      // For aborted requests or network errors, return a default value
+      // to prevent UI from breaking completely
+      if (error && error.name && 
+          (error.name === 'AbortError' || error.name === 'TypeError' || error.name === 'NetworkError')) {
+        console.warn(`Request to ${url} was aborted or had a network error. Returning empty data.`);
+        return { processing: false, gptOutput: null, chats: [], attachments: [] };
+      }
+      
       throw error;
     }
   };

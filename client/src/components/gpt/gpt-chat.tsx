@@ -231,8 +231,12 @@ export function GPTChat({
       .filter(item => item.chat.role === 'assistant')
       .pop()?.index;
     
+    // Determine if we should show processing indicator
+    // Hide it if we already have a final output (could be stuck in processing state)
+    const shouldShowProcessing = isProcessing && !finalOutput;
+    
     // Processing indicator
-    const processingIndicator = isProcessing && (
+    const processingIndicator = shouldShowProcessing && (
       <div className="flex items-center justify-center py-3">
         <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
         <span className="text-sm text-green-700">Processing with AI...</span>
@@ -249,7 +253,8 @@ export function GPTChat({
           // Determine if this is the most recent AI message (for highlighting)
           const isLastAIMessage = chat.role === 'assistant' && index === lastAssistantIndex;
           // Display final output badge only on the last message and if finalOutput is available
-          const isOutputMessage = isLastAIMessage && finalOutput && !isProcessing;
+          // Note: we show the output even if isProcessing is true (it might be stuck in that state)
+          const isOutputMessage = isLastAIMessage && finalOutput;
           
           return (
             <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'} mb-4`}>
@@ -288,7 +293,7 @@ export function GPTChat({
                     : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
                 }`}>
 
-                  {isLastAIMessage && !finalOutput && !isProcessing && (
+                  {isLastAIMessage && (finalOutput || (!isProcessing && chat.content)) && (
                     <div className="flex items-center mb-2 mt-1">
                       <span className="text-xs font-medium text-green-800">Latest Response</span>
                     </div>
