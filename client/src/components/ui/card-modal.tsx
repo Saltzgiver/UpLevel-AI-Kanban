@@ -61,6 +61,7 @@ export function CardModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   // Get real-time processing status with more frequent polling for chat messages
+  // Pass isDetailView=true to not show processing status in the modal
   const { 
     isProcessing, 
     isProcessingTimedOut,
@@ -68,8 +69,9 @@ export function CardModal({
     gptOutput, 
     chats, 
     attachments,
-    resetProcessingState 
-  } = useCardProcessing(card.id);
+    resetProcessingState,
+    rawProcessingStatus 
+  } = useCardProcessing(card.id, true);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -385,16 +387,16 @@ export function CardModal({
                   size="sm"
                   className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
                   onClick={handleRetriggerGPT}
-                  disabled={isProcessing}
+                  disabled={rawProcessingStatus}
                 >
                   <Zap className="h-3 w-3 mr-1" />
                   Retrigger
                 </Button>
               </div>
               
-              {/* Use the unified ProcessingIndicator component */}
+              {/* Use the unified ProcessingIndicator component with rawProcessingStatus */}
               <ProcessingIndicator 
-                isProcessing={isProcessing}
+                isProcessing={rawProcessingStatus}
               />
               
               {/* Unified Chat Interface with Output */}
@@ -411,7 +413,7 @@ export function CardModal({
                     gptColor={column.gptColor}
                     embedded={true}
                     finalOutput={gptOutput}
-                    isProcessing={isProcessing}
+                    isProcessing={rawProcessingStatus}
                   />
                 </div>
               </div>

@@ -16,8 +16,10 @@ interface ProcessingStatus {
 /**
  * Hook to monitor processing status of a card
  * Automatically polls for updates while processing
+ * @param cardId - The ID of the card to monitor
+ * @param isDetailView - Whether the card is being viewed in detail (modal view)
  */
-export function useCardProcessing(cardId: number) {
+export function useCardProcessing(cardId: number, isDetailView: boolean = false) {
   const queryClient = useQueryClient();
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -125,9 +127,10 @@ export function useCardProcessing(cardId: number) {
     }
   }, [cardId, queryClient, toast]);
   
-  // Return a more comprehensive status object
-  return {
-    isProcessing: data?.processing || false,
+  // Return a more comprehensive status object with processing state dependent on view context
+  const result = {
+    // Only show processing indicator in card view (not in detail view) if not explicitly requested
+    isProcessing: isDetailView ? false : (data?.processing || false),
     isProcessingTimedOut: processingTimeout,
     processingError: data?.processingError || null,
     gptOutput: data?.gptOutput || null,
@@ -136,5 +139,9 @@ export function useCardProcessing(cardId: number) {
     isLoading,
     error: isError ? (error instanceof Error ? error.message : "Unknown error") : null,
     resetProcessingState,
+    // Add raw processing status for internal use
+    rawProcessingStatus: data?.processing || false
   };
+  
+  return result;
 }

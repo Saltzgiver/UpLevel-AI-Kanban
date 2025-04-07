@@ -70,8 +70,8 @@ export function Card({ card, index, onClick }: CardProps) {
                 compact={true}
               />
               
-              {/* Show GPT output if it exists and not processing */}
-              {finalOutput && !isProcessing && (
+              {/* Always show GPT output on unopened cards if it exists */}
+              {finalOutput && (
                 <div className="mt-2 pt-2 text-xs text-gray-600 border-t border-gray-100">
                   <div className="font-medium mb-1 text-gray-500">AI Output</div>
                   <div 
