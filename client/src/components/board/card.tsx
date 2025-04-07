@@ -22,12 +22,19 @@ export function Card({ card, index, onClick }: CardProps) {
   // Use our unified processing hook instead of custom implementation
   const {
     isProcessing,
-    gptOutput
+    gptOutput,
+    rawProcessingStatus, // Track the raw processing status for debugging
+    isLoading
   } = useCardProcessing(card.id);
   
   // We'll use the gptOutput from the real-time status if available,
   // otherwise fall back to the card's stored output
   const finalOutput = gptOutput || card.gptOutput;
+  
+  // Log changes to processing state for debugging
+  useEffect(() => {
+    console.log(`Card ${card.id} processing state: ${isProcessing}`);
+  }, [card.id, isProcessing]);
   
   const [expanded, setExpanded] = useState(false);
   

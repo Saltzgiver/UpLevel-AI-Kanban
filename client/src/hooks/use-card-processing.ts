@@ -34,9 +34,11 @@ export function useCardProcessing(cardId: number, isDetailView: boolean = false)
     enabled: Boolean(cardId),
     // Fixed polling interval while enabled
     refetchInterval: 1000, // Poll every second while the card is open
-    staleTime: 1000,
+    staleTime: 500, // Shorter stale time to ensure more frequent refreshes
     retry: 3,
     retryDelay: 1000,
+    // Force refetch on window focus to ensure we always have latest state
+    refetchOnWindowFocus: true,
   });
   
   // Setup timeout when processing starts
@@ -84,6 +86,10 @@ export function useCardProcessing(cardId: number, isDetailView: boolean = false)
       if (processingTimeout) {
         setProcessingTimeout(false);
       }
+      
+      // Force refresh the board data when processing completes
+      // This ensures all cards get updated with the latest processing state
+      queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
     }
     
     return () => {
