@@ -235,7 +235,8 @@ export function GPTChat({
     
     // Determine if we should show processing indicator
     // Hide it if we already have a final output (could be stuck in processing state)
-    const shouldShowProcessing = isProcessing && !finalOutput;
+    // Also hide it when embedded in a card (per user requirement)
+    const shouldShowProcessing = isProcessing && !finalOutput && !embedded;
     
     // Processing indicator
     const processingIndicator = shouldShowProcessing && (
