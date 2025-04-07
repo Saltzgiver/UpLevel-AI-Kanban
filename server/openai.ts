@@ -19,6 +19,9 @@ const getOpenAIClient = (apiKey?: string) => {
  */
 export async function triggerGPTProcessing(cardId: number, column: Column): Promise<void> {
   try {
+    // Mark the card as processing
+    await storage.updateCard(cardId, { processing: true });
+    
     // Get the card with all its data
     const card = await storage.getCardById(cardId);
     if (!card) {
@@ -138,6 +141,9 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
  */
 export async function processChat(cardId: number, userMessage: string, column: Column): Promise<void> {
   try {
+    // Update card to mark as processing
+    await storage.updateCard(cardId, { processing: true });
+    
     // Get the card with all its data
     const card = await storage.getCardById(cardId);
     if (!card) {
@@ -195,6 +201,9 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     // Handle file generation if indicated in the response
     await handleFileGeneration(cardId, response);
+    
+    // Always update card to reset processing state, even if a chat modal has been closed
+    await storage.updateCard(cardId, { processing: false });
 
   } catch (error) {
     console.error("Error processing chat with GPT:", error);
@@ -222,6 +231,21 @@ export async function processChat(cardId: number, userMessage: string, column: C
       gptName: column.gptName || "AI Assistant",
       gptColor: column.gptColor
     });
+    
+    // Always reset the processing state on error, even if the chat modal has been closed
+    try {
+      // Store the error in the gptOutput field since there's no dedicated error field
+      await storage.updateCard(cardId, { 
+        processing: false
+      });
+      
+      // Optionally update the output message to indicate an error
+      await storage.updateCard(cardId, {
+        gptOutput: `Error: ${userFriendlyError}`
+      });
+    } catch (updateError) {
+      console.error("Error updating card processing state:", updateError);
+    }
 
     throw error;
   }
