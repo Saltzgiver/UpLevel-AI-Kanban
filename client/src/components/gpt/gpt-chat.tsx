@@ -59,20 +59,6 @@ export function GPTChat({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container) return;
-    
-    const resizeObserver = new ResizeObserver(() => {
-      if (!isUserScrollingRef.current) {
-        container.scrollTop = container.scrollHeight;
-      }
-    });
-    
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, []);
-
   // Track if user has manually scrolled up
   const [userHasScrolled, setUserHasScrolled] = useState(false);
   
@@ -134,11 +120,14 @@ export function GPTChat({
     }
   }, []);
   
-  // Immediate scroll on mount
+  // Delayed scroll on mount to ensure content is rendered
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+    const timer = setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Auto-scroll to bottom when messages change, but only in specific cases:
