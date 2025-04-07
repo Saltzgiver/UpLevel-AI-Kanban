@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { Card as CardType, Chat, Attachment } from "@shared/schema";
-import { useQueryClient } from "@tanstack/react-query";
+import { Card as CardType } from "@shared/schema";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface CardProps {
   card: CardType & { commentCount?: number };
@@ -9,50 +9,41 @@ interface CardProps {
   onClick: () => void;
 }
 
+interface ProcessingStatus {
+  processing: boolean;
+  gptOutput: string | null;
+}
+
 export function Card({ card, index, onClick }: CardProps) {
   const [isProcessing, setIsProcessing] = useState(card.processing || false);
   const queryClient = useQueryClient();
-  const pollingRef = useRef<number | null>(null);
   
-  // A simpler approach without full useCardProcessing to avoid re-render loops
+  // Only use React Query when the card is already in processing state
+  // This is more efficient than polling all cards
+  const enabled = Boolean(card.processing);
+  
+  // Simple query for processing status
+  const { data } = useQuery<ProcessingStatus>({
+    queryKey: [`/api/cards/${card.id}/processing-status`],
+    enabled: enabled,
+    refetchInterval: enabled ? 2000 : false, // Poll every 2 seconds if enabled
+    staleTime: 1000,
+  });
+  
+  // Update processing state when data changes
   useEffect(() => {
-    // Update initial processing state from card prop
-    setIsProcessing(card.processing || false);
-    
-    // If card is processing, set up polling
-    if (card.processing) {
-      // Start polling for status updates
-      const pollStatus = () => {
-        fetch(`/api/cards/${card.id}/processing-status`)
-          .then(res => res.json())
-          .then(data => {
-            setIsProcessing(data.processing);
-            
-            // If processing is complete, stop polling and invalidate queries
-            if (!data.processing && card.processing) {
-              if (pollingRef.current) {
-                window.clearInterval(pollingRef.current);
-                pollingRef.current = null;
-              }
-              // Refresh board data
-              queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
-            }
-          })
-          .catch(err => console.error("Error polling card status:", err));
-      };
+    if (data) {
+      setIsProcessing(data.processing);
       
-      // Poll every second
-      pollingRef.current = window.setInterval(pollStatus, 1000);
-      
-      // Clean up on unmount
-      return () => {
-        if (pollingRef.current) {
-          window.clearInterval(pollingRef.current);
-          pollingRef.current = null;
-        }
-      };
+      // If processing is complete, invalidate board queries
+      if (!data.processing && card.processing) {
+        queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+      }
+    } else {
+      // Fall back to prop if no data available
+      setIsProcessing(card.processing || false);
     }
-  }, [card.id, card.processing, queryClient]);
+  }, [data, card.processing, queryClient]);
   
   const showProcessing = isProcessing;
   
