@@ -353,9 +353,6 @@ export function CardModal({
               {/* Use the unified ProcessingIndicator component */}
               <ProcessingIndicator 
                 isProcessing={isProcessing}
-                isTimedOut={isProcessingTimedOut}
-                error={processingError}
-                onReset={resetProcessingState}
               />
               
               {/* Unified Chat Interface with Output */}

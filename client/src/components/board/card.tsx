@@ -20,13 +20,12 @@ export function Card({ card, index, onClick }: CardProps) {
   // Use our unified processing hook instead of custom implementation
   const {
     isProcessing,
-    isProcessingTimedOut,
-    processingError,
-    resetProcessingState
+    gptOutput
   } = useCardProcessing(card.id);
   
-  // For the card preview, we'll only check active processing
-  // More detailed states will be visible in the modal
+  // We'll use the gptOutput from the real-time status if available,
+  // otherwise fall back to the card's stored output
+  const finalOutput = gptOutput || card.gptOutput;
   
   const [expanded, setExpanded] = useState(false);
   
@@ -60,34 +59,26 @@ export function Card({ card, index, onClick }: CardProps) {
               
               {/* Tag-like elements could go here */}
               <div className="flex flex-wrap gap-1 mb-2">
-                {/* Sample tags for visual design only */}
-                {card.processing && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
-                    Processing
-                  </span>
-                )}
+                {/* Empty container for future tags if needed */}
               </div>
               
-              {/* Use our unified ProcessingIndicator */}
+              {/* Use our unified ProcessingIndicator - simplified props */}
               <ProcessingIndicator
                 isProcessing={isProcessing}
-                isTimedOut={isProcessingTimedOut}
-                error={processingError}
-                onReset={resetProcessingState}
                 compact={true}
               />
               
-              {/* Show GPT output if it exists */}
-              {card.gptOutput && !isProcessing && (
+              {/* Show GPT output if it exists and not processing */}
+              {finalOutput && !isProcessing && (
                 <div className="mt-2 pt-2 text-xs text-gray-600 border-t border-gray-100">
-                  <div className="font-medium mb-1 text-gray-500">Last GPT Output</div>
+                  <div className="font-medium mb-1 text-gray-500">AI Output</div>
                   <div 
                     className={expanded ? "" : "line-clamp-2"}
                     onClick={handleExpand}
                   >
-                    {card.gptOutput}
+                    {finalOutput}
                   </div>
-                  {card.gptOutput.length > 100 && (
+                  {finalOutput.length > 100 && (
                     <button 
                       className="text-xs text-blue-600 mt-1 hover:underline font-medium"
                       onClick={handleExpand}
