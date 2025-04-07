@@ -304,19 +304,19 @@ export function GPTChat({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        p: (props: any) => <p className="my-1" {...props} />,
-                        ul: (props: any) => <ul className="list-disc pl-4 my-1" {...props} />,
-                        ol: (props: any) => <ol className="list-decimal pl-4 my-1" {...props} />,
-                        li: (props: any) => <li className="my-0.5" {...props} />,
-                        a: (props: any) => <a className="text-blue-600 hover:underline" {...props} />,
-                        blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-1" {...props} />,
+                        p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
+                        ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
+                        ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
+                        li: (props: any) => <li className="my-0 text-xs" {...props} />,
+                        a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
+                        blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
                         code: (props: any) => 
                           props.inline 
-                            ? <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono" {...props} />
-                            : <code className="block bg-gray-100 p-1 rounded text-xs font-mono my-1 overflow-x-auto" {...props} />,
-                        pre: (props: any) => <pre className="bg-gray-100 p-2 rounded text-xs font-mono my-1 overflow-x-auto" {...props} />,
-                        strong: (props: any) => <strong className="font-bold" {...props} />,
-                        em: (props: any) => <em className="italic" {...props} />,
+                            ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
+                            : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                        pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                        strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
+                        em: (props: any) => <em className="italic text-xs" {...props} />,
                       }}
                     >
                       {chat.content}

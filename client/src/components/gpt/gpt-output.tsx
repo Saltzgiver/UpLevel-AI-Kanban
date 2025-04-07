@@ -36,23 +36,23 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                h1: (props: any) => <h1 className="text-lg font-bold mt-4 mb-2" {...props} />,
-                h2: (props: any) => <h2 className="text-md font-bold mt-3 mb-2" {...props} />,
-                h3: (props: any) => <h3 className="text-base font-bold mt-3 mb-1" {...props} />,
-                p: (props: any) => <p className="mb-2" {...props} />,
-                ul: (props: any) => <ul className="list-disc pl-5 mb-2" {...props} />,
-                ol: (props: any) => <ol className="list-decimal pl-5 mb-2" {...props} />,
-                li: (props: any) => <li className="mb-1" {...props} />,
-                a: (props: any) => <a className="text-blue-600 hover:underline" {...props} />,
-                blockquote: (props: any) => <blockquote className="border-l-4 border-gray-200 pl-3 italic my-2" {...props} />,
+                h1: (props: any) => <h1 className="text-base font-bold mt-3 mb-2" {...props} />,
+                h2: (props: any) => <h2 className="text-sm font-bold mt-2 mb-1" {...props} />,
+                h3: (props: any) => <h3 className="text-xs font-bold mt-2 mb-1" {...props} />,
+                p: (props: any) => <p className="mb-1.5 text-xs" {...props} />,
+                ul: (props: any) => <ul className="list-disc pl-4 mb-1.5 text-xs" {...props} />,
+                ol: (props: any) => <ol className="list-decimal pl-4 mb-1.5 text-xs" {...props} />,
+                li: (props: any) => <li className="mb-0.5 text-xs" {...props} />,
+                a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
+                blockquote: (props: any) => <blockquote className="border-l-4 border-gray-200 pl-3 italic my-1.5 text-xs" {...props} />,
                 code: (props: any) => 
                   props.inline 
-                    ? <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono" {...props} />
-                    : <code className="block bg-gray-100 p-2 rounded-md text-sm font-mono my-2 overflow-x-auto" {...props} />,
-                pre: (props: any) => <pre className="bg-gray-100 p-3 rounded-md text-sm font-mono my-2 overflow-x-auto" {...props} />,
-                strong: (props: any) => <strong className="font-bold" {...props} />,
-                em: (props: any) => <em className="italic" {...props} />,
-                hr: (props: any) => <hr className="my-4 border-gray-200" {...props} />,
+                    ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
+                    : <code className="block bg-gray-100 p-1.5 rounded-md text-[10px] font-mono my-1.5 overflow-x-auto" {...props} />,
+                pre: (props: any) => <pre className="bg-gray-100 p-2 rounded-md text-[10px] font-mono my-1.5 overflow-x-auto" {...props} />,
+                strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
+                em: (props: any) => <em className="italic text-xs" {...props} />,
+                hr: (props: any) => <hr className="my-3 border-gray-200" {...props} />,
               }}
             >
               {output}
