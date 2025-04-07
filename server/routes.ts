@@ -422,10 +422,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the latest chat data if available
       let chats = card.chats || [];
       
-      // Enhance the response to include timestamps
+      // Check if the card has processing errors (indicated by error prefix in gptOutput)
+      const processingError = card.gptOutput?.startsWith("Error processing with GPT:") 
+        ? card.gptOutput 
+        : null;
+      
+      // Enhanced response with error status
       const response = { 
         processing: card.processing || false,
         gptOutput: card.gptOutput,
+        processingError,
         chats: chats.map(chat => ({
           ...chat,
           // Ensure timestamp is present for all chats
@@ -438,7 +444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(response);
     } catch (error) {
       console.error("Error getting card processing status:", error);
-      return res.status(500).json({ message: "Error getting card processing status" });
+      return res.status(500).json({ 
+        message: "Error getting card processing status",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

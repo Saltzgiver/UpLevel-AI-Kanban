@@ -1,12 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Chat, Attachment } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ProcessingStatus {
   processing: boolean;
   gptOutput: string | null;
+  processingError: string | null;
   chats: Chat[];
   attachments: Attachment[];
+  updatedAt?: string;
 }
 
 /**
@@ -15,123 +19,122 @@ interface ProcessingStatus {
  */
 export function useCardProcessing(cardId: number) {
   const queryClient = useQueryClient();
-  const [isPolling, setIsPolling] = useState(false);
   const [processingTimeout, setProcessingTimeout] = useState(false);
-  const startTimeRef = useRef<number | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
   
-  // Query for processing status
-  const { data, isLoading, error } = useQuery<ProcessingStatus>({
+  // Set a consistent timeout duration
+  const PROCESSING_TIMEOUT = 60000; // 1 minute timeout
+  
+  // Simplified query with retries and consistent polling
+  const { data, isLoading, error, isError } = useQuery<ProcessingStatus>({
     queryKey: [`/api/cards/${cardId}/processing-status`],
     enabled: Boolean(cardId),
-    // Only refetch on window focus if not already polling
-    refetchOnWindowFocus: !isPolling,
-    // Use a consistent stale time
-    staleTime: 2000,
-    // Add some retry settings
+    // Fixed polling interval while enabled
+    refetchInterval: 1000, // Poll every second while the card is open
+    staleTime: 1000,
     retry: 3,
     retryDelay: 1000,
   });
-
-  // Handle polling while processing
-  useEffect(() => {
-    // Start polling if card is processing and not timed out
-    if (data?.processing && !isPolling && !processingTimeout) {
-      // If no start time recorded, set it now
-      if (startTimeRef.current === null) {
-        startTimeRef.current = Date.now();
-        console.log(`Starting processing timer for card ${cardId}`);
-      }
-      
-      // Check if we've been processing for more than 2 minutes (120000ms)
-      // This prevents infinite processing states
-      const processingDuration = Date.now() - (startTimeRef.current || 0);
-      if (processingDuration > 120000) {
-        console.warn(`Processing timeout reached for card ${cardId} after ${processingDuration}ms`);
-        setProcessingTimeout(true);
-        // Force-update state to not processing to prevent UI from hanging
-        setIsPolling(false);
-        
-        // Even though we timed out, we'll allow viewing any partial data that was processed
-        // This recovers the UI even if the backend got stuck
-        
-        // Notify about the UI recovering from a timeout
-        console.info(`UI recovered from processing timeout for card ${cardId}. Displaying available data.`);
-        
-        return;
-      }
-      
-      setIsPolling(true);
-      
-      // Check status more frequently (1 second) for better responsiveness
-      const intervalId = setInterval(() => {
-        queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
-      }, 1000);
-      
-      return () => {
-        clearInterval(intervalId);
-        setIsPolling(false);
-      };
-    }
-    
-    // Stop polling if processing is complete or we hit timeout
-    if ((!data?.processing && isPolling) || processingTimeout) {
-      setIsPolling(false);
-      
-      // Reset the start time
-      startTimeRef.current = null;
-      
-      // Refetch board data to update the card info in the main view
-      queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
-      
-      // If we have data but the process timed out, log this edge case
-      if (processingTimeout && (data?.gptOutput || (data?.chats && data.chats.length > 0))) {
-        console.info(`Card ${cardId} processing timed out but data is available and being displayed.`);
-      }
-    }
-    
-    return undefined;
-  }, [data?.processing, isPolling, cardId, queryClient, processingTimeout]);
   
-  // Single initial fetch when the hook is first used
+  // Setup timeout when processing starts
   useEffect(() => {
-    // Only do an initial fetch, don't start polling
-    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     
-    // Set up focus listener to update when the window regains focus
-    const handleFocus = () => {
-      // Don't update if we're already actively polling
-      if (!isPolling) {
+    // If processing started, set up a new timeout
+    if (data?.processing && !processingTimeout) {
+      console.log(`Starting processing timer for card ${cardId}`);
+      
+      timeoutRef.current = setTimeout(() => {
+        console.warn(`Processing timeout reached for card ${cardId} after ${PROCESSING_TIMEOUT}ms`);
+        setProcessingTimeout(true);
+        
+        toast({
+          title: "Processing Timeout",
+          description: "The AI processing took too long and timed out. You can view any partial results or try again.",
+          variant: "destructive"
+        });
+        
+        // Force refresh data to ensure UI is updated
         queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
-      }
-    };
+        queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+      }, PROCESSING_TIMEOUT);
+    }
     
-    window.addEventListener('focus', handleFocus);
+    // If processing completed, clear timeout and reset state
+    if (!data?.processing && !isLoading) {
+      // If there was a processing error, show a toast
+      if (data?.processingError) {
+        console.error(`Processing error for card ${cardId}:`, data.processingError);
+      }
+      
+      // Clear timeout if processing is complete
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      
+      // If timeout was previously set but now processing is done
+      if (processingTimeout) {
+        setProcessingTimeout(false);
+      }
+    }
     
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, [cardId, queryClient, isPolling]);
-
-  // Function to manually reset processing state if it gets stuck
-  const resetProcessingState = () => {
-    console.log(`Manually resetting processing state for card ${cardId}`);
-    setProcessingTimeout(true);
-    setIsPolling(false);
-    startTimeRef.current = null;
-    
-    // Force refresh data
-    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
-    queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
-  };
-
+  }, [data?.processing, data?.processingError, cardId, queryClient, processingTimeout, toast, isLoading]);
+  
+  // Function to manually reset processing state
+  const resetProcessingState = useCallback(async () => {
+    try {
+      console.log(`Manually resetting processing state for card ${cardId}`);
+      
+      await apiRequest("PATCH", `/api/cards/${cardId}`, { 
+        processing: false 
+      });
+      
+      // Clear timeout and reset state
+      setProcessingTimeout(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      
+      // Force refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
+      
+      toast({
+        title: "Processing Reset",
+        description: "Processing state has been reset successfully."
+      });
+    } catch (e) {
+      console.error("Failed to reset processing state:", e);
+      toast({
+        title: "Error",
+        description: "Failed to reset processing state.",
+        variant: "destructive"
+      });
+    }
+  }, [cardId, queryClient, toast]);
+  
+  // Return a more comprehensive status object
   return {
     isProcessing: data?.processing || false,
     isProcessingTimedOut: processingTimeout,
+    processingError: data?.processingError || null,
     gptOutput: data?.gptOutput || null,
     chats: data?.chats || [],
     attachments: data?.attachments || [],
     isLoading,
-    error,
+    error: isError ? (error instanceof Error ? error.message : "Unknown error") : null,
     resetProcessingState,
   };
 }

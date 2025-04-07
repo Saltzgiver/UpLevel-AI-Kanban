@@ -29,6 +29,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { ProcessingIndicator } from "@/components/ui/processing-indicator";
 
 interface CardModalProps {
   card: CardType & { 
@@ -62,6 +63,7 @@ export function CardModal({
   const { 
     isProcessing, 
     isProcessingTimedOut,
+    processingError,
     gptOutput, 
     chats, 
     attachments,
@@ -348,45 +350,13 @@ export function CardModal({
                 </Button>
               </div>
               
-              {/* Processing Indicator - Regular or Timed Out */}
-              {isProcessing ? (
-                <div className="rounded-lg border border-yellow-100 bg-yellow-50 flex items-center justify-between py-3 px-4 mb-3">
-                  <div className="flex items-center text-yellow-700">
-                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="text-sm">AI is working on your request...</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs text-amber-700 hover:bg-amber-50 border-amber-200 h-7 px-2 ml-2"
-                    onClick={handleResetProcessing}
-                    title="If processing is stuck, click to reset it"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset
-                  </Button>
-                </div>
-              ) : isProcessingTimedOut ? (
-                <div className="rounded-lg border border-orange-100 bg-orange-50 flex items-center justify-between py-3 px-4 mb-3">
-                  <div className="flex items-center text-orange-700">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    <span className="text-sm">Processing timed out. You can still view any available results.</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs text-orange-700 hover:bg-orange-100 border-orange-200 h-7 px-2 ml-2"
-                    onClick={resetProcessingState}
-                    title="Reset the processing state and try again"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset State
-                  </Button>
-                </div>
-              ) : null}
+              {/* Use the unified ProcessingIndicator component */}
+              <ProcessingIndicator 
+                isProcessing={isProcessing}
+                isTimedOut={isProcessingTimedOut}
+                error={processingError}
+                onReset={resetProcessingState}
+              />
               
               {/* Unified Chat Interface with Output */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">

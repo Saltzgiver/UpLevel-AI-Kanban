@@ -97,10 +97,32 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
   } catch (error) {
     console.error("Error processing card with GPT:", error);
     
-    // Update card to indicate processing failed
+    // More informative error message
+    const errorMessage = error instanceof Error 
+      ? error.message
+      : "Unknown error occurred while processing";
+    
+    // Check for rate limits or token limits specifically
+    let userFriendlyError = errorMessage;
+    if (errorMessage.includes("rate limit")) {
+      userFriendlyError = "OpenAI API rate limit exceeded. Please try again in a few moments.";
+    } else if (errorMessage.includes("maximum context length")) {
+      userFriendlyError = "The card content is too large for processing. Please reduce the content or split it into multiple cards.";
+    } else if (errorMessage.includes("API key")) {
+      userFriendlyError = "Invalid or missing OpenAI API key. Please update the API key in column settings.";
+    }
+    
+    // Update card with clear error message and stop processing
     await storage.updateCard(cardId, {
       processing: false,
-      gptOutput: `Error processing with GPT: ${error instanceof Error ? error.message : "Unknown error"}`
+      gptOutput: `Error processing with GPT: ${userFriendlyError}`
+    });
+    
+    // Also add as chat message for visibility
+    await storage.createChat({
+      cardId,
+      role: "assistant",
+      content: `⚠️ Error: ${userFriendlyError}`
     });
 
     throw error;
@@ -171,11 +193,26 @@ export async function processChat(cardId: number, userMessage: string, column: C
   } catch (error) {
     console.error("Error processing chat with GPT:", error);
     
-    // Add error message to chat
+    // More informative error message
+    const errorMessage = error instanceof Error 
+      ? error.message
+      : "Unknown error occurred while processing";
+    
+    // Check for rate limits or token limits specifically
+    let userFriendlyError = errorMessage;
+    if (errorMessage.includes("rate limit")) {
+      userFriendlyError = "OpenAI API rate limit exceeded. Please try again in a few moments.";
+    } else if (errorMessage.includes("maximum context length")) {
+      userFriendlyError = "The chat history is too large for processing. Try starting a new card with shorter content.";
+    } else if (errorMessage.includes("API key")) {
+      userFriendlyError = "Invalid or missing OpenAI API key. Please update the API key in column settings.";
+    }
+    
+    // Add user-friendly error message to chat
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+      content: `⚠️ Error: ${userFriendlyError}`
     });
 
     throw error;
