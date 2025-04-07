@@ -320,16 +320,6 @@ export function CardModal({
               
               {/* Unified Chat Interface with Output */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                <div className="flex items-center px-3 py-1 border-b border-gray-100 justify-between">
-                  <div className="text-xs text-gray-500 italic">
-                    {chats.length} message{chats.length !== 1 ? 's' : ''}
-                  </div>
-                  {gptOutput && (
-                    <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-green-50 border-green-200 text-green-700">
-                      Output Ready
-                    </Badge>
-                  )}
-                </div>
                 
                 <div className="flex flex-col h-[412px]"> 
                   {/* GPTChat component contains both the message area and the input */}

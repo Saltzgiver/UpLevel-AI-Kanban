@@ -228,12 +228,7 @@ export function GPTChat({
                     new Date(chat.timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 
                     ''}
                 </div>
-                {isOutputMessage && (
-                  <span className="ml-2 text-[10px] font-medium text-green-600 flex items-center">
-                    <span className="bg-green-600 rounded-full h-1.5 w-1.5 mr-1"></span>
-                    Final output
-                  </span>
-                )}
+
               </div>
               
               {/* Message content */}
@@ -247,13 +242,7 @@ export function GPTChat({
                       : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
                     : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
                 }`}>
-                  {isOutputMessage && (
-                    <div className="flex items-center mb-2 mt-1">
-                      <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] px-2 py-0 h-4 font-normal">
-                        Moves to next column
-                      </Badge>
-                    </div>
-                  )}
+
                   {isLastAIMessage && !finalOutput && !isProcessing && (
                     <div className="flex items-center mb-2 mt-1">
                       <span className="text-xs font-medium text-green-800">Latest Response</span>
