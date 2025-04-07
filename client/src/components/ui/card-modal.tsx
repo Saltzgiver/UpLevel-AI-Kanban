@@ -257,8 +257,8 @@ export function CardModal({
         {/* Main Content Area - Scrollable */}
         <div className="overflow-y-auto flex-1 px-6 pt-3 pb-5">
           {/* Description Section - Prompt Context */}
-          <div className="mb-2">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
             </div>
@@ -267,7 +267,7 @@ export function CardModal({
               <div 
                 className={`rounded-md ${
                   description ? 
-                    'border-0 focus-within:border focus-within:border-gray-200' : 
+                    'border border-gray-200 bg-gray-50/50' : 
                     'border border-dashed border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -286,7 +286,7 @@ export function CardModal({
                   )}
                   <textarea
                     ref={textAreaRef}
-                    className={`w-full text-sm py-1 px-3 overflow-hidden bg-transparent ${
+                    className={`w-full text-sm py-2 px-3 overflow-hidden bg-transparent ${
                       description ? 'border-0 focus:outline-none focus:ring-0' : 'opacity-0'
                     }`}
                     value={description}
@@ -326,7 +326,7 @@ export function CardModal({
             </div>
           </div>
           
-          <Separator className="my-2" />
+          <Separator className="my-3" />
           
           {/* GPT Content & Chat Interface - Expanded and prominent */}
           {column.gptAssigned && (
@@ -357,7 +357,7 @@ export function CardModal({
               
               {/* Unified Chat Interface with Output */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                <div className="flex flex-col h-[412px] overflow-y-auto"> 
+                <div className="flex flex-col h-[320px] overflow-y-auto"> 
                   {/* GPTChat component contains both the message area and the input */}
                   <GPTChat 
                     cardId={card.id} 

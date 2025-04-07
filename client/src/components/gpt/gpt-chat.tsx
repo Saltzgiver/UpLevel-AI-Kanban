@@ -350,7 +350,7 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="flex-1 px-4 py-4 flex flex-col scroll-smooth"
+          className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
         >
           <ChatMessages />
         </div>
