@@ -86,6 +86,7 @@ export const insertChatSchema = createInsertSchema(chats).pick({
   cardId: true,
   role: true,
   content: true,
+  timestamp: true,
 });
 
 // Attachments table for files

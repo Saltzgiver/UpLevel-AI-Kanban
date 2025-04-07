@@ -45,8 +45,16 @@ export function CardModal({
   const [showMoveOptions, setShowMoveOptions] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  // Get real-time processing status
+  // Get real-time processing status with more frequent polling for chat messages
   const { isProcessing, gptOutput, chats, attachments } = useCardProcessing(card.id);
+
+  // Actively check for updates when the modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Check for updates immediately when modal opens
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${card.id}/processing-status`] });
+    }
+  }, [isOpen, card.id, queryClient]);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 

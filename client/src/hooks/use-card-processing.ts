@@ -54,6 +54,42 @@ export function useCardProcessing(cardId: number) {
     
     return undefined;
   }, [data?.processing, isPolling, cardId, queryClient]);
+  
+  // Always start a brief polling period when the hook is first used or when component using it gets focus
+  // This ensures we catch any messages that were added since the last time the component was active
+  useEffect(() => {
+    const pollBriefly = () => {
+      // Poll every second for 5 seconds
+      let pollCount = 0;
+      const intervalId = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
+        pollCount++;
+        if (pollCount >= 5) {
+          clearInterval(intervalId);
+        }
+      }, 1000);
+      
+      return intervalId;
+    };
+    
+    // Initial poll when hook is mounted
+    const initialPollId = pollBriefly();
+    
+    // Set up focus listener to poll when the window regains focus
+    const handleFocus = () => {
+      // Don't start a new poll if we're already actively polling
+      if (!isPolling) {
+        pollBriefly();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(initialPollId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [cardId, queryClient, isPolling]);
 
   return {
     isProcessing: data?.processing || false,

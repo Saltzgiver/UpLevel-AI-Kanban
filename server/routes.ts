@@ -352,7 +352,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CHAT ROUTES
   app.post("/api/chats", async (req, res) => {
     try {
-      const chatData = insertChatSchema.parse(req.body);
+      const chatData = insertChatSchema.parse({
+        ...req.body,
+        // Add timestamp to new chats if not provided
+        timestamp: req.body.timestamp || new Date().toISOString()
+      });
       
       // Create user chat message
       const chat = await storage.createChat(chatData);
@@ -368,6 +372,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Column has no GPT assigned" });
       }
       
+      // Mark card as processing while GPT is generating a response
+      await storage.updateCard(chatData.cardId, { processing: true });
+      
       // Return response immediately
       res.status(201).json(chat);
       
@@ -376,6 +383,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await processChat(chatData.cardId, chatData.content, column);
       } catch (error) {
         console.error("Error processing chat with GPT:", error);
+        // Make sure processing flag is cleared even if there's an error
+        await storage.updateCard(chatData.cardId, { processing: false });
       }
       
       return;
@@ -413,12 +422,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Card not found" });
       }
       
-      return res.json({ 
+      // Get the latest chat data if available
+      let chats = card.chats || [];
+      
+      // Enhance the response to include timestamps
+      const response = { 
         processing: card.processing || false,
         gptOutput: card.gptOutput,
-        chats: card.chats || [],
-        attachments: card.attachments || []
-      });
+        chats: chats.map(chat => ({
+          ...chat,
+          // Ensure timestamp is present for all chats
+          timestamp: chat.timestamp || new Date().toISOString()
+        })),
+        attachments: card.attachments || [],
+        updatedAt: new Date().toISOString() // Add timestamp for clients to track freshness
+      };
+      
+      return res.json(response);
     } catch (error) {
       console.error("Error getting card processing status:", error);
       return res.status(500).json({ message: "Error getting card processing status" });

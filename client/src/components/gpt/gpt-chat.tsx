@@ -165,13 +165,31 @@ export function GPTChat({
     setUserHasScrolled(false);
     
     try {
+      // Store a copy of the message text before clearing the input
+      const sentMessage = message.trim();
+      
+      // Create a local optimistic update with the new message
+      const optimisticChat = {
+        id: Date.now(), // Temporary ID
+        cardId,
+        role: "user",
+        content: sentMessage,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Clear the input field immediately for better UX
+      setMessage("");
+      
+      // Send the message to the server
       await apiRequest("POST", `/api/chats`, {
         cardId,
         role: "user",
-        content: message
+        content: sentMessage
       });
       
-      setMessage("");
+      // Start polling for processing status to get new messages
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
+      // Also update the board data
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       
       // Scroll to bottom after sending a message
