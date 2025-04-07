@@ -327,6 +327,7 @@ export function CardModal({
                     cardId={card.id} 
                     chats={chats} 
                     gptName={column.gptName || "AI Assistant"}
+                    gptColor={column.gptColor}
                     embedded={true}
                     finalOutput={gptOutput}
                     isProcessing={isProcessing}

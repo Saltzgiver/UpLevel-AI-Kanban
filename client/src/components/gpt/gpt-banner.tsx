@@ -4,6 +4,57 @@ import { useState } from "react";
 import { AssignGPTModal } from "@/components/ui/assign-gpt-modal";
 import { Column } from "@shared/schema";
 
+// Define color palette
+type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
+
+type ColorStyles = {
+  bgGradient: string;
+  borderColor: string;
+  textColor: string;
+  iconColor: string;
+};
+
+const colorPalette: Record<ColorName, ColorStyles> = {
+  "Peach": { 
+    bgGradient: "from-[#FEE9D7]/70 to-[#F7C9B0]/40", 
+    borderColor: "border-[#F7C9B0]", 
+    textColor: "text-[#E25B3D]",
+    iconColor: "text-[#E25B3D]"
+  },
+  "Sky": { 
+    bgGradient: "from-[#E1F2FE]/70 to-[#B7DCF7]/40", 
+    borderColor: "border-[#B7DCF7]", 
+    textColor: "text-[#2E7EC9]",
+    iconColor: "text-[#2E7EC9]"
+  }, 
+  "Lavender": { 
+    bgGradient: "from-[#F6E6FF]/70 to-[#E9CEFB]/40", 
+    borderColor: "border-[#E9CEFB]", 
+    textColor: "text-[#C235D1]",
+    iconColor: "text-[#C235D1]"
+  },
+  "Mint": { 
+    bgGradient: "from-[#DDFFE7]/70 to-[#C1EDD4]/40", 
+    borderColor: "border-[#C1EDD4]", 
+    textColor: "text-[#1A9E5E]",
+    iconColor: "text-[#1A9E5E]"
+  },
+  "Aqua": { 
+    bgGradient: "from-[#E0F9FF]/70 to-[#C3E8F4]/40", 
+    borderColor: "border-[#C3E8F4]", 
+    textColor: "text-[#3992B0]",
+    iconColor: "text-[#3992B0]"
+  }
+};
+
+// Helper to safely get color styles
+const getColorStyle = (colorName: string | null | undefined, defaultColor: ColorName = "Peach"): ColorStyles => {
+  if (colorName && colorName in colorPalette) {
+    return colorPalette[colorName as ColorName];
+  }
+  return colorPalette[defaultColor];
+};
+
 interface GPTBannerProps {
   column: Column;
 }
@@ -12,12 +63,16 @@ export function GPTBanner({ column }: GPTBannerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (column.gptAssigned) {
+    const colorStyle = getColorStyle(column.gptColor);
+    
     return (
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-100 rounded-lg mb-3 p-3 text-sm shadow-sm">
+      <div className={`bg-gradient-to-r ${colorStyle.bgGradient} ${colorStyle.borderColor} rounded-lg mb-3 p-3 text-sm shadow-sm`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Sparkles className="h-5 w-5 mr-2 text-green-600" />
-            <span className="font-semibold text-green-700">GPT Assistant</span>
+            <Sparkles className={`h-5 w-5 mr-2 ${colorStyle.iconColor}`} />
+            <span className={`font-semibold ${colorStyle.textColor}`}>
+              {column.gptName || "GPT Assistant"}
+            </span>
           </div>
           <Button
             variant="ghost"

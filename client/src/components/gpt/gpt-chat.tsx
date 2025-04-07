@@ -8,19 +8,46 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 
+// Define color palette
+type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
+
+type ColorStyles = {
+  bg: string;
+  text: string;
+  border: string;
+};
+
+const colorPalette: Record<ColorName, ColorStyles> = {
+  "Peach": { bg: "bg-[#FEE9D7]", text: "text-[#E25B3D]", border: "border-[#F7C9B0]" },
+  "Sky": { bg: "bg-[#E1F2FE]", text: "text-[#2E7EC9]", border: "border-[#B7DCF7]" }, 
+  "Lavender": { bg: "bg-[#F6E6FF]", text: "text-[#C235D1]", border: "border-[#E9CEFB]" },
+  "Mint": { bg: "bg-[#DDFFE7]", text: "text-[#1A9E5E]", border: "border-[#C1EDD4]" },
+  "Aqua": { bg: "bg-[#E0F9FF]", text: "text-[#3992B0]", border: "border-[#C3E8F4]" }
+};
+
 interface GPTChatProps {
   cardId: number;
   chats: Chat[];
   gptName: string;
+  gptColor?: string | null;
   embedded?: boolean;
   finalOutput?: string | null;
   isProcessing?: boolean;
 }
 
+// Helper to safely get color styles
+const getColorStyle = (colorName: string | null | undefined, defaultColor: ColorName = "Peach"): ColorStyles => {
+  if (colorName && colorName in colorPalette) {
+    return colorPalette[colorName as ColorName];
+  }
+  return colorPalette[defaultColor];
+};
+
 export function GPTChat({ 
   cardId, 
   chats, 
   gptName, 
+  gptColor = "Peach" as ColorName,
   embedded = false,
   finalOutput = null,
   isProcessing = false
@@ -213,13 +240,13 @@ export function GPTChat({
                 <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   chat.role === 'assistant'
                     ? isLastAIMessage 
-                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      ? `${getColorStyle(gptColor).bg} ${getColorStyle(gptColor).text} ${getColorStyle(gptColor).border}`
                       : 'bg-gray-100 text-gray-800 border border-gray-200'
                     : 'bg-blue-100 text-blue-800 border border-blue-200'
                 }`}>
                   {chat.role === 'assistant' 
                     ? (isLastAIMessage 
-                      ? <span className="flex items-center"><Sparkles className="h-3 w-3 mr-1 text-green-600" /> {gptName}</span>
+                      ? <span className="flex items-center"><Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(gptColor).text}`} /> {gptName}</span>
                       : gptName) 
                     : 'You'}
                 </div>
@@ -238,7 +265,7 @@ export function GPTChat({
                 <div className={`text-sm ${
                   chat.role === 'assistant' 
                     ? isLastAIMessage
-                      ? 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200 py-2 px-3 shadow-sm' 
+                      ? `${getColorStyle(gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(gptColor).border} py-2 px-3 shadow-sm` 
                       : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
                     : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
                 }`}>

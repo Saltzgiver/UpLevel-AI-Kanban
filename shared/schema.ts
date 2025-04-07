@@ -36,6 +36,7 @@ export const columns = pgTable("columns", {
   gptAssigned: boolean("gpt_assigned").default(false),
   gptName: text("gpt_name"),
   gptInstructions: text("gpt_instructions"),
+  gptColor: text("gpt_color"),
   autoTrigger: boolean("auto_trigger").default(true),
   apiKey: text("api_key"),
 });
@@ -47,6 +48,7 @@ export const insertColumnSchema = createInsertSchema(columns).pick({
   gptAssigned: true,
   gptName: true,
   gptInstructions: true,
+  gptColor: true,
   autoTrigger: true,
   apiKey: true,
 });

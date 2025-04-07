@@ -9,6 +9,7 @@ import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Check } from "lucide-react";
 
 interface AssignGPTModalProps {
   column: Column;
@@ -16,10 +17,20 @@ interface AssignGPTModalProps {
   onClose: () => void;
 }
 
+// Define color palette
+const colorPalette = [
+  { name: "Peach", bg: "bg-[#FEE9D7]", text: "text-[#E25B3D]", border: "border-[#F7C9B0]" },
+  { name: "Sky", bg: "bg-[#E1F2FE]", text: "text-[#2E7EC9]", border: "border-[#B7DCF7]" }, 
+  { name: "Lavender", bg: "bg-[#F6E6FF]", text: "text-[#C235D1]", border: "border-[#E9CEFB]" },
+  { name: "Mint", bg: "bg-[#DDFFE7]", text: "text-[#1A9E5E]", border: "border-[#C1EDD4]" },
+  { name: "Aqua", bg: "bg-[#E0F9FF]", text: "text-[#3992B0]", border: "border-[#C3E8F4]" }
+];
+
 export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps) {
   const [gptName, setGptName] = useState<string>(column.gptName || "GPT Assistant");
   const [apiKey, setApiKey] = useState<string>(column.apiKey || "");
   const [instructions, setInstructions] = useState<string>(column.gptInstructions || "");
+  const [gptColor, setGptColor] = useState<string>(column.gptColor || colorPalette[0].name);
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
@@ -42,6 +53,7 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
         gptName,
         apiKey,
         gptInstructions: instructions,
+        gptColor,
         autoTrigger
       });
       
@@ -123,6 +135,32 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
             />
             <p className="text-xs text-muted-foreground">
               Example: "Generate a poem based on the card title and description"
+            </p>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label>GPT Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {colorPalette.map((color) => (
+                <button
+                  key={color.name}
+                  type="button"
+                  className={`relative ${color.bg} ${color.text} ${color.border} flex items-center justify-center px-5 py-3 rounded-md border hover:opacity-90 transition-opacity ${
+                    gptColor === color.name ? 'ring-2 ring-offset-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setGptColor(color.name)}
+                >
+                  <span>Text</span>
+                  {gptColor === color.name && (
+                    <div className="absolute top-1 right-1">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This color will be used to identify the AI assistant in chat
             </p>
           </div>
           
