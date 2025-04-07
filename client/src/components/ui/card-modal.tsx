@@ -331,7 +331,7 @@ export function CardModal({
                   )}
                 </div>
                 
-                <div className="flex-grow flex flex-col"> 
+                <div className="flex flex-col h-[412px]"> 
                   {/* GPTChat component contains both the message area and the input */}
                   <GPTChat 
                     cardId={card.id} 

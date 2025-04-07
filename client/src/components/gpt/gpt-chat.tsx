@@ -57,9 +57,15 @@ export function GPTChat({
   }, []);
   
   // Auto-scroll to bottom when messages change, but only if user hasn't scrolled up
+  // Use setTimeout to ensure the DOM has fully updated before scrolling
   useEffect(() => {
     if (chatContainerRef.current && (!userHasScrolled || isProcessing)) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      // Use requestAnimationFrame for smoother scrolling after layout updates
+      requestAnimationFrame(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      });
     }
   }, [chats, isProcessing, finalOutput, userHasScrolled]);
 
@@ -81,11 +87,12 @@ export function GPTChat({
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       
       // Force scroll to bottom after sending a message
-      setTimeout(() => {
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
         if (chatContainerRef.current) {
           chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
-      }, 100);
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -101,8 +108,10 @@ export function GPTChat({
   const ChatMessages = () => {
     if (chats.length === 0 && !isProcessing) {
       return (
-        <div className="text-sm text-center text-muted-foreground p-4 mt-auto">
-          No messages yet. Ask the AI a question to start the conversation.
+        <div className="flex items-center justify-center h-full">
+          <div className="text-sm text-center text-muted-foreground p-4">
+            No messages yet. Ask the AI a question to start the conversation.
+          </div>
         </div>
       );
     }
@@ -122,7 +131,7 @@ export function GPTChat({
     );
     
     return (
-      <div className="space-y-4 flex flex-col min-h-[200px]">
+      <div className="space-y-4 flex flex-col">
         {/* Display processing indicator if applicable */}
         {processingIndicator}
         
@@ -210,7 +219,8 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-0 py-2 flex flex-col min-h-[200px] max-h-[350px]"
+          className="overflow-y-auto px-0 py-2 flex flex-col h-[350px]"
+          style={{ overscrollBehavior: 'contain' }}
         >
           <ChatMessages />
         </div>
