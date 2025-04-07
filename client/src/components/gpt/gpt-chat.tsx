@@ -181,8 +181,28 @@ export function GPTChat({
           const isOutputMessage = isLastAIMessage && finalOutput && !isProcessing;
           
           return (
-            <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'}`}>
+            <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'} mb-4`}>
+              {/* Message header with name and time - Slack style */}
+              <div className={`flex items-center mb-1 ${chat.role === 'assistant' ? 'ml-2' : 'mr-2 justify-end w-full'}`}>
+                <div className="font-medium text-xs text-gray-700">
+                  {chat.role === 'assistant' ? gptName : 'You'}
+                </div>
+                <div className="text-[10px] text-gray-400 ml-2">
+                  {chat.timestamp ? 
+                    new Date(chat.timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 
+                    ''}
+                </div>
+                {isOutputMessage && (
+                  <span className="ml-2 text-[10px] font-medium text-green-600 flex items-center">
+                    <span className="bg-green-600 rounded-full h-1.5 w-1.5 mr-1"></span>
+                    Final output
+                  </span>
+                )}
+              </div>
+              
+              {/* Message content */}
               <div className="flex items-start">
+                {/* Only show icon for assistant messages */}
                 {chat.role === 'assistant' && (
                   <div className={`w-6 h-6 rounded-full ${isLastAIMessage ? 'bg-green-500' : 'bg-green-100'} mr-2 flex-shrink-0 flex items-center justify-center`}>
                     {isLastAIMessage ? (
@@ -193,46 +213,32 @@ export function GPTChat({
                   </div>
                 )}
                 
+                {/* Message bubble - user messages keep light blue bubble, GPT messages vary based on rules */}
                 <div className={`text-sm ${
                   chat.role === 'assistant' 
                     ? isLastAIMessage
-                      ? 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200' 
-                      : 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border border-green-100'
-                    : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100'
-                } py-2 px-3 shadow-sm`}>
+                      ? 'bg-green-50 text-gray-800 rounded-lg rounded-tl-none border-2 border-green-200 py-2 px-3 shadow-sm' 
+                      : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
+                    : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
+                }`}>
                   {isOutputMessage && (
                     <div className="flex items-center mb-1">
-                      <span className="text-xs font-medium text-green-800 mr-2">Final Output</span>
                       <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] px-1 py-0 h-4">
                         Moves to next column
                       </Badge>
                     </div>
                   )}
                   {isLastAIMessage && !finalOutput && !isProcessing && (
-                    <div className="text-xs font-medium text-green-800 mb-1">Latest AI Response</div>
+                    <div className="text-xs font-medium text-green-800 mb-1">Latest Response</div>
                   )}
                   {chat.content}
                 </div>
                 
+                {/* User avatar only shown for user messages */}
                 {chat.role === 'user' && (
                   <div className="w-6 h-6 rounded-full bg-blue-100 ml-2 flex-shrink-0 flex items-center justify-center">
                     <span className="text-xs font-bold text-blue-700">You</span>
                   </div>
-                )}
-              </div>
-              
-              <div className={`text-[10px] ${
-                chat.role === 'assistant' 
-                  ? isLastAIMessage ? 'text-green-600 font-medium' : 'text-gray-400'
-                  : 'text-gray-400'
-              } mt-1 px-2 ${
-                chat.role === 'assistant' ? 'ml-8' : 'mr-8 text-right'
-              }`}>
-                {chat.timestamp ? 
-                  new Date(chat.timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 
-                  ''}
-                {isOutputMessage && (
-                  <span className="ml-1 font-medium text-green-600">• Final output</span>
                 )}
               </div>
             </div>
