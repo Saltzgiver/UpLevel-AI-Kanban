@@ -233,12 +233,22 @@ export function GPTChat({
       .filter(item => item.chat.role === 'assistant')
       .pop()?.index;
     
-    // Previously we had a processing indicator here that has been removed
-    // per user request
+    // Determine if we should show processing indicator
+    // Hide it if we already have a final output (could be stuck in processing state)
+    const shouldShowProcessing = isProcessing && !finalOutput;
+    
+    // Processing indicator
+    const processingIndicator = shouldShowProcessing && (
+      <div className="flex items-center justify-center py-3">
+        <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
+        <span className="text-sm text-green-700">Processing with AI...</span>
+      </div>
+    );
     
     return (
       <div className="space-y-6 flex flex-col">
-        {/* Processing indicator removed */}
+        {/* Display processing indicator if applicable */}
+        {processingIndicator}
         
         {/* Display all chat messages */}
         {chats.map((chat, index) => {
