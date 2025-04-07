@@ -216,7 +216,7 @@ export function CardModal({
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
       <div 
         ref={modalRef}
-        className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-xl"
+        className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
       >
         {/* Header - Fixed at the top with single-line title */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -254,10 +254,9 @@ export function CardModal({
           </div>
         )}
         
-        {/* Main Content Area - Scrollable */}
+        {/* Main Content Area - Using flex layout instead of scroll on this container */}
         <div 
-          className="overflow-y-auto flex-1 px-6 pt-3 pb-5"
-          onWheel={e => e.stopPropagation()}
+          className="flex-1 px-6 pt-3 pb-5 flex flex-col"
         >
           {/* Description Section - Prompt Context */}
           <div className="mb-2">
@@ -359,20 +358,17 @@ export function CardModal({
               />
               
               {/* Unified Chat Interface with Output */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                
-                <div className="flex flex-col h-[412px]"> 
-                  {/* GPTChat component contains both the message area and the input */}
-                  <GPTChat 
-                    cardId={card.id} 
-                    chats={chats} 
-                    gptName={column.gptName || "AI Assistant"}
-                    gptColor={column.gptColor}
-                    embedded={true}
-                    finalOutput={gptOutput}
-                    isProcessing={isProcessing}
-                  />
-                </div>
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-grow">
+                {/* GPTChat component contains both the message area and the input */}
+                <GPTChat 
+                  cardId={card.id} 
+                  chats={chats} 
+                  gptName={column.gptName || "AI Assistant"}
+                  gptColor={column.gptColor}
+                  embedded={true}
+                  finalOutput={gptOutput}
+                  isProcessing={isProcessing}
+                />
               </div>
               
               {/* Attachments Section - Clear separation and grouping */}

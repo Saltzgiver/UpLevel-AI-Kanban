@@ -58,123 +58,75 @@ export function GPTChat({
   const [isSending, setIsSending] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Track if this is the initial render to force scroll to bottom
+  const isInitialRenderRef = useRef(true);
+  // Track if chat messages have changed to force scroll to bottom on new messages
+  const prevChatsLengthRef = useRef(chats?.length || 0);
 
-  // Track if user has manually scrolled up
-  const [userHasScrolled, setUserHasScrolled] = useState(false);
-
-  // Using refs to track scroll state between renders without causing re-renders
-  const lastScrollPositionRef = useRef(0);
-  const scrollingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isUserScrollingRef = useRef(false);
-
-  const handleScroll = () => {
-    if (!chatContainerRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    const isScrolledToBottom = scrollHeight - scrollTop - clientHeight < 50;
-
-    // Get the scroll direction (up or down)
-    const isScrollingUp = scrollTop < lastScrollPositionRef.current;
-
-    // Only detect intentional scrolling with significant movement
-    // This prevents tiny scroll adjustments from triggering the user scroll state
-    const scrollDelta = Math.abs(scrollTop - lastScrollPositionRef.current);
-
-    // If user is clearly scrolling up (away from bottom), mark as user-scrolled
-    if (isScrollingUp && scrollDelta > 20 && !isScrolledToBottom) {
-      isUserScrollingRef.current = true;
-      setUserHasScrolled(true);
-    }
-
-    // If at bottom, we can reset the user scrolled state
-    if (isScrolledToBottom) {
-      setUserHasScrolled(false);
-      isUserScrollingRef.current = false;
-    }
-
-    // Save the position for next comparison
-    lastScrollPositionRef.current = scrollTop;
-
-    // Debounce the scroll end detection
-    if (scrollingTimerRef.current) {
-      clearTimeout(scrollingTimerRef.current);
-    }
-
-    // Only reset scroll state when user has stopped scrolling for a while
-    scrollingTimerRef.current = setTimeout(() => {
-      isUserScrollingRef.current = false;
-
-      // When scrolling stops, if at bottom, reset user scroll state
-      if (isScrolledToBottom) {
-        setUserHasScrolled(false);
+  // Simplified scroll behavior function
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    if (chatContainerRef.current) {
+      // Log some details about scrolling for debugging
+      console.log("Scroll effect triggered, chats length:", chats.length);
+      
+      if (isInitialRenderRef.current) {
+        console.log("Forcing scroll to absolute bottom");
+        // Set the scroll position directly for most reliable first-render behavior
+        const container = chatContainerRef.current;
+        console.log("Container: scrollHeight=", container.scrollHeight, "clientHeight=", container.clientHeight);
+        
+        // Using RAF to ensure the DOM has updated before scrolling
+        requestAnimationFrame(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          }
+        });
+        
+        isInitialRenderRef.current = false;
+      } else {
+        // For subsequent scrolls, use smooth behavior
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior
+        });
       }
-    }, 300); // Longer debounce time to prevent interference
+    }
   };
-
-  // Add scroll event listener
+  
+  // Scroll to bottom on initial render
   useEffect(() => {
-    const container = chatContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
-
-  // Delayed scroll on mount to ensure content is rendered
-  useEffect(() => {
+    // Use a slightly longer delay to ensure content is fully rendered
     const timer = setTimeout(() => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
-    }, 100);
+      scrollToBottom('auto');
+    }, 150);
     return () => clearTimeout(timer);
   }, []);
-
-  // Auto-scroll to bottom when messages change, but only in specific cases:
-  // 1. When new messages arrive AND user hasn't manually scrolled up
-  // 2. When processing state changes (starts or stops)
-  // 3. When finalOutput becomes available
+  
+  // Scroll to bottom when new messages arrive or when processing state changes
   useEffect(() => {
-    // Never auto-scroll while the user is actively scrolling
-    if (isUserScrollingRef.current) {
-      return;
-    }
-
-    // Only auto-scroll if one of these conditions is met
-    const shouldAutoScroll = 
-      !userHasScrolled || // User hasn't scrolled up
-      isProcessing ||    // Processing state changed (loading)
-      (finalOutput && !prevFinalOutputRef.current); // New final output available
-
-    if (chatContainerRef.current && shouldAutoScroll) {
-      // Use a small delay to ensure we don't interfere with manual scrolling
-      // This helps prevent scroll jittering/jumping
-      const timer = setTimeout(() => {
-        if (!isUserScrollingRef.current && chatContainerRef.current) {
-          // Smooth scroll to bottom instead of instant jump
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
+    // Check if we have new messages
+    const hasNewMessages = chats.length > prevChatsLengthRef.current;
+    prevChatsLengthRef.current = chats.length;
+    
+    // Always scroll to bottom when:
+    // 1. New messages arrive
+    // 2. Processing state changes
+    // 3. Final output becomes available
+    if (hasNewMessages || isProcessing !== undefined || finalOutput) {
+      // Use a small timeout to ensure DOM has updated
+      setTimeout(() => {
+        scrollToBottom('smooth');
       }, 100);
-
-      return () => clearTimeout(timer);
     }
-
-    // Track previous finalOutput state to detect changes
-    prevFinalOutputRef.current = finalOutput;
-  }, [chats, isProcessing, finalOutput, userHasScrolled]);
-
-  // Reference to track previous finalOutput status
-  const prevFinalOutputRef = useRef(finalOutput);
+  }, [chats, isProcessing, finalOutput]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
     setIsSending(true);
-    // Reset user scroll state when sending a new message
-    setUserHasScrolled(false);
+    // Use scrollToBottom to scroll to the latest message after sending
+    scrollToBottom('smooth');
 
     try {
       // Store a copy of the message text before clearing the input
@@ -203,17 +155,8 @@ export function GPTChat({
       queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
       // Also update the board data
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-
-      // Scroll to bottom after sending a message
-      // Using smooth scroll for better user experience
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      }, 100);
+      
+      // We already called scrollToBottom at the start, no need to scroll again
     } catch (error) {
       toast({
         title: "Error",
@@ -350,18 +293,17 @@ export function GPTChat({
   if (embedded) {
     return (
       <div className="flex flex-col h-full">
-        {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
-        {chats.length > 3 && !userHasScrolled && (
-          <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
-            <ChevronUp className="h-3 w-3 mx-auto" />
-            Scroll for earlier messages
-          </div>
-        )}
-
+        {/* Simplified chat container with flex-grow for dynamic sizing */}
         <div 
           ref={chatContainerRef}
-          className="overflow-y-auto px-4 py-4 flex flex-col h-[350px] scroll-smooth isolate"
-          onWheel={e => e.stopPropagation()}
+          className="overflow-y-auto px-4 py-4 flex flex-col flex-grow scroll-smooth"
+          style={{ 
+            // Set min-height for initial scrollable area, but allow it to grow
+            minHeight: "350px",
+            // Add a subtle scrollbar indicator that doesn't take space
+            scrollbarWidth: "thin",
+            scrollbarColor: "#E5E7EB transparent"
+          }}
         >
           <ChatMessages />
         </div>
