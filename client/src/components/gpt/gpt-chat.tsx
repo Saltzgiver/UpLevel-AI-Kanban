@@ -111,6 +111,28 @@ export function GPTChat({
     }, 300); // Longer debounce time to prevent interference
   };
   
+  // Initial scroll to bottom when component mounts or chat data changes
+  useEffect(() => {
+    // Reset user scroll state when component receives new data/mounts
+    setUserHasScrolled(false);
+    isUserScrollingRef.current = false;
+    
+    // Scroll to bottom immediately on mount
+    if (chatContainerRef.current) {
+      // Use a slightly longer delay to ensure DOM is fully rendered
+      const initialScrollTimer = setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'auto'  // Use 'auto' for initial scroll to avoid animation issues
+          });
+        }
+      }, 150);
+      
+      return () => clearTimeout(initialScrollTimer);
+    }
+  }, []);  // Empty dependency array means this runs once on mount
+
   // Add scroll event listener
   useEffect(() => {
     const container = chatContainerRef.current;

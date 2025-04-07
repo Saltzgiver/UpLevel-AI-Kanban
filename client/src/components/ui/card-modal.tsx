@@ -77,8 +77,11 @@ export function CardModal({
     if (isOpen) {
       setTitle(card.title);
       setDescription(card.description || "");
+      
+      // Reset processing state to ensure fresh data when opening a card
+      resetProcessingState();
     }
-  }, [isOpen, card]);
+  }, [isOpen, card, resetProcessingState]);
 
   // Handle auto-height for text area after description is set
   useEffect(() => {
