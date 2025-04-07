@@ -293,13 +293,14 @@ export function GPTChat({
   if (embedded) {
     return (
       <div className="flex flex-col h-full">
-        {/* Simplified chat container with flex-grow for dynamic sizing */}
+        {/* Chat container with fixed height to ensure scrolling works */}
         <div 
           ref={chatContainerRef}
-          className="overflow-y-auto px-4 py-4 flex flex-col flex-grow scroll-smooth"
+          className="overflow-y-auto px-4 py-4 flex flex-col scroll-smooth"
           style={{ 
-            // Set min-height for initial scrollable area, but allow it to grow
-            minHeight: "350px",
+            // Fixed height to ensure scrolling is possible
+            height: "350px",
+            maxHeight: "350px",
             // Add a subtle scrollbar indicator that doesn't take space
             scrollbarWidth: "thin",
             scrollbarColor: "#E5E7EB transparent"

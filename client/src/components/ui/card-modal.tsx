@@ -358,7 +358,7 @@ export function CardModal({
               />
               
               {/* Unified Chat Interface with Output */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-grow">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: "450px" }}>
                 {/* GPTChat component contains both the message area and the input */}
                 <GPTChat 
                   cardId={card.id} 
