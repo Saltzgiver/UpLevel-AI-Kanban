@@ -16,11 +16,7 @@ import {
   MessageSquare, 
   AlignLeft, 
   Sparkles,
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  Edit,
-  Save
+  AlertTriangle
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
@@ -60,8 +56,6 @@ export function CardModal({
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
   const [isSaving, setIsSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(false);
   const [showMoveOptions, setShowMoveOptions] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -84,10 +78,6 @@ export function CardModal({
     if (isOpen) {
       setTitle(card.title);
       setDescription(card.description || "");
-      // Automatically collapse long descriptions
-      const shouldCollapseDescription = (card.description || "").length > 120;
-      setIsDescriptionCollapsed(shouldCollapseDescription);
-      setIsEditing(false);
     }
   }, [isOpen, card]);
 
@@ -284,60 +274,12 @@ export function CardModal({
         <div className="overflow-y-auto flex-1 px-6 pt-3 pb-5">
           {/* Description Section - Prompt Context */}
           <div className="mb-4">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
-              </div>
-              
-              {/* Minimalist action buttons - only shown when there's content */}
-              {description && (
-                <div className="flex items-center gap-1.5">
-                  {/* Edit/Save button */}
-                  {!isEditing ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-full"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <Edit className="h-3.5 w-3.5 text-gray-500" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-full"
-                      onClick={() => {
-                        setIsEditing(false);
-                        handleSaveDescription();
-                      }}
-                    >
-                      <Save className="h-3.5 w-3.5 text-gray-500" />
-                    </Button>
-                  )}
-                  
-                  {/* Collapse/Expand button - only if content is more than 2 lines approx */}
-                  {textAreaRef.current && textAreaRef.current.scrollHeight > 50 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-full"
-                      onClick={() => setIsDescriptionCollapsed(!isDescriptionCollapsed)}
-                    >
-                      {isDescriptionCollapsed ? (
-                        <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
-                      ) : (
-                        <ChevronUp className="h-3.5 w-3.5 text-gray-500" />
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
+            <div className="flex items-center gap-2 mb-2">
+              <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
             </div>
-            
             <div className="pl-6">
-              {/* Dynamic height text area that adapts to content with minimalist edit/save UX */}
+              {/* Dynamic height text area that adapts to content and is read-only until clicked */}
               <div 
                 className={`rounded-md ${
                   description ? 
@@ -345,90 +287,60 @@ export function CardModal({
                     'border border-dashed border-gray-200 hover:border-gray-300'
                 }`}
               >
-                {/* Collapsed view - first 2 lines with ellipsis */}
-                {description && isDescriptionCollapsed ? (
-                  <div 
-                    className="relative p-2 text-sm cursor-pointer"
-                    onClick={() => setIsDescriptionCollapsed(false)}
-                  >
-                    <p className="line-clamp-2 text-gray-600">
-                      {description}
-                    </p>
-                    <div className="absolute bottom-0 right-0 pr-2 pb-1">
-                      <div className="text-xs text-primary font-medium">Show more</div>
+                <div 
+                  className={`min-h-0 w-full relative ${description ? '' : 'cursor-text'}`}
+                  onClick={(e) => {
+                    // Find the textarea and focus it when the container is clicked
+                    const textarea = e.currentTarget.querySelector('textarea');
+                    if (textarea) textarea.focus();
+                  }}
+                >
+                  {!description && (
+                    <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
+                      Add context for the AI to understand your task...
                     </div>
-                  </div>
-                ) : (
-                  <div 
-                    className={`min-h-0 w-full relative ${description && !isEditing ? '' : 'cursor-text'}`}
-                    onClick={(e) => {
-                      if (!isEditing && description) {
-                        setIsEditing(true);
-                      }
-                      // Find the textarea and focus it when the container is clicked
-                      const textarea = e.currentTarget.querySelector('textarea');
-                      if (textarea) textarea.focus();
+                  )}
+                  <textarea
+                    ref={textAreaRef}
+                    className={`w-full text-sm py-2 px-3 bg-transparent ${
+                      description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
+                    }`}
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      // Only auto-adjust height up to a point
+                      e.target.style.height = '24px';
+                      const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
+                      e.target.style.height = newHeight + 'px';
                     }}
-                  >
-                    {!description && (
-                      <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
-                        Add context for the AI to understand your task...
-                      </div>
-                    )}
-                    
-                    {/* Read-only view of content when not editing and has content */}
-                    {description && !isEditing ? (
-                      <div className="w-full text-sm p-3 text-gray-600">
-                        {description.split("\n").map((line, i) => (
-                          <p key={i}>{line || <br/>}</p>
-                        ))}
-                      </div>
-                    ) : (
-                      <textarea
-                        ref={textAreaRef}
-                        className={`w-full text-sm py-2 px-3 bg-transparent ${
-                          description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
-                        }`}
-                        value={description}
-                        onChange={(e) => {
-                          setDescription(e.target.value);
-                          // Only auto-adjust height up to a point
-                          e.target.style.height = '24px';
-                          const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
-                          e.target.style.height = newHeight + 'px';
-                        }}
-                        onFocus={(e) => {
-                          // Show border on focus
-                          setIsEditing(true);
-                          e.target.parentElement?.classList.add('border');
-                          e.target.parentElement?.classList.add('border-gray-200');
-                          e.target.classList.remove('opacity-0');
-                          // Auto-adjust height with max
-                          e.target.style.height = '24px';
-                          const newHeight = Math.min(e.target.scrollHeight, 120);
-                          e.target.style.height = newHeight + 'px';
-                        }}
-                        onBlur={(e) => {
-                          if (!description) {
-                            e.target.classList.add('opacity-0');
-                            e.target.parentElement?.classList.remove('border');
-                          }
-                          if (description !== (card.description || "")) {
-                            handleSaveDescription();
-                          }
-                          setIsEditing(false);
-                        }}
-                        style={{
-                          height: description ? 'auto' : '24px', // Single line height
-                          resize: 'none',
-                          lineHeight: '1.5',
-                          minHeight: '24px', // Minimal single line height
-                          maxHeight: '120px' // Maximum height before scrolling
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
+                    onFocus={(e) => {
+                      // Show border on focus
+                      e.target.parentElement?.classList.add('border');
+                      e.target.parentElement?.classList.add('border-gray-200');
+                      e.target.classList.remove('opacity-0');
+                      // Auto-adjust height with max
+                      e.target.style.height = '24px';
+                      const newHeight = Math.min(e.target.scrollHeight, 120);
+                      e.target.style.height = newHeight + 'px';
+                    }}
+                    onBlur={(e) => {
+                      if (!description) {
+                        e.target.classList.add('opacity-0');
+                        e.target.parentElement?.classList.remove('border');
+                      }
+                      if (description !== (card.description || "")) {
+                        handleSaveDescription();
+                      }
+                    }}
+                    style={{
+                      height: description ? 'auto' : '24px', // Single line height
+                      resize: 'none',
+                      lineHeight: '1.5',
+                      minHeight: '24px', // Minimal single line height
+                      maxHeight: '120px' // Maximum height before scrolling
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
