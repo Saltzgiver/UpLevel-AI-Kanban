@@ -34,17 +34,41 @@ export function GPTChat({
   const [userHasScrolled, setUserHasScrolled] = useState(false);
   
   // Handle scroll events to detect manual scrolling
+  // Using a ref to track the last scroll position to avoid conflicts with auto-scrolling
+  const lastScrollPositionRef = useRef(0);
+  const scrollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
     
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
     const isScrolledToBottom = scrollHeight - scrollTop - clientHeight < 50;
     
-    if (!isScrolledToBottom) {
-      setUserHasScrolled(true);
-    } else {
-      setUserHasScrolled(false);
+    // Only set userHasScrolled if this is a genuine user scroll action
+    // Compare current scroll with last position to determine if it's likely a user action
+    const scrollDelta = Math.abs(scrollTop - lastScrollPositionRef.current);
+    if (scrollDelta > 10) { // This helps identify actual user scrolling vs. programmatic
+      if (!isScrolledToBottom) {
+        setUserHasScrolled(true);
+      } else {
+        setUserHasScrolled(false);
+      }
     }
+    
+    // Update the last scroll position
+    lastScrollPositionRef.current = scrollTop;
+    
+    // Clear existing timer and set a new one
+    if (scrollingTimerRef.current) {
+      clearTimeout(scrollingTimerRef.current);
+    }
+    
+    // Reset scrolling state after a brief pause in scrolling
+    scrollingTimerRef.current = setTimeout(() => {
+      if (isScrolledToBottom) {
+        setUserHasScrolled(false);
+      }
+    }, 100);
   };
   
   // Add scroll event listener
@@ -56,10 +80,18 @@ export function GPTChat({
     }
   }, []);
   
-  // Auto-scroll to bottom when messages change, but only if user hasn't scrolled up
-  // Use setTimeout to ensure the DOM has fully updated before scrolling
+  // Auto-scroll to bottom when messages change, but only in specific cases:
+  // 1. When new messages arrive AND user hasn't manually scrolled up
+  // 2. When processing state changes (starts or stops)
+  // 3. When finalOutput becomes available
   useEffect(() => {
-    if (chatContainerRef.current && (!userHasScrolled || isProcessing)) {
+    // Only auto-scroll if one of these conditions is met
+    const shouldAutoScroll = 
+      !userHasScrolled || // User hasn't scrolled up
+      isProcessing ||    // Processing state changed (loading)
+      (finalOutput && !prevFinalOutputRef.current); // New final output available
+    
+    if (chatContainerRef.current && shouldAutoScroll) {
       // Use requestAnimationFrame for smoother scrolling after layout updates
       requestAnimationFrame(() => {
         if (chatContainerRef.current) {
@@ -67,7 +99,13 @@ export function GPTChat({
         }
       });
     }
+    
+    // Track previous finalOutput state to detect changes
+    prevFinalOutputRef.current = finalOutput;
   }, [chats, isProcessing, finalOutput, userHasScrolled]);
+  
+  // Reference to track previous finalOutput status
+  const prevFinalOutputRef = useRef(finalOutput);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -219,8 +257,7 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="overflow-y-auto px-0 py-2 flex flex-col h-[350px]"
-          style={{ overscrollBehavior: 'contain' }}
+          className="overflow-y-auto px-0 py-2 flex flex-col h-[350px] scroll-smooth"
         >
           <ChatMessages />
         </div>
@@ -274,7 +311,7 @@ export function GPTChat({
       <div className="flex flex-col">
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-3 space-y-4 flex flex-col min-h-[240px] max-h-[300px]"
+          className="flex-1 overflow-y-auto px-4 py-3 space-y-4 flex flex-col h-[300px] scroll-smooth"
         >
           <ChatMessages />
         </div>
