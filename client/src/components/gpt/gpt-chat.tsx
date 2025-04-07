@@ -237,31 +237,8 @@ export function GPTChat({
     // Hide it if we already have a final output (could be stuck in processing state)
     const shouldShowProcessing = isProcessing && !finalOutput;
     
-    // Processing indicator - styled to match the design from the image
-    const processingIndicator = shouldShowProcessing && (
-      <div className="flex items-start ml-2 mb-4">
-        <div className="bg-amber-50 text-amber-800 rounded-lg rounded-tl-none border-2 border-amber-100 py-3 px-4 shadow-sm w-full max-w-[85%]">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin h-5 w-5 text-amber-700">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-base font-medium">Processing with AI</h3>
-              <p className="text-sm text-amber-700">Please wait, the AI is processing your request...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-    
     return (
       <div className="space-y-6 flex flex-col">
-        {/* Display processing indicator if applicable */}
-        {processingIndicator}
-        
         {/* Display all chat messages */}
         {chats.map((chat, index) => {
           // Determine if this is the most recent AI message (for highlighting)
@@ -343,6 +320,41 @@ export function GPTChat({
             </div>
           );
         })}
+        
+        {/* Display processing indicator as part of the conversation flow */}
+        {shouldShowProcessing && (
+          <div className="flex flex-col items-start self-start mb-4 max-w-[90%]">
+            {/* Pillbox header */}
+            <div className="flex items-center mb-1">
+              <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${getColorStyle(gptColor).bg} ${getColorStyle(gptColor).text} ${getColorStyle(gptColor).border}`}>
+                <span className="flex items-center">
+                  <Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(gptColor).text}`} /> {gptName}
+                </span>
+              </div>
+              <div className="text-[10px] text-gray-400 ml-2">
+                {new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}
+              </div>
+            </div>
+            
+            {/* Processing message styled like the image */}
+            <div className="flex items-start ml-2">
+              <div className="bg-amber-50 text-amber-800 rounded-lg rounded-tl-none border-2 border-amber-100 py-3 px-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin h-5 w-5 text-amber-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-medium">Processing with AI</h3>
+                    <p className="text-sm text-amber-700">Please wait, the AI is processing your request...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
