@@ -441,12 +441,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createChat(chat: InsertChat): Promise<Chat> {
+    // Include gptName and gptColor when inserting
     const [newChat] = await db
       .insert(chats)
       .values({
         cardId: chat.cardId,
         role: chat.role,
-        content: chat.content
+        content: chat.content,
+        gptName: chat.gptName || null,  // Ensure we include GPT metadata if available
+        gptColor: chat.gptColor || null
       })
       .returning();
     

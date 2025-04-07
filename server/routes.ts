@@ -433,6 +433,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gptOutput: card.gptOutput,
         processingError,
         chats: await Promise.all(chats.map(async chat => {
+          // Log the original chat data to see what's coming from the database
+          console.log(`DEBUG - Chat original data for chat ${chat.id}:`, {
+            role: chat.role,
+            gptName: chat.gptName,
+            gptColor: chat.gptColor,
+            cardId: chat.cardId,
+            timestamp: chat.timestamp
+          });
+          
           // For all chats, ensure timestamp is present
           let updatedChat = {
             ...chat,
@@ -447,16 +456,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // even if the card has been moved between columns
               
               // First, find the column where the card was located when this chat was created
-              const messageTimestamp = new Date(chat.timestamp || new Date());
+              const messageTimestamp = new Date(chat.timestamp || new Date().toISOString());
               
               // For existing messages without GPT metadata, use the current column as fallback
               const originalColumn = await storage.getColumnById(card.columnId);
+              console.log(`DEBUG - Using column for chat ${chat.id}:`, {
+                columnId: card.columnId,
+                columnGptName: originalColumn?.gptName,
+                columnGptColor: originalColumn?.gptColor
+              });
               
               // Add GPT metadata based on original column settings
+              // IMPORTANT: Only use fallback if the original is null/undefined, not empty string
               updatedChat = {
                 ...updatedChat,
-                gptName: chat.gptName || (originalColumn?.gptName || 'AI Assistant'),
-                gptColor: chat.gptColor || originalColumn?.gptColor
+                gptName: chat.gptName !== null && chat.gptName !== undefined ? chat.gptName : (originalColumn?.gptName || 'AI Assistant'),
+                gptColor: chat.gptColor !== null && chat.gptColor !== undefined ? chat.gptColor : (originalColumn?.gptColor || null)
               };
             } catch (error) {
               console.error("Error finding original column for chat:", error);
@@ -468,6 +483,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             }
           }
+          
+          // Log the updated chat data to see what's being sent to the frontend
+          console.log(`DEBUG - Chat after processing ${chat.id}:`, {
+            role: updatedChat.role,
+            gptName: updatedChat.gptName,
+            gptColor: updatedChat.gptColor
+          });
           
           return updatedChat;
         })),

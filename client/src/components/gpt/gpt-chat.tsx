@@ -269,8 +269,29 @@ export function GPTChat({
                 }`}>
                   {chat.role === 'assistant' 
                     ? (isLastAIMessage 
-                      ? <span className="flex items-center"><Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(chat.gptColor || gptColor).text}`} /> {chat.gptName || gptName}</span>
-                      : <span>{chat.gptName || gptName}</span>) 
+                      ? (console.log(`FRONTEND DEBUG - Chat rendering message:`, {
+                          chatId: chat.id,
+                          messageGptName: chat.gptName, 
+                          messageGptColor: chat.gptColor,
+                          propGptName: gptName,
+                          propGptColor: gptColor,
+                          usedName: chat.gptName || gptName,
+                          usedColor: chat.gptColor || gptColor
+                        }), 
+                        <span className="flex items-center">
+                          <Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(chat.gptColor || gptColor).text}`} /> 
+                          {chat.gptName || gptName}
+                        </span>)
+                      : (console.log(`FRONTEND DEBUG - Chat rendering non-latest:`, {
+                          chatId: chat.id,
+                          messageGptName: chat.gptName, 
+                          messageGptColor: chat.gptColor,
+                          propGptName: gptName,
+                          propGptColor: gptColor,
+                          usedName: chat.gptName || gptName,
+                          usedColor: chat.gptColor || gptColor
+                        }), 
+                        <span>{chat.gptName || gptName}</span>)) 
                     : 'You'}
                 </div>
                 <div className="text-[10px] text-gray-400 ml-2">
