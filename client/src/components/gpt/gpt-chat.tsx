@@ -111,26 +111,7 @@ export function GPTChat({
     }, 300); // Longer debounce time to prevent interference
   };
   
-  // Simplified scroll logic that works with the absolute positioning
-  useEffect(() => {
-    // Reset user scroll state when component receives new data
-    setUserHasScrolled(false);
-    isUserScrollingRef.current = false;
-    
-    // For the absolute-positioned container, scrollTo the end
-    const scrollToEnd = () => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
-    };
-    
-    // Execute scrollToEnd after a brief delay to allow DOM to update
-    const timer = setTimeout(scrollToEnd, 50);
-    
-    return () => clearTimeout(timer);
-  }, [chats]);  // Only depends on chats to avoid unnecessary rerenders
-
-  // Add scroll event listener to detect when user scrolls manually
+  // Add scroll event listener
   useEffect(() => {
     const container = chatContainerRef.current;
     if (container) {
@@ -138,6 +119,42 @@ export function GPTChat({
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, []);
+  
+  // Auto-scroll to bottom when messages change, but only in specific cases:
+  // 1. When new messages arrive AND user hasn't manually scrolled up
+  // 2. When processing state changes (starts or stops)
+  // 3. When finalOutput becomes available
+  useEffect(() => {
+    // Never auto-scroll while the user is actively scrolling
+    if (isUserScrollingRef.current) {
+      return;
+    }
+    
+    // Only auto-scroll if one of these conditions is met
+    const shouldAutoScroll = 
+      !userHasScrolled || // User hasn't scrolled up
+      isProcessing ||    // Processing state changed (loading)
+      (finalOutput && !prevFinalOutputRef.current); // New final output available
+    
+    if (chatContainerRef.current && shouldAutoScroll) {
+      // Use a small delay to ensure we don't interfere with manual scrolling
+      // This helps prevent scroll jittering/jumping
+      const timer = setTimeout(() => {
+        if (!isUserScrollingRef.current && chatContainerRef.current) {
+          // Smooth scroll to bottom instead of instant jump
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    // Track previous finalOutput state to detect changes
+    prevFinalOutputRef.current = finalOutput;
+  }, [chats, isProcessing, finalOutput, userHasScrolled]);
   
   // Reference to track previous finalOutput status
   const prevFinalOutputRef = useRef(finalOutput);
@@ -152,6 +169,15 @@ export function GPTChat({
     try {
       // Store a copy of the message text before clearing the input
       const sentMessage = message.trim();
+      
+      // Create a local optimistic update with the new message
+      const optimisticChat = {
+        id: Date.now(), // Temporary ID
+        cardId,
+        role: "user",
+        content: sentMessage,
+        timestamp: new Date().toISOString()
+      };
       
       // Clear the input field immediately for better UX
       setMessage("");
@@ -168,9 +194,16 @@ export function GPTChat({
       // Also update the board data
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       
-      // Don't manually scroll here - our useEffect handler will take care of it
-      // when the chats state updates
-      
+      // Scroll to bottom after sending a message
+      // Using smooth scroll for better user experience
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
     } catch (error) {
       toast({
         title: "Error",
@@ -212,47 +245,13 @@ export function GPTChat({
       </div>
     );
     
-    // Rather than trying to scroll, we'll only show the most recent messages
-    // and let the user scroll up to see earlier messages
-    
-    // By default, we'll show just the last 3 messages plus any processing indicator
-    // This ensures the latest content is always visible without scrolling
-    const messagesToShow = chats.length <= 3 
-      ? chats 
-      : chats.slice(-3);  // Show last 3 messages
-    
     return (
-      <div className="space-y-4 flex flex-col">
+      <div className="space-y-6 flex flex-col">
         {/* Display processing indicator if applicable */}
-        {shouldShowProcessing && processingIndicator}
+        {processingIndicator}
         
-        {/* If there are more messages that aren't shown, display a "load more" prompt */}
-        {chats.length > 3 && (
-          <button
-            className="text-xs text-blue-600 hover:text-blue-800 py-2 self-center"
-            onClick={() => {
-              // When clicked, we'll reveal all messages and then scroll to the clicked position
-              setUserHasScrolled(true);
-              // Force the update by setting an array with all messages
-              if (chatContainerRef.current) {
-                // Remember current scroll position
-                const currentScroll = chatContainerRef.current.scrollTop;
-                // Scroll back to same position after rerender
-                setTimeout(() => {
-                  if (chatContainerRef.current) {
-                    chatContainerRef.current.scrollTop = currentScroll;
-                  }
-                }, 50);
-              }
-            }}
-          >
-            <ChevronUp className="h-3 w-3 mx-auto" />
-            Show {chats.length - 3} earlier messages
-          </button>
-        )}
-        
-        {/* Display visible messages (either all or last 3) */}
-        {(userHasScrolled ? chats : messagesToShow).map((chat, index) => {
+        {/* Display all chat messages */}
+        {chats.map((chat, index) => {
           // Determine if this is the most recent AI message (for highlighting)
           const isLastAIMessage = chat.role === 'assistant' && index === lastAssistantIndex;
           // Display final output badge only on the last message and if finalOutput is available
@@ -349,15 +348,11 @@ export function GPTChat({
           </div>
         )}
         
-        {/* Absolute positioning approach to ensure bottom content is always visible */}
-        <div className="relative h-[350px]">
-          <div 
-            ref={chatContainerRef}
-            className="absolute inset-0 overflow-y-auto px-4 py-4"
-            style={{ scrollbarWidth: 'thin' }}
-          >
-            <ChatMessages />
-          </div>
+        <div 
+          ref={chatContainerRef}
+          className="overflow-y-auto px-4 py-4 flex flex-col h-[350px] scroll-smooth"
+        >
+          <ChatMessages />
         </div>
         
         {/* Chat Input - Always at the bottom */}
@@ -407,15 +402,11 @@ export function GPTChat({
       </div>
       
       <div className="flex flex-col">
-        {/* Absolute positioning approach to ensure bottom content is always visible */}
-        <div className="relative h-[300px]">
-          <div 
-            ref={chatContainerRef}
-            className="absolute inset-0 overflow-y-auto px-4 py-4"
-            style={{ scrollbarWidth: 'thin' }}
-          >
-            <ChatMessages />
-          </div>
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
+        >
+          <ChatMessages />
         </div>
         
         {/* Chat Input - Fixed at the bottom */}
