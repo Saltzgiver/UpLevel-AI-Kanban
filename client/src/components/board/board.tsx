@@ -472,14 +472,10 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   return (
     <div className="w-full">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
-        {/* Horizontal scrolling container with appropriate constraints */}
-        <div className="relative w-full">
+        {/* Horizontal scrolling container with constraining parent */}
+        <div className="relative w-full overflow-hidden">
           <div className="flex flex-nowrap gap-4 pb-6 overflow-x-auto min-w-full scrollbar-thin" 
-               id="board-container"
-               style={{ 
-                 scrollbarWidth: 'thin',
-                 scrollBehavior: 'smooth'
-               }}>
+               style={{ scrollbarWidth: 'thin' }}>
             {columns.map((column, index) => (
               <Column
                 key={column.id}
