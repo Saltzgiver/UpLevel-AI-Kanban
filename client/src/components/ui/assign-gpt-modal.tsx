@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,14 +26,78 @@ const colorPalette = [
   { name: "Aqua", bg: "bg-[#E0F9FF]", text: "text-[#3992B0]", border: "border-[#C3E8F4]" }
 ];
 
+// Function to automatically assign a color based on existing columns
+const getNextColorInRotation = async (): Promise<string> => {
+  try {
+    // Get all existing columns
+    const response = await fetch('/api/boards');
+    const boards = await response.json();
+    
+    // Extract all columns with GPT assigned
+    const gptColumns = boards.flatMap((board: any) => 
+      board.columns.filter((col: any) => col.gptAssigned && col.gptColor)
+    );
+    
+    // Get all colors currently in use
+    const usedColors = gptColumns.map((col: any) => col.gptColor);
+    
+    // Find first unused color, or use least used color if all are in use
+    const colorCounts: Record<string, number> = {};
+    const colorNames = colorPalette.map(color => color.name);
+    
+    // Initialize counts
+    colorNames.forEach(name => {
+      colorCounts[name] = 0;
+    });
+    
+    // Count usage of each color
+    usedColors.forEach((color: string) => {
+      if (color in colorCounts) {
+        colorCounts[color]++;
+      }
+    });
+    
+    // Find unused or least used color
+    const unusedColors = colorNames.filter(name => colorCounts[name] === 0);
+    
+    if (unusedColors.length > 0) {
+      // Return the first unused color
+      return unusedColors[0];
+    } else {
+      // All colors are used, find the least used one
+      const sortedColors = Object.entries(colorCounts)
+        .sort(([, countA], [, countB]) => countA - countB);
+      
+      return sortedColors[0][0]; // Return the name of the least used color
+    }
+  } catch (error) {
+    console.error('Error fetching colors:', error);
+    return "Peach"; // Default if there's an error
+  }
+};
+
 export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps) {
   const [gptName, setGptName] = useState<string>(column.gptName || "GPT Assistant");
   const [apiKey, setApiKey] = useState<string>(column.apiKey || "");
   const [instructions, setInstructions] = useState<string>(column.gptInstructions || "");
-  const [gptColor, setGptColor] = useState<string>(column.gptColor || colorPalette[0].name);
+  const [gptColor, setGptColor] = useState<string>(column.gptColor || "");
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
+  
+  // Get the next color automatically when the modal opens for a new GPT configuration
+  useEffect(() => {
+    if (isOpen && !column.gptAssigned) {
+      const assignNextColor = async () => {
+        const nextColor = await getNextColorInRotation();
+        setGptColor(nextColor);
+      };
+      assignNextColor();
+    } else if (isOpen && column.gptColor) {
+      // If editing existing column, use its current color
+      setGptColor(column.gptColor);
+    }
+  }, [isOpen, column.gptAssigned, column.gptColor]);
 
   const handleSubmit = async () => {
     if (!instructions.trim()) {
