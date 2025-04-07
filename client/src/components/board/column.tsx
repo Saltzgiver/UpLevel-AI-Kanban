@@ -76,7 +76,7 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
   
   return (
     <div className="column bg-muted rounded-lg shadow-sm flex-shrink-0 w-72 max-w-[300px]">
-      <div className="p-3 flex flex-col h-full">
+      <div className="p-3 flex flex-col h-full min-h-[50vh]">
         {/* Column Header - no more dragHandleProps */}
         <div className="column-header flex items-center justify-between mb-3">
           {/* Column title area */}

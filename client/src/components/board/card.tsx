@@ -1,6 +1,6 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { Card as CardType } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProcessingIndicator } from "@/components/ui/processing-indicator";
 import { useCardProcessing } from "@/hooks/use-card-processing";
 import ReactMarkdown from "react-markdown";
@@ -10,6 +10,38 @@ interface CardProps {
   card: CardType & { commentCount?: number };
   index: number;
   onClick: () => void;
+}
+
+// Helper function to auto-scroll to a dragged card when it's near the edge
+const autoScrollDuringDrag = (dragging: boolean, transform: string | undefined) => {
+  if (!dragging || !transform) return;
+  
+  const container = document.getElementById('board-container');
+  if (!container) return;
+  
+  // Extract X position from transform string "translate(Xpx, Ypx)"
+  const match = transform.match(/translate\(([^,]+)px/);
+  if (!match || !match[1]) return;
+  
+  const xPos = parseFloat(match[1]);
+  const containerRect = container.getBoundingClientRect();
+  const containerWidth = containerRect.width;
+  const scrollLeft = container.scrollLeft;
+  
+  // If card is dragged near right edge, scroll right
+  if (xPos > containerWidth - 150 + scrollLeft) {
+    container.scrollTo({
+      left: scrollLeft + 50,
+      behavior: 'smooth'
+    });
+  }
+  // If card is dragged near left edge, scroll left
+  else if (xPos < 150 + scrollLeft) {
+    container.scrollTo({
+      left: Math.max(0, scrollLeft - 50),
+      behavior: 'smooth'
+    });
+  }
 }
 
 export function Card({ card, index, onClick }: CardProps) {
@@ -24,6 +56,18 @@ export function Card({ card, index, onClick }: CardProps) {
   const finalOutput = gptOutput || card.gptOutput;
   
   const [expanded, setExpanded] = useState(false);
+  const [dragTransform, setDragTransform] = useState<string | undefined>(undefined);
+  
+  // Use this effect to trigger auto-scrolling when a card is dragged
+  useEffect(() => {
+    if (dragTransform) {
+      const interval = setInterval(() => {
+        autoScrollDuringDrag(true, dragTransform);
+      }, 200);
+      
+      return () => clearInterval(interval);
+    }
+  }, [dragTransform]);
   
   const handleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -33,9 +77,16 @@ export function Card({ card, index, onClick }: CardProps) {
   return (
     <Draggable draggableId={card.id.toString()} index={index}>
       {(provided, snapshot) => {
-        // Add logging when card is dragged
-        if (snapshot.isDragging) {
-          console.log("Card being dragged:", card.id, "Position:", provided.draggableProps.style?.transform);
+        // Update dragTransform state when card is dragged
+        if (snapshot.isDragging && provided.draggableProps.style?.transform) {
+          console.log("Card being dragged:", card.id, "Position:", provided.draggableProps.style.transform);
+          // Only update if transform changed to avoid unnecessary re-renders
+          if (dragTransform !== provided.draggableProps.style.transform) {
+            setDragTransform(provided.draggableProps.style.transform as string);
+          }
+        } else if (!snapshot.isDragging && dragTransform) {
+          // Reset dragTransform when no longer dragging
+          setDragTransform(undefined);
         }
         
         return (
