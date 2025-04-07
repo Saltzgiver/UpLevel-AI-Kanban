@@ -216,7 +216,7 @@ export function CardModal({
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
       <div 
         ref={modalRef}
-        className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-xl"
+        className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-hidden flex flex-col shadow-xl"
       >
         {/* Header - Fixed at the top with single-line title */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -286,24 +286,26 @@ export function CardModal({
                   )}
                   <textarea
                     ref={textAreaRef}
-                    className={`w-full text-sm py-2 px-3 overflow-hidden bg-transparent ${
-                      description ? 'border-0 focus:outline-none focus:ring-0' : 'opacity-0'
+                    className={`w-full text-sm py-2 px-3 bg-transparent ${
+                      description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
                     }`}
                     value={description}
                     onChange={(e) => {
                       setDescription(e.target.value);
-                      // Auto-adjust height - start with minimal height
+                      // Only auto-adjust height up to a point
                       e.target.style.height = '24px';
-                      e.target.style.height = e.target.scrollHeight + 'px';
+                      const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
+                      e.target.style.height = newHeight + 'px';
                     }}
                     onFocus={(e) => {
                       // Show border on focus
                       e.target.parentElement?.classList.add('border');
                       e.target.parentElement?.classList.add('border-gray-200');
                       e.target.classList.remove('opacity-0');
-                      // Auto-adjust height
+                      // Auto-adjust height with max
                       e.target.style.height = '24px';
-                      e.target.style.height = e.target.scrollHeight + 'px';
+                      const newHeight = Math.min(e.target.scrollHeight, 120);
+                      e.target.style.height = newHeight + 'px';
                     }}
                     onBlur={(e) => {
                       if (!description) {
@@ -318,7 +320,8 @@ export function CardModal({
                       height: description ? 'auto' : '24px', // Single line height
                       resize: 'none',
                       lineHeight: '1.5',
-                      minHeight: '24px' // Minimal single line height
+                      minHeight: '24px', // Minimal single line height
+                      maxHeight: '120px' // Maximum height before scrolling
                     }}
                   />
                 </div>
@@ -357,7 +360,7 @@ export function CardModal({
               
               {/* Unified Chat Interface with Output */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                <div className="flex flex-col h-[320px] overflow-y-auto"> 
+                <div className="flex flex-col h-[280px] overflow-y-auto"> 
                   {/* GPTChat component contains both the message area and the input */}
                   <GPTChat 
                     cardId={card.id} 
