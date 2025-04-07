@@ -169,7 +169,7 @@ export function GPTChat({
     );
     
     return (
-      <div className="space-y-4 flex flex-col">
+      <div className="space-y-6 flex flex-col">
         {/* Display processing indicator if applicable */}
         {processingIndicator}
         
@@ -211,7 +211,7 @@ export function GPTChat({
               </div>
               
               {/* Message content */}
-              <div className="flex items-start ml-1">
+              <div className="flex items-start ml-2">
                 
                 {/* Message bubble - user messages keep light blue bubble, GPT messages vary based on rules */}
                 <div className={`text-sm ${
@@ -258,7 +258,7 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="overflow-y-auto px-0 py-2 flex flex-col h-[350px] scroll-smooth"
+          className="overflow-y-auto px-4 py-4 flex flex-col h-[350px] scroll-smooth"
         >
           <ChatMessages />
         </div>
@@ -312,7 +312,7 @@ export function GPTChat({
       <div className="flex flex-col">
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-3 space-y-4 flex flex-col h-[300px] scroll-smooth"
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
         >
           <ChatMessages />
         </div>
