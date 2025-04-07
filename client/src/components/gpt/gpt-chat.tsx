@@ -350,7 +350,7 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="overflow-y-auto px-4 py-4 flex flex-col h-[350px] scroll-smooth"
+          className="flex-1 px-4 py-4 flex flex-col scroll-smooth"
         >
           <ChatMessages />
         </div>
@@ -404,7 +404,7 @@ export function GPTChat({
       <div className="flex flex-col">
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
+          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
         >
           <ChatMessages />
         </div>
