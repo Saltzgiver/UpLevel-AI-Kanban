@@ -427,22 +427,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? card.gptOutput 
         : null;
       
-      // Get column information for this card to provide default GPT name/color for older messages
-      const column = await storage.getColumnById(card.columnId);
-      
       // Enhanced response with error status
       const response = { 
         processing: card.processing || false,
         gptOutput: card.gptOutput,
         processingError,
-        chats: chats.map(chat => ({
-          ...chat,
-          // Ensure timestamp is present for all chats
-          timestamp: chat.timestamp || new Date().toISOString(),
-          // For assistant messages with missing GPT info, provide the column's GPT info
-          // This ensures older messages (created before the schema update) display with the correct GPT info
-          gptName: chat.role === 'assistant' && !chat.gptName ? (column?.gptName || 'AI Assistant') : chat.gptName,
-          gptColor: chat.role === 'assistant' && !chat.gptColor ? column?.gptColor : chat.gptColor
+        chats: await Promise.all(chats.map(async chat => {
+          // For all chats, ensure timestamp is present
+          let updatedChat = {
+            ...chat,
+            timestamp: chat.timestamp || new Date().toISOString()
+          };
+          
+          // Only process assistant messages with missing GPT info
+          if (chat.role === 'assistant' && (!chat.gptName || !chat.gptColor)) {
+            try {
+              // Try to find which column the message was created in based on timestamp
+              // This ensures older messages display with their original GPT info
+              // even if the card has been moved between columns
+              
+              // First, find the column where the card was located when this chat was created
+              const messageTimestamp = new Date(chat.timestamp || new Date());
+              
+              // For existing messages without GPT metadata, use the current column as fallback
+              const originalColumn = await storage.getColumnById(card.columnId);
+              
+              // Add GPT metadata based on original column settings
+              updatedChat = {
+                ...updatedChat,
+                gptName: chat.gptName || (originalColumn?.gptName || 'AI Assistant'),
+                gptColor: chat.gptColor || originalColumn?.gptColor
+              };
+            } catch (error) {
+              console.error("Error finding original column for chat:", error);
+              // Fallback to minimum defaults if anything fails
+              updatedChat = {
+                ...updatedChat,
+                gptName: chat.gptName || 'AI Assistant',
+                gptColor: chat.gptColor || 'Peach'
+              };
+            }
+          }
+          
+          return updatedChat;
         })),
         attachments: card.attachments || [],
         updatedAt: new Date().toISOString() // Add timestamp for clients to track freshness
