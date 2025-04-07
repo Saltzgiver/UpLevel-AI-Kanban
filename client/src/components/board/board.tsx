@@ -56,16 +56,7 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId, type } = result;
 
-    // Log the drag operation for debugging
-    console.log("Drag ended:", {
-      from: source,
-      to: destination,
-      itemId: draggableId,
-      type
-    });
-
     if (!destination) {
-      console.log("No destination, cancelling drag");
       return;
     }
 
@@ -73,7 +64,6 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
       destination.droppableId === source.droppableId &&
       destination.index === source.index
     ) {
-      console.log("Dropped in same position, no action needed");
       return;
     }
 
@@ -472,23 +462,20 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   return (
     <div className="w-full">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
-        {/* Horizontal scrolling container with constraining parent */}
-        <div className="relative w-full overflow-hidden">
-          <div className="flex flex-nowrap gap-4 pb-6 overflow-x-auto min-w-full scrollbar-thin" 
-               style={{ scrollbarWidth: 'thin' }}>
-            {columns.map((column, index) => (
-              <Column
-                key={column.id}
-                column={column}
-                index={index}
-                onCardClick={handleCardClick}
-                onDeleteColumn={handleDeleteColumn}
-              />
-            ))}
-            <AddColumn boardId={board.id} />
-            {/* Add more padding at the end to ensure there's room on the right */}
-            <div className="w-4 flex-shrink-0"></div>
-          </div>
+        {/* Horizontal scrolling container */}
+        <div className="flex flex-nowrap gap-4 pb-6 overflow-x-auto min-w-full">
+          {columns.map((column, index) => (
+            <Column
+              key={column.id}
+              column={column}
+              index={index}
+              onCardClick={handleCardClick}
+              onDeleteColumn={handleDeleteColumn}
+            />
+          ))}
+          <AddColumn boardId={board.id} />
+          {/* Add more padding at the end to ensure there's room on the right */}
+          <div className="w-4 flex-shrink-0"></div>
         </div>
       </DragDropContext>
 
