@@ -33,10 +33,10 @@ export function GPTChat({
   // Track if user has manually scrolled up
   const [userHasScrolled, setUserHasScrolled] = useState(false);
   
-  // Handle scroll events to detect manual scrolling
-  // Using a ref to track the last scroll position to avoid conflicts with auto-scrolling
+  // Using refs to track scroll state between renders without causing re-renders
   const lastScrollPositionRef = useRef(0);
   const scrollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isUserScrollingRef = useRef(false);
   
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
@@ -44,31 +44,42 @@ export function GPTChat({
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
     const isScrolledToBottom = scrollHeight - scrollTop - clientHeight < 50;
     
-    // Only set userHasScrolled if this is a genuine user scroll action
-    // Compare current scroll with last position to determine if it's likely a user action
+    // Get the scroll direction (up or down)
+    const isScrollingUp = scrollTop < lastScrollPositionRef.current;
+    
+    // Only detect intentional scrolling with significant movement
+    // This prevents tiny scroll adjustments from triggering the user scroll state
     const scrollDelta = Math.abs(scrollTop - lastScrollPositionRef.current);
-    if (scrollDelta > 10) { // This helps identify actual user scrolling vs. programmatic
-      if (!isScrolledToBottom) {
-        setUserHasScrolled(true);
-      } else {
-        setUserHasScrolled(false);
-      }
+    
+    // If user is clearly scrolling up (away from bottom), mark as user-scrolled
+    if (isScrollingUp && scrollDelta > 20 && !isScrolledToBottom) {
+      isUserScrollingRef.current = true;
+      setUserHasScrolled(true);
     }
     
-    // Update the last scroll position
+    // If at bottom, we can reset the user scrolled state
+    if (isScrolledToBottom) {
+      setUserHasScrolled(false);
+      isUserScrollingRef.current = false;
+    }
+    
+    // Save the position for next comparison
     lastScrollPositionRef.current = scrollTop;
     
-    // Clear existing timer and set a new one
+    // Debounce the scroll end detection
     if (scrollingTimerRef.current) {
       clearTimeout(scrollingTimerRef.current);
     }
     
-    // Reset scrolling state after a brief pause in scrolling
+    // Only reset scroll state when user has stopped scrolling for a while
     scrollingTimerRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+      
+      // When scrolling stops, if at bottom, reset user scroll state
       if (isScrolledToBottom) {
         setUserHasScrolled(false);
       }
-    }, 100);
+    }, 300); // Longer debounce time to prevent interference
   };
   
   // Add scroll event listener
@@ -85,6 +96,11 @@ export function GPTChat({
   // 2. When processing state changes (starts or stops)
   // 3. When finalOutput becomes available
   useEffect(() => {
+    // Never auto-scroll while the user is actively scrolling
+    if (isUserScrollingRef.current) {
+      return;
+    }
+    
     // Only auto-scroll if one of these conditions is met
     const shouldAutoScroll = 
       !userHasScrolled || // User hasn't scrolled up
@@ -92,12 +108,19 @@ export function GPTChat({
       (finalOutput && !prevFinalOutputRef.current); // New final output available
     
     if (chatContainerRef.current && shouldAutoScroll) {
-      // Use requestAnimationFrame for smoother scrolling after layout updates
-      requestAnimationFrame(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      // Use a small delay to ensure we don't interfere with manual scrolling
+      // This helps prevent scroll jittering/jumping
+      const timer = setTimeout(() => {
+        if (!isUserScrollingRef.current && chatContainerRef.current) {
+          // Smooth scroll to bottom instead of instant jump
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
         }
-      });
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
     
     // Track previous finalOutput state to detect changes
@@ -124,13 +147,16 @@ export function GPTChat({
       setMessage("");
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       
-      // Force scroll to bottom after sending a message
-      // Use requestAnimationFrame for smoother scrolling
-      requestAnimationFrame(() => {
+      // Scroll to bottom after sending a message
+      // Using smooth scroll for better user experience
+      setTimeout(() => {
         if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
         }
-      });
+      }, 100);
     } catch (error) {
       toast({
         title: "Error",
