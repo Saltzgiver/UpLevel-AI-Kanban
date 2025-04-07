@@ -84,11 +84,13 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       processing: false
     });
 
-    // Add GPT's response as a chat message
+    // Add GPT's response as a chat message with GPT name and color
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: gptOutput
+      content: gptOutput,
+      gptName: column.gptName || "AI Assistant",
+      gptColor: column.gptColor
     });
 
     // Handle file generation if indicated in the response
@@ -118,11 +120,13 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       gptOutput: `Error processing with GPT: ${userFriendlyError}`
     });
     
-    // Also add as chat message for visibility
+    // Also add as chat message for visibility with GPT name and color
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: `⚠️ Error: ${userFriendlyError}`
+      content: `⚠️ Error: ${userFriendlyError}`,
+      gptName: column.gptName || "AI Assistant",
+      gptColor: column.gptColor
     });
 
     throw error;
@@ -180,11 +184,13 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const response = completion.choices[0].message.content || "";
 
-    // Save the assistant's response
+    // Save the assistant's response with GPT name and color
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: response
+      content: response,
+      gptName: column.gptName || "AI Assistant",
+      gptColor: column.gptColor
     });
 
     // Handle file generation if indicated in the response
@@ -208,11 +214,13 @@ export async function processChat(cardId: number, userMessage: string, column: C
       userFriendlyError = "Invalid or missing OpenAI API key. Please update the API key in column settings.";
     }
     
-    // Add user-friendly error message to chat
+    // Add user-friendly error message to chat with GPT name and color
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: `⚠️ Error: ${userFriendlyError}`
+      content: `⚠️ Error: ${userFriendlyError}`,
+      gptName: column.gptName || "AI Assistant",
+      gptColor: column.gptColor
     });
 
     throw error;

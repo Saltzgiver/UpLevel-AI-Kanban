@@ -264,15 +264,13 @@ export function GPTChat({
               <div className={`flex items-center mb-1 ${chat.role === 'assistant' ? '' : 'justify-end w-full'}`}>
                 <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   chat.role === 'assistant'
-                    ? isLastAIMessage 
-                      ? `${getColorStyle(gptColor).bg} ${getColorStyle(gptColor).text} ${getColorStyle(gptColor).border}`
-                      : 'bg-gray-100 text-gray-800 border border-gray-200'
+                    ? `${getColorStyle(chat.gptColor || gptColor).bg} ${getColorStyle(chat.gptColor || gptColor).text} ${getColorStyle(chat.gptColor || gptColor).border}`
                     : 'bg-blue-100 text-blue-800 border border-blue-200'
                 }`}>
                   {chat.role === 'assistant' 
                     ? (isLastAIMessage 
-                      ? <span className="flex items-center"><Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(gptColor).text}`} /> {gptName}</span>
-                      : gptName) 
+                      ? <span className="flex items-center"><Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(chat.gptColor || gptColor).text}`} /> {chat.gptName || gptName}</span>
+                      : <span>{chat.gptName || gptName}</span>) 
                     : 'You'}
                 </div>
                 <div className="text-[10px] text-gray-400 ml-2">
@@ -290,7 +288,7 @@ export function GPTChat({
                 <div className={`text-sm ${
                   chat.role === 'assistant' 
                     ? isLastAIMessage
-                      ? `${getColorStyle(gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(gptColor).border} py-2 px-3 shadow-sm` 
+                      ? `${getColorStyle(chat.gptColor || gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(chat.gptColor || gptColor).border} py-2 px-3 shadow-sm` 
                       : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
                     : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
                 }`}>

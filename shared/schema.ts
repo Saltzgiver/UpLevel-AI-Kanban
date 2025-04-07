@@ -80,6 +80,8 @@ export const chats = pgTable("chats", {
   role: text("role").notNull(), // 'user' or 'assistant'
   content: text("content").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
+  gptName: text("gpt_name"), // Store the GPT name that created this message
+  gptColor: text("gpt_color"), // Store the GPT color that created this message
 });
 
 // Base schema with validation
@@ -88,6 +90,8 @@ export const insertChatSchema = createInsertSchema(chats)
     cardId: true,
     role: true,
     content: true,
+    gptName: true,
+    gptColor: true,
   })
   .extend({
     // Make timestamp optional in the input schema and handle it server-side
