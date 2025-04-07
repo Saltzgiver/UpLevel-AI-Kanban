@@ -71,6 +71,7 @@ export function CardModal({
   } = useCardProcessing(card.id);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize state when the modal opens
   useEffect(() => {
@@ -106,6 +107,21 @@ export function CardModal({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose]);
+  
+  // Scroll to the bottom of the chat container when the modal opens
+  // or when new messages arrive
+  useEffect(() => {
+    if (isOpen && chatContainerRef.current && column.gptAssigned) {
+      // Small delay to ensure the content is rendered
+      const timer = setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, chats, gptOutput, column.gptAssigned]);
 
   if (!isOpen) return null;
 
@@ -360,7 +376,10 @@ export function CardModal({
               
               {/* Unified Chat Interface with Output */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                <div className="flex flex-col h-[280px] overflow-y-auto"> 
+                <div 
+                  ref={chatContainerRef}
+                  className="flex flex-col h-[280px] overflow-y-auto"
+                > 
                   {/* GPTChat component contains both the message area and the input */}
                   <GPTChat 
                     cardId={card.id} 
