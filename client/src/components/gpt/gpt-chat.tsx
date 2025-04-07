@@ -212,16 +212,47 @@ export function GPTChat({
       </div>
     );
     
+    // Rather than trying to scroll, we'll only show the most recent messages
+    // and let the user scroll up to see earlier messages
+    
+    // By default, we'll show just the last 3 messages plus any processing indicator
+    // This ensures the latest content is always visible without scrolling
+    const messagesToShow = chats.length <= 3 
+      ? chats 
+      : chats.slice(-3);  // Show last 3 messages
+    
     return (
-      <div className="space-y-6 flex flex-col">
-        {/* Add auto-height spacer at the top to push content down when there's room */}
-        <div className="flex-1 min-h-[20px]" />
-        
+      <div className="space-y-4 flex flex-col">
         {/* Display processing indicator if applicable */}
-        {processingIndicator}
+        {shouldShowProcessing && processingIndicator}
         
-        {/* Display all chat messages */}
-        {chats.map((chat, index) => {
+        {/* If there are more messages that aren't shown, display a "load more" prompt */}
+        {chats.length > 3 && (
+          <button
+            className="text-xs text-blue-600 hover:text-blue-800 py-2 self-center"
+            onClick={() => {
+              // When clicked, we'll reveal all messages and then scroll to the clicked position
+              setUserHasScrolled(true);
+              // Force the update by setting an array with all messages
+              if (chatContainerRef.current) {
+                // Remember current scroll position
+                const currentScroll = chatContainerRef.current.scrollTop;
+                // Scroll back to same position after rerender
+                setTimeout(() => {
+                  if (chatContainerRef.current) {
+                    chatContainerRef.current.scrollTop = currentScroll;
+                  }
+                }, 50);
+              }
+            }}
+          >
+            <ChevronUp className="h-3 w-3 mx-auto" />
+            Show {chats.length - 3} earlier messages
+          </button>
+        )}
+        
+        {/* Display visible messages (either all or last 3) */}
+        {(userHasScrolled ? chats : messagesToShow).map((chat, index) => {
           // Determine if this is the most recent AI message (for highlighting)
           const isLastAIMessage = chat.role === 'assistant' && index === lastAssistantIndex;
           // Display final output badge only on the last message and if finalOutput is available
