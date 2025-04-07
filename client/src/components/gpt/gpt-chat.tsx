@@ -210,7 +210,7 @@ export function GPTChat({
         
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-0 py-2 flex flex-col min-h-[180px] max-h-[260px]"
+          className="flex-1 overflow-y-auto px-0 py-2 flex flex-col min-h-[200px] max-h-[350px]"
         >
           <ChatMessages />
         </div>
