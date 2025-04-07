@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProcessingIndicator } from "@/components/ui/processing-indicator";
 import { useCardProcessing } from "@/hooks/use-card-processing";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface CardProps {
   card: CardType & { commentCount?: number };
@@ -73,10 +75,26 @@ export function Card({ card, index, onClick }: CardProps) {
                 <div className="mt-2 pt-2 text-xs text-gray-600 border-t border-gray-100">
                   <div className="font-medium mb-1 text-gray-500">AI Output</div>
                   <div 
-                    className={expanded ? "" : "line-clamp-2"}
+                    className={expanded ? "prose prose-sm max-w-full" : "line-clamp-2 prose prose-sm max-w-full"}
                     onClick={handleExpand}
                   >
-                    {finalOutput}
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: (props: any) => <p className="my-0.5" {...props} />,
+                        ul: (props: any) => <ul className="list-disc pl-4 my-0.5" {...props} />,
+                        ol: (props: any) => <ol className="list-decimal pl-4 my-0.5" {...props} />,
+                        li: (props: any) => <li className="my-0" {...props} />,
+                        a: (props: any) => <a className="text-blue-600 hover:underline" {...props} />,
+                        code: (props: any) => 
+                          props.inline 
+                            ? <code className="bg-gray-100 px-0.5 rounded text-xs font-mono" {...props} />
+                            : <code className="block bg-gray-100 p-1 rounded text-xs font-mono my-0.5 overflow-x-auto" {...props} />,
+                        pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-xs font-mono my-0.5 overflow-x-auto" {...props} />,
+                      }}
+                    >
+                      {finalOutput}
+                    </ReactMarkdown>
                   </div>
                   {finalOutput.length > 100 && (
                     <button 

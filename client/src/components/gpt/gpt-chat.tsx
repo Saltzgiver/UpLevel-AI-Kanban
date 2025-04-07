@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -298,7 +300,30 @@ export function GPTChat({
                       <span className="text-xs font-medium text-green-800">Latest Response</span>
                     </div>
                   )}
-                  {chat.content}
+                  {chat.role === 'assistant' ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: (props: any) => <p className="my-1" {...props} />,
+                        ul: (props: any) => <ul className="list-disc pl-4 my-1" {...props} />,
+                        ol: (props: any) => <ol className="list-decimal pl-4 my-1" {...props} />,
+                        li: (props: any) => <li className="my-0.5" {...props} />,
+                        a: (props: any) => <a className="text-blue-600 hover:underline" {...props} />,
+                        blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-1" {...props} />,
+                        code: (props: any) => 
+                          props.inline 
+                            ? <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono" {...props} />
+                            : <code className="block bg-gray-100 p-1 rounded text-xs font-mono my-1 overflow-x-auto" {...props} />,
+                        pre: (props: any) => <pre className="bg-gray-100 p-2 rounded text-xs font-mono my-1 overflow-x-auto" {...props} />,
+                        strong: (props: any) => <strong className="font-bold" {...props} />,
+                        em: (props: any) => <em className="italic" {...props} />,
+                      }}
+                    >
+                      {chat.content}
+                    </ReactMarkdown>
+                  ) : (
+                    <div>{chat.content}</div>
+                  )}
                 </div>
                 
                 {/* No user avatar, we're using pillbox names above instead */}
