@@ -182,10 +182,20 @@ export function GPTChat({
           
           return (
             <div key={index} className={`flex flex-col ${chat.role === 'assistant' ? 'items-start' : 'items-end'} max-w-[90%] ${chat.role === 'assistant' ? 'self-start' : 'self-end'} mb-4`}>
-              {/* Message header with name and time - Slack style */}
-              <div className={`flex items-center mb-1 ${chat.role === 'assistant' ? 'ml-2' : 'mr-2 justify-end w-full'}`}>
-                <div className="font-medium text-xs text-gray-700">
-                  {chat.role === 'assistant' ? gptName : 'You'}
+              {/* Message header with pillbox name and time - Slack style */}
+              <div className={`flex items-center mb-1 ${chat.role === 'assistant' ? '' : 'justify-end w-full'}`}>
+                <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  chat.role === 'assistant'
+                    ? isLastAIMessage 
+                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      : 'bg-gray-100 text-gray-800 border border-gray-200'
+                    : 'bg-blue-100 text-blue-800 border border-blue-200'
+                }`}>
+                  {chat.role === 'assistant' 
+                    ? (isLastAIMessage 
+                      ? <span className="flex items-center"><Sparkles className="h-3 w-3 mr-1 text-green-600" /> {gptName}</span>
+                      : gptName) 
+                    : 'You'}
                 </div>
                 <div className="text-[10px] text-gray-400 ml-2">
                   {chat.timestamp ? 
@@ -201,17 +211,7 @@ export function GPTChat({
               </div>
               
               {/* Message content */}
-              <div className="flex items-start">
-                {/* Only show icon for assistant messages */}
-                {chat.role === 'assistant' && (
-                  <div className={`w-6 h-6 rounded-full ${isLastAIMessage ? 'bg-green-500' : 'bg-green-100'} mr-2 flex-shrink-0 flex items-center justify-center`}>
-                    {isLastAIMessage ? (
-                      <Sparkles className="h-3 w-3 text-white" />
-                    ) : (
-                      <span className="text-xs font-bold text-green-700">AI</span>
-                    )}
-                  </div>
-                )}
+              <div className="flex items-start ml-1">
                 
                 {/* Message bubble - user messages keep light blue bubble, GPT messages vary based on rules */}
                 <div className={`text-sm ${
@@ -234,12 +234,7 @@ export function GPTChat({
                   {chat.content}
                 </div>
                 
-                {/* User avatar only shown for user messages */}
-                {chat.role === 'user' && (
-                  <div className="w-6 h-6 rounded-full bg-blue-100 ml-2 flex-shrink-0 flex items-center justify-center">
-                    <span className="text-xs font-bold text-blue-700">You</span>
-                  </div>
-                )}
+                {/* No user avatar, we're using pillbox names above instead */}
               </div>
             </div>
           );
