@@ -158,12 +158,11 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const response = completion.choices[0].message.content || "";
 
-    // Save the assistant's response with timestamp
+    // Save the assistant's response
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: response,
-      timestamp: new Date().toISOString()
+      content: response
     });
 
     // Handle file generation if indicated in the response
@@ -172,12 +171,11 @@ export async function processChat(cardId: number, userMessage: string, column: C
   } catch (error) {
     console.error("Error processing chat with GPT:", error);
     
-    // Add error message to chat with timestamp
+    // Add error message to chat
     await storage.createChat({
       cardId,
       role: "assistant",
-      content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      timestamp: new Date().toISOString()
+      content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
     });
 
     throw error;

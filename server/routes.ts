@@ -352,11 +352,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CHAT ROUTES
   app.post("/api/chats", async (req, res) => {
     try {
-      const chatData = insertChatSchema.parse({
-        ...req.body,
-        // Add timestamp to new chats if not provided
-        timestamp: req.body.timestamp || new Date().toISOString()
-      });
+      // Parse the request body without timestamp, let database handle it
+      const chatData = insertChatSchema.parse(req.body);
       
       // Create user chat message
       const chat = await storage.createChat(chatData);

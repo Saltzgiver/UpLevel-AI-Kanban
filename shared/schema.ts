@@ -82,12 +82,17 @@ export const chats = pgTable("chats", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
-export const insertChatSchema = createInsertSchema(chats).pick({
-  cardId: true,
-  role: true,
-  content: true,
-  timestamp: true,
-});
+// Base schema with validation
+export const insertChatSchema = createInsertSchema(chats)
+  .pick({
+    cardId: true,
+    role: true,
+    content: true,
+  })
+  .extend({
+    // Make timestamp optional in the input schema and handle it server-side
+    timestamp: z.date().optional(),
+  });
 
 // Attachments table for files
 export const attachments = pgTable("attachments", {
