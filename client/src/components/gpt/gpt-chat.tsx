@@ -111,29 +111,42 @@ export function GPTChat({
     }, 300); // Longer debounce time to prevent interference
   };
   
-  // Initial scroll to bottom when component mounts or chat data changes
+  // Simple scroll-to-bottom logic that runs on mount and when messages change
   useEffect(() => {
-    // Reset user scroll state when component receives new data/mounts
+    console.log('Scroll effect triggered, chats length:', chats.length);
+    
+    // Always reset the scroll state when the messages change
     setUserHasScrolled(false);
     isUserScrollingRef.current = false;
     
-    // Scroll to bottom immediately on mount
-    if (chatContainerRef.current) {
-      // Use a slightly longer delay to ensure DOM is fully rendered
-      const initialScrollTimer = setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: 'auto'  // Use 'auto' for initial scroll to avoid animation issues
-          });
-        }
-      }, 150);
-      
-      return () => clearTimeout(initialScrollTimer);
-    }
-  }, []);  // Empty dependency array means this runs once on mount
+    // Function to scroll to bottom
+    const scrollToBottom = () => {
+      console.log('Scrolling to bottom');
+      if (chatContainerRef.current) {
+        const scrollHeight = chatContainerRef.current.scrollHeight;
+        console.log('Scroll height:', scrollHeight);
+        
+        chatContainerRef.current.scrollTop = scrollHeight;
+        
+        // Double-check with setTimeout as a fallback for content rendering delays
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          }
+        }, 100);
+      }
+    };
+    
+    // Scroll immediately and also after a short delay to handle rendering timing issues
+    scrollToBottom();
+    
+    // One more scroll after a longer delay to ensure all content has rendered
+    const finalScrollTimer = setTimeout(scrollToBottom, 300);
+    
+    return () => clearTimeout(finalScrollTimer);
+  }, [chats]);  // Only depends on chats to avoid excessive re-rendering
 
-  // Add scroll event listener
+  // Add scroll event listener to detect when user scrolls manually
   useEffect(() => {
     const container = chatContainerRef.current;
     if (container) {
@@ -141,42 +154,6 @@ export function GPTChat({
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, []);
-  
-  // Auto-scroll to bottom when messages change, but only in specific cases:
-  // 1. When new messages arrive AND user hasn't manually scrolled up
-  // 2. When processing state changes (starts or stops)
-  // 3. When finalOutput becomes available
-  useEffect(() => {
-    // Never auto-scroll while the user is actively scrolling
-    if (isUserScrollingRef.current) {
-      return;
-    }
-    
-    // Only auto-scroll if one of these conditions is met
-    const shouldAutoScroll = 
-      !userHasScrolled || // User hasn't scrolled up
-      isProcessing ||    // Processing state changed (loading)
-      (finalOutput && !prevFinalOutputRef.current); // New final output available
-    
-    if (chatContainerRef.current && shouldAutoScroll) {
-      // Use a small delay to ensure we don't interfere with manual scrolling
-      // This helps prevent scroll jittering/jumping
-      const timer = setTimeout(() => {
-        if (!isUserScrollingRef.current && chatContainerRef.current) {
-          // Smooth scroll to bottom instead of instant jump
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    // Track previous finalOutput state to detect changes
-    prevFinalOutputRef.current = finalOutput;
-  }, [chats, isProcessing, finalOutput, userHasScrolled]);
   
   // Reference to track previous finalOutput status
   const prevFinalOutputRef = useRef(finalOutput);
@@ -191,15 +168,6 @@ export function GPTChat({
     try {
       // Store a copy of the message text before clearing the input
       const sentMessage = message.trim();
-      
-      // Create a local optimistic update with the new message
-      const optimisticChat = {
-        id: Date.now(), // Temporary ID
-        cardId,
-        role: "user",
-        content: sentMessage,
-        timestamp: new Date().toISOString()
-      };
       
       // Clear the input field immediately for better UX
       setMessage("");
@@ -216,16 +184,9 @@ export function GPTChat({
       // Also update the board data
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       
-      // Scroll to bottom after sending a message
-      // Using smooth scroll for better user experience
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      }, 100);
+      // Don't manually scroll here - our useEffect handler will take care of it
+      // when the chats state updates
+      
     } catch (error) {
       toast({
         title: "Error",

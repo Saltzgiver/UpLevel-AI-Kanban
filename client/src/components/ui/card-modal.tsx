@@ -78,10 +78,11 @@ export function CardModal({
       setTitle(card.title);
       setDescription(card.description || "");
       
-      // Reset processing state to ensure fresh data when opening a card
-      resetProcessingState();
+      // Don't call resetProcessingState() here - it's causing errors
+      // Instead, just make sure we fetch the latest data when opening a card
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${card.id}/processing-status`] });
     }
-  }, [isOpen, card, resetProcessingState]);
+  }, [isOpen, card, card.id]);
 
   // Handle auto-height for text area after description is set
   useEffect(() => {
@@ -363,7 +364,9 @@ export function CardModal({
                 
                 <div className="flex flex-col h-[412px]"> 
                   {/* GPTChat component contains both the message area and the input */}
+                  {/* Add key with chats length to force remount when chats change */}
                   <GPTChat 
+                    key={`card-chat-${card.id}-${chats.length}`}
                     cardId={card.id} 
                     chats={chats} 
                     gptName={column.gptName || "AI Assistant"}
