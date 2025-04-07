@@ -7,23 +7,48 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Helper function to ensure URL is properly formatted
+function getFullUrl(url: string): string {
+  try {
+    // If it's already a full URL, just return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // For API endpoints, ensure they have a leading slash
+    if (!url.startsWith('/')) {
+      url = '/' + url;
+    }
+    
+    // Return relative URLs as is - fetch will resolve them against the current origin
+    return url;
+  } catch (error) {
+    console.error("Error formatting URL:", error);
+    return url; // Return original URL as fallback
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Create a URL object to handle both relative and absolute URLs
-  const fullUrl = new URL(url, window.location.origin);
+  const fullUrl = getFullUrl(url);
   
-  const res = await fetch(fullUrl.toString(), {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(fullUrl, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error(`API request failed for ${method} ${fullUrl}:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -32,18 +57,23 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Create a URL object to handle both relative and absolute URLs
-    const url = new URL(queryKey[0] as string, window.location.origin);
-    const res = await fetch(url.toString(), {
-      credentials: "include",
-    });
+    const url = getFullUrl(queryKey[0] as string);
+    
+    try {
+      const res = await fetch(url, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      console.error(`Query failed for ${url}:`, error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({
