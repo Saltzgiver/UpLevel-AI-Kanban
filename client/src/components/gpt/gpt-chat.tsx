@@ -111,7 +111,7 @@ export function GPTChat({
     }, 300); // Longer debounce time to prevent interference
   };
   
-  // Simple scroll-to-bottom logic that runs on mount and when messages change
+  // More robust scroll-to-bottom logic with multiple timeouts for different render stages
   useEffect(() => {
     console.log('Scroll effect triggered, chats length:', chats.length);
     
@@ -119,31 +119,47 @@ export function GPTChat({
     setUserHasScrolled(false);
     isUserScrollingRef.current = false;
     
-    // Function to scroll to bottom
-    const scrollToBottom = () => {
-      console.log('Scrolling to bottom');
+    // Function to scroll to absolute bottom of container
+    const scrollToAbsoluteBottom = () => {
+      console.log('Forcing scroll to absolute bottom');
       if (chatContainerRef.current) {
+        // Get the exact scroll height at the moment
         const scrollHeight = chatContainerRef.current.scrollHeight;
-        console.log('Scroll height:', scrollHeight);
+        const clientHeight = chatContainerRef.current.clientHeight;
+        console.log('Container: scrollHeight=', scrollHeight, 'clientHeight=', clientHeight);
         
-        chatContainerRef.current.scrollTop = scrollHeight;
-        
-        // Double-check with setTimeout as a fallback for content rendering delays
-        setTimeout(() => {
-          if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          }
-        }, 100);
+        // Force scroll to absolute bottom
+        chatContainerRef.current.scrollTop = Number.MAX_SAFE_INTEGER; // This forces it to the bottom regardless of actual height
       }
     };
     
-    // Scroll immediately and also after a short delay to handle rendering timing issues
-    scrollToBottom();
+    // We need multiple timeouts at different intervals because:
+    // 1. Initial render might not have all content
+    // 2. Markdown rendering happens asynchronously
+    // 3. Images or other content might load late
     
-    // One more scroll after a longer delay to ensure all content has rendered
-    const finalScrollTimer = setTimeout(scrollToBottom, 300);
+    // Schedule multiple scroll attempts with increasing delays
+    const scrollTimers: NodeJS.Timeout[] = [];
     
-    return () => clearTimeout(finalScrollTimer);
+    // Immediate scroll attempt (for already rendered content)
+    scrollTimers.push(setTimeout(scrollToAbsoluteBottom, 0));
+    
+    // Scroll after initial render (for most content)
+    scrollTimers.push(setTimeout(scrollToAbsoluteBottom, 50));
+    
+    // Scroll after markdown render (for expanded content)
+    scrollTimers.push(setTimeout(scrollToAbsoluteBottom, 100));
+    
+    // Final scroll after all possible content is loaded
+    scrollTimers.push(setTimeout(scrollToAbsoluteBottom, 300));
+    
+    // Extra-safe final scroll
+    scrollTimers.push(setTimeout(scrollToAbsoluteBottom, 500));
+    
+    // Clean up all timers
+    return () => {
+      scrollTimers.forEach(timer => clearTimeout(timer));
+    };
   }, [chats]);  // Only depends on chats to avoid excessive re-rendering
 
   // Add scroll event listener to detect when user scrolls manually
@@ -334,8 +350,12 @@ export function GPTChat({
         <div 
           ref={chatContainerRef}
           className="overflow-y-auto px-4 py-4 flex flex-col h-[350px] scroll-smooth"
+          style={{ display: 'flex', flexDirection: 'column' }}
         >
-          <ChatMessages />
+          {/* Using an inner div with min-height to ensure content doesn't collapse */}
+          <div style={{ flexGrow: 1, minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <ChatMessages />
+          </div>
         </div>
         
         {/* Chat Input - Always at the bottom */}
@@ -388,8 +408,12 @@ export function GPTChat({
         <div 
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
+          style={{ display: 'flex', flexDirection: 'column' }}
         >
-          <ChatMessages />
+          {/* Using an inner div with min-height to ensure content doesn't collapse */}
+          <div style={{ flexGrow: 1, minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <ChatMessages />
+          </div>
         </div>
         
         {/* Chat Input - Fixed at the bottom */}
