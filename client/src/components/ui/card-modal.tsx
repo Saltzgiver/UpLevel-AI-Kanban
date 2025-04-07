@@ -255,7 +255,10 @@ export function CardModal({
         )}
         
         {/* Main Content Area - Scrollable */}
-        <div className="overflow-y-auto flex-1 px-6 pt-3 pb-5">
+        <div 
+          className="overflow-y-auto flex-1 px-6 pt-3 pb-5"
+          onWheel={e => e.stopPropagation()}
+        >
           {/* Description Section - Prompt Context */}
           <div className="mb-2">
             <div className="flex items-center gap-2 mb-1">
