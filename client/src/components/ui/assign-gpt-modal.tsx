@@ -78,7 +78,6 @@ const getNextColorInRotation = async (): Promise<string> => {
 
 export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps) {
   const [gptName, setGptName] = useState<string>(column.gptName || "GPT Assistant");
-  const [apiKey, setApiKey] = useState<string>(column.apiKey || "");
   const [instructions, setInstructions] = useState<string>(column.gptInstructions || "");
   const [gptColor, setGptColor] = useState<string>(column.gptColor || "");
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
@@ -104,7 +103,6 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
   useEffect(() => {
     if (isOpen) {
       setGptName(column.gptName || "GPT Assistant");
-      setApiKey(column.apiKey || "");
       setInstructions(column.gptInstructions || "");
       setAutoTrigger(column.autoTrigger !== false);
     }
@@ -126,7 +124,6 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       await apiRequest("PATCH", `/api/columns/${column.id}/assign-gpt`, {
         gptAssigned: true,
         gptName,
-        apiKey,
         gptInstructions: instructions,
         gptColor,
         autoTrigger
@@ -214,27 +211,6 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
               </p>
             </div>
             
-            {/* API Key */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="api-key" className="text-sm font-medium">API Key</Label>
-                <Button variant="link" className="h-auto p-0 text-xs" onClick={() => setApiKey("")}>
-                  Use default key
-                </Button>
-              </div>
-              <Input 
-                id="api-key" 
-                type="password" 
-                placeholder="sk-..." 
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave blank to use your default OpenAI API key
-              </p>
-            </div>
-            
             {/* Instructions */}
             <div className="space-y-2">
               <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
@@ -251,30 +227,28 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
               </p>
             </div>
             
-            {/* Color Selection */}
-            <div className="space-y-3">
+            {/* Color Selection - much smaller now */}
+            <div className="space-y-2">
               <Label className="text-sm font-medium">Assistant Color</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="flex gap-2">
                 {colorPalette.map((color) => (
                   <button
                     key={color.name}
                     type="button"
-                    className={`relative ${color.bg} ${color.text} ${color.border} flex items-center justify-center py-3 rounded-md border hover:opacity-90 transition-opacity ${
+                    className={`relative ${color.bg} ${color.text} ${color.border} h-8 w-8 flex-shrink-0 rounded-full border hover:opacity-90 transition-opacity ${
                       gptColor === color.name ? 'ring-2 ring-offset-1 ring-primary' : ''
                     }`}
                     onClick={() => setGptColor(color.name)}
+                    title={color.name}
                   >
-                    <span>Text</span>
                     {gptColor === color.name && (
-                      <div className="absolute top-1 right-1">
-                        <Check className="h-3 w-3" />
-                      </div>
+                      <Check className="h-4 w-4 m-auto" />
                     )}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                This color will be used to identify the AI assistant in chats
+                Choose a color to identify the AI assistant in chats
               </p>
             </div>
             
