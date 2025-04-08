@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Attachment } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -16,6 +15,30 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const { toast } = useToast();
+  
+  // Handle keyboard events for the modal
+  useEffect(() => {
+    // Only add the event listener when the modal is open
+    if (!showImagePreview) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowImagePreview(false);
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener("keydown", handleKeyDown);
+    
+    // Disable body scrolling when modal is open
+    document.body.style.overflow = "hidden";
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [showImagePreview]);
 
   const handleDownload = () => {
     // Create a download link for the attachment
