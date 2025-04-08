@@ -1,0 +1,37 @@
+The above error occurred in the <AttachmentItem> component:
+
+    at AttachmentItem (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/src/components/gpt/attachment-item.tsx?t=1744133238642:25:34)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at div
+    at div
+    at CardModal (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/src/components/ui/card-modal.tsx?t=1744133238642:38:3)
+    at div
+    at BoardComponent (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/src/components/board/board.tsx?t=1744133238642:41:34)
+    at div
+    at main
+    at div
+    at Home (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/src/pages/home.tsx?t=1744133238642:27:21)
+    at Route (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c609bb31:265:16)
+    at Switch (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c609bb31:321:17)
+    at Router
+    at DndProvider (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/src/components/board/board.tsx?t=1744133238642:28:31)
+    at QueryClientProvider (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=c609bb31:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+DialogPortal is not defined
+at AttachmentItem (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/src/components/gpt/attachment-item.tsx?t=1744133238642:310:242)
+at renderWithHooks (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:11548:26)
+at mountIndeterminateComponent (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:14926:21)
+at beginWork (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:15914:22)
+at beginWork$1 (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:19753:22)
+at performUnitOfWork (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:19198:20)
+at workLoopSync (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:19137:13)
+at renderRootSync (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:19116:15)
+at recoverFromConcurrentError (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:18736:28)
+at performSyncWorkOnRoot (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c609bb31:18879:28)
