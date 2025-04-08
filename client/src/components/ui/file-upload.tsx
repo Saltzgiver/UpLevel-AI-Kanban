@@ -86,39 +86,51 @@ export function FileUpload({ cardId }: FileUploadProps) {
   };
 
   return (
-    <div className="mt-2">
+    <div 
+      className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors overflow-hidden h-full flex flex-col"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={handleButtonClick}
+    >
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+        disabled={isUploading}
+      />
+      
+      {/* Square Placeholder */}
       <div 
-        className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer transition-colors ${
-          isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+        className={`relative cursor-pointer aspect-square ${
+          isDragging ? 'bg-blue-50' : 'bg-gray-50'
         }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleButtonClick}
       >
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileChange} 
-          className="hidden" 
-          disabled={isUploading}
-        />
-        {isUploading ? (
-          <div className="flex flex-col items-center justify-center py-2">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-500 mb-1" />
-            <p className="text-xs text-gray-500">Uploading...</p>
+        <div className="absolute inset-0 flex items-center justify-center">
+          {isUploading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+          ) : (
+            <div className="flex flex-col items-center justify-center">
+              <Upload className="h-6 w-6 text-blue-500 mb-1" />
+              <p className="text-[9px] text-center text-gray-500 px-1">
+                Upload file
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Info Bar */}
+      <div className="flex items-center p-1 border-t border-gray-100 mt-auto">
+        <div className="h-4 w-4 rounded bg-blue-50 flex items-center justify-center mr-1 border border-blue-100">
+          <Paperclip className="h-2 w-2 text-blue-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[9px] font-medium text-gray-700 truncate">
+            Add attachment
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-2">
-            <Upload className="h-5 w-5 text-blue-500 mb-1" />
-            <p className="text-xs text-gray-500">
-              Drag & drop a file or click to browse
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Supported files: images, PDFs, CSVs, etc.
-            </p>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
