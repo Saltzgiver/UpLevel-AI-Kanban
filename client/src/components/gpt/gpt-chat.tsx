@@ -256,14 +256,20 @@ export function GPTChat({
         let attachmentId: number | undefined = undefined;
         
         // Try to extract the attachment ID with a regex pattern to handle all cases
-        const match = src.match(/attachment:(\d+)/);
+        // This pattern matches both "attachment:123" and "(attachment:123)"
+        const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
+        
         if (match && match[1]) {
           attachmentId = parseInt(match[1]);
+          console.log("Extracted attachment ID:", attachmentId, "from src:", src);
         } else {
           // Fallback to direct parsing if the regex didn't work
           if (src.startsWith('attachment:')) {
             // Direct format: attachment:123
             attachmentId = parseInt(src.substring('attachment:'.length));
+          } else if (src.startsWith('(attachment:') && src.endsWith(')')) {
+            // Markdown link format: (attachment:123)
+            attachmentId = parseInt(src.substring('(attachment:'.length, src.length - 1));
           }
         }
         
