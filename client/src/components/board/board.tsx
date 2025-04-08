@@ -222,15 +222,14 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
           return newData;
         });
         
-        // Make the actual API request
-        await apiRequest("PATCH", `/api/cards/${cardId}/move`, {
+        // Make the actual API request but don't await it immediately to maintain smooth UI
+        const apiPromise = apiRequest("PATCH", `/api/cards/${cardId}/move`, {
           destinationColumnId: destColId,
           position: destination.index,
         });
         
         // If the destination column has a GPT assigned and auto-trigger is enabled
         if (destColumn.gptAssigned && destColumn.autoTrigger) {
-          
           // Set up a timer to check for updates and refresh the board data
           const checkProcessingStatus = () => {
             const timer = setInterval(async () => {
@@ -241,25 +240,50 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
                 // If processing is complete, stop checking and refresh data
                 if (!data.processing) {
                   clearInterval(timer);
+                  
                   // Quietly refetch to update the data without disrupting the UI
-                  queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+                  // Use a refetch type that won't cause flickering
+                  queryClient.invalidateQueries({ 
+                    queryKey: [`/api/boards`],
+                    refetchType: 'none' 
+                  });
+                  
+                  setTimeout(() => {
+                    queryClient.refetchQueries({ 
+                      queryKey: [`/api/boards`],
+                      exact: false
+                    });
+                  }, 300);
                 }
               } catch (err) {
                 console.error("Error checking processing status:", err);
               }
-            }, 1000);
+            }, 2000); // Increased interval to reduce UI updates
             
             // Stop checking after 30 seconds as a failsafe
             setTimeout(() => clearInterval(timer), 30000);
           };
           
-          // Start checking after a short delay
-          setTimeout(checkProcessingStatus, 500);
+          // Wait for the API call to complete before starting the status checks
+          apiPromise.then(() => {
+            // Start checking after a delay to let the UI settle
+            setTimeout(checkProcessingStatus, 1000);
+          });
         } else {
-          // Quietly refetch data in the background after a short delay
-          setTimeout(() => {
-            queryClient.refetchQueries({ queryKey: [`/api/boards`] });
-          }, 1000);
+          // For non-GPT columns, wait longer before refreshing to maintain smooth experience
+          apiPromise.then(() => {
+            setTimeout(() => {
+              // Use a two-step refresh to avoid flickering
+              queryClient.invalidateQueries({ 
+                queryKey: [`/api/boards`],
+                refetchType: 'none'
+              });
+              
+              setTimeout(() => {
+                queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+              }, 300);
+            }, 1500);
+          });
         }
       } catch (error) {
         toast({
@@ -401,15 +425,14 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
       // Close the modal immediately after the optimistic update
       handleCloseCardModal();
       
-      // Make the actual API request
-      await apiRequest("PATCH", `/api/cards/${cardId}/move`, {
+      // Make the actual API request but don't await it immediately to maintain smooth UI
+      const apiPromise = apiRequest("PATCH", `/api/cards/${cardId}/move`, {
         destinationColumnId,
         position: 0, // Place at the top of the destination column
       });
       
       // If the destination column has a GPT assigned and auto-trigger is enabled
       if (destColumn?.gptAssigned && destColumn?.autoTrigger) {
-        
         // Set up a timer to check for updates and refresh the board data
         const checkProcessingStatus = () => {
           const timer = setInterval(async () => {
@@ -420,25 +443,50 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
               // If processing is complete, stop checking and refresh data
               if (!data.processing) {
                 clearInterval(timer);
+                
                 // Quietly refetch to update the data without disrupting the UI
-                queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+                // Use a refetch type that won't cause flickering
+                queryClient.invalidateQueries({ 
+                  queryKey: [`/api/boards`],
+                  refetchType: 'none' 
+                });
+                
+                setTimeout(() => {
+                  queryClient.refetchQueries({ 
+                    queryKey: [`/api/boards`],
+                    exact: false
+                  });
+                }, 300);
               }
             } catch (err) {
               console.error("Error checking processing status:", err);
             }
-          }, 1000);
+          }, 2000); // Increased interval to reduce UI updates
           
           // Stop checking after 30 seconds as a failsafe
           setTimeout(() => clearInterval(timer), 30000);
         };
         
-        // Start checking after a short delay
-        setTimeout(checkProcessingStatus, 500);
+        // Wait for the API call to complete before starting the status checks
+        apiPromise.then(() => {
+          // Start checking after a delay to let the UI settle
+          setTimeout(checkProcessingStatus, 1000);
+        });
       } else {
-        // Quietly refetch data in the background after a short delay
-        setTimeout(() => {
-          queryClient.refetchQueries({ queryKey: [`/api/boards`] });
-        }, 1000);
+        // For non-GPT columns, wait longer before refreshing to maintain smooth experience
+        apiPromise.then(() => {
+          setTimeout(() => {
+            // Use a two-step refresh to avoid flickering
+            queryClient.invalidateQueries({ 
+              queryKey: [`/api/boards`],
+              refetchType: 'none'
+            });
+            
+            setTimeout(() => {
+              queryClient.refetchQueries({ queryKey: [`/api/boards`] });
+            }, 300);
+          }, 1500);
+        });
       }
     } catch (error) {
       toast({
