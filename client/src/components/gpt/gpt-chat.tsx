@@ -63,7 +63,10 @@ function ImageDialogModal({
 }) {
   return (
     <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden">
+      <DialogContent 
+        className="max-w-4xl p-0 overflow-hidden"
+        aria-describedby="image-viewer-description"
+      >
         <DialogHeader className="p-4 bg-gray-50">
           <DialogTitle className="flex items-center justify-between">
             <span className="text-gray-800 font-medium">
@@ -73,6 +76,9 @@ function ImageDialogModal({
               <X className="h-4 w-4" />
             </DialogClose>
           </DialogTitle>
+          <p id="image-viewer-description" className="sr-only">
+            Enlarged view of image. Click outside or use the X button to close.
+          </p>
         </DialogHeader>
         <div className="p-6 flex items-center justify-center bg-black/5">
           {selectedImage && (
@@ -341,7 +347,7 @@ export function GPTChat({
                     alt={'AI Generated Image'} 
                     className="max-w-full object-cover h-48 w-auto" 
                     onLoad={(e) => {
-                      console.log("Image successfully loaded:", mostRecentAttachment.id);
+                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
                     }}
                     onError={(e) => {
                       console.error("Attachment image failed to load:", mostRecentAttachment.id);
