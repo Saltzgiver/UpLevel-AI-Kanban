@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Send, Loader2, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Chat, Attachment } from "@shared/schema";
@@ -9,6 +9,13 @@ import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -58,6 +65,7 @@ export function GPTChat({
 }: GPTChatProps) {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{src: string, alt: string} | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -265,32 +273,42 @@ export function GPTChat({
           console.log("Using most recent attachment for generic image reference:", mostRecentAttachment?.id);
           
           if (mostRecentAttachment) {
+            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
             return (
               <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
                 <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
                   AI Generated
                 </div>
-                <img 
-                  src={`/api/attachments/${mostRecentAttachment.id}`} 
-                  alt={'AI Generated Image'} 
-                  className="max-w-full object-cover"
-                  onLoad={(e) => {
-                    console.log("Image successfully loaded:", mostRecentAttachment.id);
-                  }}
-                  onError={(e) => {
-                    console.error("Attachment image failed to load:", mostRecentAttachment.id);
-                    // Replace with error message on load failure
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const errorDiv = document.createElement('div');
-                      errorDiv.className = 'text-red-500 text-xs p-2';
-                      errorDiv.textContent = `Failed to load image (ID: ${mostRecentAttachment.id})`;
-                      parent.appendChild(errorDiv);
-                    }
-                  }}
-                />
+                <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  <span>Click to expand</span>
+                </div>
+                <div 
+                  className="cursor-pointer" 
+                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                >
+                  <img 
+                    src={imageSrc} 
+                    alt={'AI Generated Image'} 
+                    className="max-w-full object-cover h-48 w-auto" 
+                    onLoad={(e) => {
+                      console.log("Image successfully loaded:", mostRecentAttachment.id);
+                    }}
+                    onError={(e) => {
+                      console.error("Attachment image failed to load:", mostRecentAttachment.id);
+                      // Replace with error message on load failure
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-red-500 text-xs p-2';
+                        errorDiv.textContent = `Failed to load image (ID: ${mostRecentAttachment.id})`;
+                        parent.appendChild(errorDiv);
+                      }
+                    }}
+                  />
+                </div>
               </div>
             );
           }
@@ -307,33 +325,43 @@ export function GPTChat({
         );
         
         if (matchingAttachment) {
+          const imageSrc = `/api/attachments/${matchingAttachment.id}`;
           console.log("Found direct matching attachment by filename:", matchingAttachment.id);
           return (
             <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
               <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
                 AI Generated
               </div>
-              <img 
-                src={`/api/attachments/${matchingAttachment.id}`} 
-                alt={alt || 'AI Generated Image'} 
-                className="max-w-full object-cover"
-                onLoad={(e) => {
-                  console.log("Image successfully loaded:", matchingAttachment.id);
-                }}
-                onError={(e) => {
-                  console.error("Attachment image failed to load:", matchingAttachment.id);
-                  // Replace with error message on load failure
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'text-red-500 text-xs p-2';
-                    errorDiv.textContent = `Failed to load image (ID: ${matchingAttachment.id})`;
-                    parent.appendChild(errorDiv);
-                  }
-                }}
-              />
+              <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                <Maximize2 className="h-3 w-3 mr-1" />
+                <span>Click to expand</span>
+              </div>
+              <div 
+                className="cursor-pointer" 
+                onClick={() => setSelectedImage({ src: imageSrc, alt: alt || 'AI Generated Image' })}
+              >
+                <img 
+                  src={imageSrc} 
+                  alt={alt || 'AI Generated Image'} 
+                  className="max-w-full object-cover h-48 w-auto"
+                  onLoad={(e) => {
+                    console.log("Image successfully loaded:", matchingAttachment.id);
+                  }}
+                  onError={(e) => {
+                    console.error("Attachment image failed to load:", matchingAttachment.id);
+                    // Replace with error message on load failure
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'text-red-500 text-xs p-2';
+                      errorDiv.textContent = `Failed to load image (ID: ${matchingAttachment.id})`;
+                      parent.appendChild(errorDiv);
+                    }
+                  }}
+                />
+              </div>
             </div>
           );
         }
@@ -374,32 +402,42 @@ export function GPTChat({
         console.log("Rendering attachment image:", { src, attachmentId, url: `/api/attachments/${attachmentId as number}` });
         
         // Use the attachment ID to create the proper image URL
+        const imageSrc = `/api/attachments/${attachmentId as number}`;
         return (
           <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
             <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
               AI Generated
             </div>
-            <img 
-              src={`/api/attachments/${attachmentId as number}`} 
-              alt={alt || 'AI Generated Image'} 
-              className="max-w-full object-cover"
-              onLoad={(e) => {
-                console.log("Image successfully loaded:", attachmentId as number);
-              }}
-              onError={(e) => {
-                console.error("Attachment image failed to load:", attachmentId as number);
-                // Replace with error message on load failure
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  const errorDiv = document.createElement('div');
-                  errorDiv.className = 'text-red-500 text-xs p-2';
-                  errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
-                  parent.appendChild(errorDiv);
-                }
-              }}
-            />
+            <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+              <Maximize2 className="h-3 w-3 mr-1" />
+              <span>Click to expand</span>
+            </div>
+            <div 
+              className="cursor-pointer" 
+              onClick={() => setSelectedImage({ src: imageSrc, alt: alt || 'AI Generated Image' })}
+            >
+              <img 
+                src={imageSrc}
+                alt={alt || 'AI Generated Image'} 
+                className="max-w-full object-cover h-48 w-auto"
+                onLoad={(e) => {
+                  console.log("Image successfully loaded:", attachmentId as number);
+                }}
+                onError={(e) => {
+                  console.error("Attachment image failed to load:", attachmentId as number);
+                  // Replace with error message on load failure
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-red-500 text-xs p-2';
+                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
+                    parent.appendChild(errorDiv);
+                  }
+                }}
+              />
+            </div>
           </div>
         );
       } else if (!src || src === '') {
@@ -418,32 +456,42 @@ export function GPTChat({
           console.log("Using most recent attachment as fallback for empty src:", mostRecentAttachment?.id);
           
           if (mostRecentAttachment) {
+            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
             return (
               <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
                 <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
                   AI Generated
                 </div>
-                <img 
-                  src={`/api/attachments/${mostRecentAttachment.id}`} 
-                  alt={'AI Generated Image'} 
-                  className="max-w-full object-cover"
-                  onLoad={(e) => {
-                    console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
-                  }}
-                  onError={(e) => {
-                    console.error("Fallback attachment image failed to load:", mostRecentAttachment.id);
-                    // Show the original fallback message
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const errorDiv = document.createElement('div');
-                      errorDiv.className = 'text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50';
-                      errorDiv.textContent = `Image reference missing. Refresh may be needed.`;
-                      parent.appendChild(errorDiv);
-                    }
-                  }}
-                />
+                <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  <span>Click to expand</span>
+                </div>
+                <div 
+                  className="cursor-pointer" 
+                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                >
+                  <img 
+                    src={imageSrc} 
+                    alt={'AI Generated Image'} 
+                    className="max-w-full object-cover h-48 w-auto"
+                    onLoad={(e) => {
+                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
+                    }}
+                    onError={(e) => {
+                      console.error("Fallback attachment image failed to load:", mostRecentAttachment.id);
+                      // Show the original fallback message
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50';
+                        errorDiv.textContent = `Image reference missing. Refresh may be needed.`;
+                        parent.appendChild(errorDiv);
+                      }
+                    }}
+                  />
+                </div>
               </div>
             );
           }
@@ -458,14 +506,27 @@ export function GPTChat({
       
       // Regular image URL
       console.log("Rendering regular image URL:", src);
-      return <img 
-        src={src} 
-        alt={alt} 
-        className="max-w-full my-2 rounded-lg"
-        onError={(e) => {
-          console.error("Regular image failed to load:", src);
-        }}
-      />;
+      return (
+        <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+          <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+            <Maximize2 className="h-3 w-3 mr-1" />
+            <span>Click to expand</span>
+          </div>
+          <div 
+            className="cursor-pointer" 
+            onClick={() => setSelectedImage({ src, alt })}
+          >
+            <img 
+              src={src} 
+              alt={alt} 
+              className="max-w-full h-48 w-auto object-cover rounded-lg"
+              onError={(e) => {
+                console.error("Regular image failed to load:", src);
+              }}
+            />
+          </div>
+        </div>
+      );
     };
     
     return (
@@ -596,112 +657,194 @@ export function GPTChat({
   // just return the messages and input without header/container
   if (embedded) {
     return (
-      <div className="flex flex-col h-full">
-        {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
-        {chats.length > 3 && !userHasScrolled && (
-          <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
-            <ChevronUp className="h-3 w-3 mx-auto" />
-            Scroll for earlier messages
-          </div>
-        )}
-        
-        <div 
-          ref={chatContainerRef}
-          className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
-        >
-          <ChatMessages />
-        </div>
-        
-        {/* Chat Input - Always at the bottom */}
-        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
-          <Input
-            type="text"
-            placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
-            className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            disabled={isSending}
-          />
+      <>
+        <div className="flex flex-col h-full">
+          {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
+          {chats.length > 3 && !userHasScrolled && (
+            <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
+              <ChevronUp className="h-3 w-3 mx-auto" />
+              Scroll for earlier messages
+            </div>
+          )}
           
-          <Button
-            size="sm"
-            className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-              isSending 
-                ? 'bg-gray-300 text-gray-600' 
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-            onClick={handleSendMessage}
-            disabled={isSending}
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
           >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+            <ChatMessages />
+          </div>
+          
+          {/* Chat Input - Always at the bottom */}
+          <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
+            <Input
+              type="text"
+              placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
+              className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={isSending}
+            />
+            
+            <Button
+              size="sm"
+              className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+                isSending 
+                  ? 'bg-gray-300 text-gray-600' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+              onClick={handleSendMessage}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+
+        {/* Image Dialog Modal - Shared between embedded and standalone views */}
+        <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden">
+            <DialogHeader className="p-4 bg-gray-50">
+              <DialogTitle className="flex items-center justify-between">
+                <span className="text-gray-800 font-medium">
+                  {selectedImage?.alt || 'Image Viewer'}
+                </span>
+                <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+                  <X className="h-4 w-4" />
+                </DialogClose>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="p-6 flex items-center justify-center bg-black/5">
+              {selectedImage && (
+                <img 
+                  src={selectedImage.src} 
+                  alt={selectedImage.alt} 
+                  className="max-w-full max-h-[70vh] object-contain" 
+                />
+              )}
+            </div>
+            <div className="p-3 bg-gray-50 flex justify-between border-t">
+              <span className="text-xs text-gray-500">
+                Click outside to close
+              </span>
+              <a 
+                href={selectedImage?.src || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open in new tab
+              </a>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
   // Standard standalone component
   return (
-    <div className="flex flex-col">
-      <div className="px-3 py-2 border-b border-gray-100">
-        <div className="text-sm font-medium text-gray-700">
-          Conversation with {gptName || 'AI Assistant'}
-        </div>
-      </div>
-      
+    <>
       <div className="flex flex-col">
-        <div 
-          ref={chatContainerRef}
-          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
-        >
-          <ChatMessages />
+        <div className="px-3 py-2 border-b border-gray-100">
+          <div className="text-sm font-medium text-gray-700">
+            Conversation with {gptName || 'AI Assistant'}
+          </div>
         </div>
         
-        {/* Chat Input - Fixed at the bottom */}
-        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
-          <Input
-            type="text"
-            placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
-            className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            disabled={isSending}
-          />
-          
-          <Button
-            size="sm"
-            className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-              isSending 
-                ? 'bg-gray-300 text-gray-600' 
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-            onClick={handleSendMessage}
-            disabled={isSending}
+        <div className="flex flex-col">
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
           >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+            <ChatMessages />
+          </div>
+          
+          {/* Chat Input - Fixed at the bottom */}
+          <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
+            <Input
+              type="text"
+              placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
+              className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={isSending}
+            />
+            
+            <Button
+              size="sm"
+              className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+                isSending 
+                  ? 'bg-gray-300 text-gray-600' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+              onClick={handleSendMessage}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Image Dialog Modal */}
+      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 bg-gray-50">
+            <DialogTitle className="flex items-center justify-between">
+              <span className="text-gray-800 font-medium">
+                {selectedImage?.alt || 'Image Viewer'}
+              </span>
+              <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+                <X className="h-4 w-4" />
+              </DialogClose>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 flex items-center justify-center bg-black/5">
+            {selectedImage && (
+              <img 
+                src={selectedImage.src} 
+                alt={selectedImage.alt} 
+                className="max-w-full max-h-[70vh] object-contain" 
+              />
+            )}
+          </div>
+          <div className="p-3 bg-gray-50 flex justify-between border-t">
+            <span className="text-xs text-gray-500">
+              Click outside to close
+            </span>
+            <a 
+              href={selectedImage?.src || '#'} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Open in new tab
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
