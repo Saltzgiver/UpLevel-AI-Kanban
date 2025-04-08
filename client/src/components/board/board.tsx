@@ -230,10 +230,6 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
         
         // If the destination column has a GPT assigned and auto-trigger is enabled
         if (destColumn.gptAssigned && destColumn.autoTrigger) {
-          toast({
-            title: "GPT Processing",
-            description: `Card will be processed by ${destColumn.gptName}`,
-          });
           
           // Set up a timer to check for updates and refresh the board data
           const checkProcessingStatus = () => {
@@ -413,10 +409,6 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
       
       // If the destination column has a GPT assigned and auto-trigger is enabled
       if (destColumn?.gptAssigned && destColumn?.autoTrigger) {
-        toast({
-          title: "GPT Processing",
-          description: `Card will be processed by ${destColumn.gptName}`,
-        });
         
         // Set up a timer to check for updates and refresh the board data
         const checkProcessingStatus = () => {
