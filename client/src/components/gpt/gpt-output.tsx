@@ -13,6 +13,8 @@ interface GPTOutputProps {
 }
 
 export function GPTOutput({ output, attachments }: GPTOutputProps) {
+  const [showAllAttachments, setShowAllAttachments] = useState(attachments.length <= 2);
+  
   if (!output && attachments.length === 0) {
     return (
       <div className="text-sm text-muted-foreground italic p-3 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50">
@@ -20,6 +22,9 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
       </div>
     );
   }
+
+  const visibleAttachments = showAllAttachments ? attachments : attachments.slice(0, 2);
+  const hasMoreAttachments = attachments.length > 2;
 
   return (
     <div>
@@ -57,6 +62,44 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
             >
               {output}
             </ReactMarkdown>
+          </div>
+        </div>
+      )}
+      
+      {attachments.length > 0 && (
+        <div className="rounded-lg bg-white border border-blue-100 overflow-hidden shadow-sm mb-4">
+          <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center">
+            <FileText className="h-4 w-4 text-blue-600 mr-2" />
+            <span className="text-sm font-medium text-blue-800">Generated Files</span>
+            <Badge variant="outline" className="ml-auto text-xs font-normal py-0 h-5 bg-blue-50 border-blue-200 text-blue-700">
+              {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
+            </Badge>
+          </div>
+          <div className="p-3 space-y-2">
+            {visibleAttachments.map(attachment => (
+              <AttachmentItem key={attachment.id} attachment={attachment} />
+            ))}
+            
+            {hasMoreAttachments && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 mt-1 flex items-center justify-center"
+                onClick={() => setShowAllAttachments(!showAllAttachments)}
+              >
+                {showAllAttachments ? (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                    Show fewer files
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                    Show {attachments.length - 2} more files
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       )}

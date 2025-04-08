@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { triggerGPTProcessing, processChat } from "./openai";
+import { triggerGPTProcessing, processChat, generateImage } from "./openai";
 import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
@@ -443,6 +443,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting attachment:", error);
       return res.status(500).json({ message: "Error deleting attachment" });
+    }
+  });
+  
+  // Generate an image with DALL-E and attach to a card
+  app.post("/api/cards/:cardId/generate-image", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const { prompt, apiKey } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ message: "No prompt provided" });
+      }
+      
+      // Get card to verify it exists
+      const card = await storage.getCardById(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+
+      // Generate the image
+      const imageUrl = await generateImage(prompt, apiKey || undefined);
+      
+      if (!imageUrl) {
+        return res.status(500).json({ message: "Failed to generate image" });
+      }
+      
+      // Fetch the image and convert to base64
+      const response = await fetch(imageUrl);
+      const imageBuffer = await response.arrayBuffer();
+      const base64Image = Buffer.from(imageBuffer).toString('base64');
+      
+      // Create a descriptive filename
+      const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `dalle_${safePrompt}_${Date.now()}.png`;
+      
+      // Create attachment
+      const attachment = await storage.createAttachment({
+        cardId,
+        filename,
+        fileType: 'image/png',
+        content: base64Image
+      });
+      
+      return res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      return res.status(500).json({ 
+        message: "Error generating image",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
   
