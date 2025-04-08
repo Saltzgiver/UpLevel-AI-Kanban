@@ -178,42 +178,51 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       
       {/* Image Preview Dialog */}
       <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <DialogHeader className="p-4 bg-gray-50">
-            <DialogTitle className="flex items-center">
-              <span className="text-gray-800 font-medium">
+        {/* Use DialogPortal instead of DialogContent to create our own custom version without the default close button */}
+        <DialogPortal>
+          <DialogOverlay />
+          <div 
+            className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background p-0 shadow-lg rounded-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 overflow-hidden"
+            aria-labelledby="attachment-preview-title"
+            aria-describedby="attachment-preview-description"
+          >
+            <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+              <h2 id="attachment-preview-title" className="text-lg font-medium text-gray-800">
                 {attachment.filename}
+              </h2>
+              {/* Only one close button */}
+              <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+            </div>
+            
+            <div className="p-6 flex items-center justify-center bg-black/5">
+              {isImage && (
+                <img 
+                  src={getAttachmentUrl()} 
+                  alt={attachment.filename} 
+                  className="max-w-full max-h-[70vh] object-contain" 
+                />
+              )}
+            </div>
+            
+            <div className="p-3 bg-gray-50 flex justify-between border-t">
+              <span id="attachment-preview-description" className="text-xs text-gray-500">
+                Click outside to close
               </span>
-            </DialogTitle>
-            {/* Single X button in the top-right corner */}
-            <DialogClose className="absolute right-4 top-4 w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
-              <X className="h-4 w-4" />
-            </DialogClose>
-          </DialogHeader>
-          <div className="p-6 flex items-center justify-center bg-black/5">
-            {isImage && (
-              <img 
-                src={getAttachmentUrl()} 
-                alt={attachment.filename} 
-                className="max-w-full max-h-[70vh] object-contain" 
-              />
-            )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDownload}
+                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+            </div>
           </div>
-          <div className="p-3 bg-gray-50 flex justify-between border-t">
-            <span className="text-xs text-gray-500">
-              Click outside to close
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Download
-            </Button>
-          </div>
-        </DialogContent>
+        </DialogPortal>
       </Dialog>
     </>
   );
