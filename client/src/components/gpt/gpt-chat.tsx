@@ -68,13 +68,10 @@ function ImageDialogModal({
         aria-describedby="image-viewer-description"
       >
         <DialogHeader className="p-4 bg-gray-50">
-          <DialogTitle className="flex items-center justify-between">
+          <DialogTitle className="flex items-center">
             <span className="text-gray-800 font-medium">
               {selectedImage?.alt || 'Image Viewer'}
             </span>
-            <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
-              <X className="h-4 w-4" />
-            </DialogClose>
           </DialogTitle>
           <p id="image-viewer-description" className="sr-only">
             Enlarged view of image. Click outside or use the X button to close.
