@@ -297,7 +297,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
+          content: `✨ Generated an image based on your request: "${prompt}"\n\n![${filename}](attachment:${attachment.id})`,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });

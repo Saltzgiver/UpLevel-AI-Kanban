@@ -250,7 +250,16 @@ export function GPTChat({
     const renderImageInMarkdown = (src: string, alt: string) => {
       // Check if this is an attachment reference
       if (src.startsWith('attachment:')) {
-        const attachmentId = parseInt(src.substring(11));
+        // Extract attachment ID directly after the colon
+        const attachmentId = parseInt(src.substring('attachment:'.length));
+        
+        if (isNaN(attachmentId)) {
+          console.error("Invalid attachment ID:", src);
+          return <div className="text-red-500 text-xs">Invalid image reference</div>;
+        }
+        
+        console.log("Rendering attachment image:", { src, attachmentId });
+        
         return (
           <div className="my-2 rounded-lg overflow-hidden border border-gray-200">
             <img 
