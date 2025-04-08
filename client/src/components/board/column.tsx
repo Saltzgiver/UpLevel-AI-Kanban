@@ -179,11 +179,16 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
         <Droppable droppableId={column.id.toString()} type="card">
           {(provided, snapshot) => (
             <div
-              className={`column-content flex-1 overflow-y-auto min-h-[100px] pr-1 ${
+              className={`column-content flex-1 min-h-[100px] pr-1 ${
                 snapshot.isDraggingOver ? "bg-primary/5" : ""
               }`}
               ref={provided.innerRef}
               {...provided.droppableProps}
+              // Fixed issue: removed nested scrollable container
+              style={{ 
+                minHeight: '50px',
+                height: 'calc(100vh - 230px)',
+              }}
             >
               {column.cards.map((card, index) => (
                 <Card 

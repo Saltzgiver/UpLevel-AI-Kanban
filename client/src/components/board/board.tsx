@@ -56,16 +56,17 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId, type } = result;
 
-    if (!destination) {
-      return;
-    }
-
-    if (
+    // If there's no destination or it's the same place, do nothing
+    if (!destination || (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
-    ) {
+    )) {
       return;
     }
+    
+    // Add a small delay to allow the drag animation to complete
+    // This helps prevent visual flickering
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Handle column reordering
     if (type === "column") {
@@ -502,8 +503,19 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   return (
     <div className="w-full overflow-hidden">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
-        {/* Horizontal scrolling container - add position relative to contain dragged items */}
-        <div className="flex flex-nowrap gap-4 pb-6 overflow-x-auto min-w-full relative" style={{ minHeight: 'calc(100vh - 120px)' }}>
+        {/* 
+          Horizontal scrolling container with position relative
+          - Fixes nested scrollable issues
+          - Removes overflow-x-auto to prevent nested scroll containers
+        */}
+        <div 
+          className="flex flex-nowrap gap-4 pb-6 min-w-full relative" 
+          style={{ 
+            minHeight: 'calc(100vh - 120px)',
+            overflowX: 'auto', 
+            overflowY: 'hidden' 
+          }}
+        >
           {columns.map((column, index) => (
             <Column
               key={column.id}
