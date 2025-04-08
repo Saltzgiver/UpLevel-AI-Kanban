@@ -428,12 +428,13 @@ export function CardModal({
                 </div>
                 
                 {attachments.length > 0 ? (
-                  <div className="grid gap-1.5 pl-5 mb-3">
+                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1 pl-1 mb-3">
                     {attachments.map((attachment) => (
-                      <AttachmentItem 
-                        key={attachment.id} 
-                        attachment={attachment} 
-                      />
+                      <div key={attachment.id} className="w-full">
+                        <AttachmentItem 
+                          attachment={attachment} 
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
