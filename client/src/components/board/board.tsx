@@ -63,10 +63,6 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
     )) {
       return;
     }
-    
-    // Add a small delay to allow the drag animation to complete
-    // This helps prevent visual flickering
-    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Handle column reordering
     if (type === "column") {
@@ -501,20 +497,11 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   };
 
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
-        {/* 
-          Horizontal scrolling container with position relative
-          - Fixes nested scrollable issues
-          - Removes overflow-x-auto to prevent nested scroll containers
-        */}
         <div 
-          className="flex flex-nowrap gap-4 pb-6 min-w-full relative" 
-          style={{ 
-            minHeight: 'calc(100vh - 120px)',
-            overflowX: 'auto', 
-            overflowY: 'hidden' 
-          }}
+          className="flex gap-4 pb-6 overflow-x-auto"
+          style={{ minHeight: 'calc(100vh - 120px)' }}
         >
           {columns.map((column, index) => (
             <Column
@@ -526,7 +513,6 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
             />
           ))}
           <AddColumn boardId={board.id} />
-          {/* Add more padding at the end to ensure there's room on the right */}
           <div className="w-4 flex-shrink-0"></div>
         </div>
       </DragDropContext>

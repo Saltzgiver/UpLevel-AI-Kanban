@@ -74,8 +74,8 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
   };
   
   return (
-    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 flex min-h-[200px] h-fit">
-      <div className="p-2 flex flex-col w-full h-full">
+    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 flex min-h-[200px]">
+      <div className="p-2 flex flex-col w-full">
         {/* Column header */}
         <div className="column-header flex items-center justify-between mb-3">
           {/* Column title - No longer draggable */}
@@ -169,16 +169,11 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
         <Droppable droppableId={column.id.toString()} type="card">
           {(provided, snapshot) => (
             <div
-              className={`column-content flex-1 min-h-[100px] pr-1 ${
+              className={`column-content flex-1 min-h-[100px] ${
                 snapshot.isDraggingOver ? "bg-primary/5" : ""
               }`}
               ref={provided.innerRef}
               {...provided.droppableProps}
-              // Fixed issue: removed nested scrollable container
-              style={{ 
-                minHeight: '50px',
-                height: 'calc(100vh - 230px)',
-              }}
             >
               {column.cards.map((card, index) => (
                 <CardComponent 
