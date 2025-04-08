@@ -415,6 +415,7 @@ export function CardModal({
                     embedded={true}
                     finalOutput={gptOutput}
                     isProcessing={rawProcessingStatus}
+                    attachments={card.attachments || []}
                   />
                 </div>
               </div>
