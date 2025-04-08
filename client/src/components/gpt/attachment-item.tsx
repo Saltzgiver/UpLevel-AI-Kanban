@@ -75,8 +75,8 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
             className="relative cursor-pointer aspect-square" 
             onClick={() => setShowImagePreview(true)}
           >
-            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-1 py-0.5 text-xs rounded-br flex items-center">
-              <Maximize2 className="h-3 w-3 mr-1" />
+            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
+              <Maximize2 className="h-2 w-2 mr-0.5" />
               <span>Expand</span>
             </div>
             <img 
@@ -86,44 +86,25 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
             />
           </div>
           
-          {/* File Info & Actions */}
-          <div className="flex items-center p-1.5 border-t border-gray-100 mt-auto">
-            <div className="h-6 w-6 rounded-md bg-indigo-50 flex items-center justify-center mr-1.5 border border-indigo-100">
+          {/* File Info & Actions - Simplified version to fit in grid */}
+          <div className="flex items-center p-1 border-t border-gray-100 mt-auto">
+            <div className="h-4 w-4 rounded bg-indigo-50 flex items-center justify-center mr-1 border border-indigo-100">
               {renderIcon()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-gray-700 truncate">
+              <div className="text-[9px] font-medium text-gray-700 truncate">
                 {attachment.filename}
               </div>
-              <div className="text-[9px] text-gray-500">
-                AI generated
-              </div>
             </div>
-            <div className="flex">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full"
-                onClick={handleDownload}
-                title="Download"
-              >
-                <Download className="h-2.5 w-2.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                title="Delete"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-2.5 w-2.5" />
-                )}
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 ml-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+              onClick={handleDownload}
+              title="Download"
+            >
+              <Download className="h-2 w-2" />
+            </Button>
           </div>
         </div>
       ) : (

@@ -75,8 +75,8 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
               {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
             </Badge>
           </div>
-          <div className="p-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+          <div className="p-2">
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1">
               {visibleAttachments.map(attachment => (
                 <div key={attachment.id} className="w-full">
                   <AttachmentItem attachment={attachment} />
