@@ -180,14 +180,15 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden">
           <DialogHeader className="p-4 bg-gray-50">
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle className="flex items-center">
               <span className="text-gray-800 font-medium">
                 {attachment.filename}
               </span>
-              <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
-                <X className="h-4 w-4" />
-              </DialogClose>
             </DialogTitle>
+            {/* Single X button in the top-right corner */}
+            <DialogClose className="absolute right-4 top-4 w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+              <X className="h-4 w-4" />
+            </DialogClose>
           </DialogHeader>
           <div className="p-6 flex items-center justify-center bg-black/5">
             {isImage && (
