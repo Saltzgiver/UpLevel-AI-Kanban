@@ -176,45 +176,64 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
         </div>
       )}
       
-      {/* Image Preview Dialog */}
-      <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden attachment-preview-dialog [&_button[data-state]]:!top-4 [&_button[data-state]]:!right-4" 
-          aria-describedby="attachment-preview-description"
+      {/* Custom Image Preview Dialog that avoids duplicate close buttons */}
+      {showImagePreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in duration-200"
+          onClick={() => setShowImagePreview(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="attachment-preview-title"
         >
-          <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-            <h2 id="attachment-preview-title" className="text-lg font-medium text-gray-800">
-              {attachment.filename}
-            </h2>
+          <div 
+            className="relative bg-white rounded-lg overflow-hidden max-w-4xl w-full mx-4 animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Custom header with single close button */}
+            <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+              <h2 id="attachment-preview-title" className="text-lg font-medium text-gray-800">
+                {attachment.filename}
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 p-0 rounded-full"
+                onClick={() => setShowImagePreview(false)}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+            
+            {/* Image container */}
+            <div className="p-6 flex items-center justify-center bg-black/5 min-h-[300px]">
+              {isImage && (
+                <img 
+                  src={getAttachmentUrl()} 
+                  alt={attachment.filename} 
+                  className="max-w-full max-h-[70vh] object-contain" 
+                />
+              )}
+            </div>
+            
+            {/* Footer with download button */}
+            <div className="p-3 bg-gray-50 flex justify-between border-t">
+              <span className="text-xs text-gray-500">
+                Click outside to close
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDownload}
+                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+            </div>
           </div>
-          
-          <div className="p-6 flex items-center justify-center bg-black/5">
-            {isImage && (
-              <img 
-                src={getAttachmentUrl()} 
-                alt={attachment.filename} 
-                className="max-w-full max-h-[70vh] object-contain" 
-              />
-            )}
-          </div>
-          
-          <div className="p-3 bg-gray-50 flex justify-between border-t">
-            <span id="attachment-preview-description" className="text-xs text-gray-500">
-              Click outside to close
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Download
-            </Button>
-          </div>
-          
-          {/* We're not using a custom style tag as it would be stripped out by React */}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </>
   );
 }
