@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check } from "lucide-react";
+import { Check, X, Sparkles } from "lucide-react";
 
 interface AssignGPTModalProps {
   column: Column;
@@ -84,6 +84,7 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
+  const modalRef = useRef<HTMLDivElement>(null);
   
   // Get the next color automatically when the modal opens for a new GPT configuration
   useEffect(() => {
@@ -98,6 +99,16 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       setGptColor(column.gptColor);
     }
   }, [isOpen, column.gptAssigned, column.gptColor]);
+  
+  // Reset form state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setGptName(column.gptName || "GPT Assistant");
+      setApiKey(column.apiKey || "");
+      setInstructions(column.gptInstructions || "");
+      setAutoTrigger(column.autoTrigger !== false);
+    }
+  }, [isOpen, column]);
 
   const handleSubmit = async () => {
     if (!instructions.trim()) {
@@ -140,119 +151,162 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
     }
   };
 
+  // useEffect for click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Set GPT Prompt for Column</DialogTitle>
-          <DialogDescription>Cards in this column will be processed with the instructions you provide</DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
+      <div 
+        ref={modalRef}
+        className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+          <div className="flex-1 flex items-center">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-medium">Configure AI Assistant</h2>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="column-name">Column</Label>
-            <div className="px-3 py-2 bg-muted rounded border text-sm">
-              {column.name}
+        {/* Column name display */}
+        <div className="px-6 pt-4 pb-2 flex">
+          <Badge variant="outline" className="text-sm py-1 bg-gray-50">
+            {column.name}
+          </Badge>
+        </div>
+        
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-6 py-2">
+          <div className="space-y-5">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="gpt-name" className="text-sm font-medium">Assistant Name</Label>
+              <Input 
+                id="gpt-name" 
+                placeholder="GPT Assistant" 
+                value={gptName}
+                onChange={(e) => setGptName(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                This name will appear in chats and outputs
+              </p>
             </div>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="gpt-name">Custom Name (Optional)</Label>
-            <Input 
-              id="gpt-name" 
-              placeholder="GPT Assistant" 
-              value={gptName}
-              onChange={(e) => setGptName(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              This name will appear in chats and outputs
-            </p>
-          </div>
-          
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="api-key">API Key (Optional)</Label>
-              <Button variant="link" className="h-auto p-0" onClick={() => setApiKey("")}>
-                Use default
-              </Button>
+            
+            {/* API Key */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="api-key" className="text-sm font-medium">API Key</Label>
+                <Button variant="link" className="h-auto p-0 text-xs" onClick={() => setApiKey("")}>
+                  Use default key
+                </Button>
+              </div>
+              <Input 
+                id="api-key" 
+                type="password" 
+                placeholder="sk-..." 
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to use your default OpenAI API key
+              </p>
             </div>
-            <Input 
-              id="api-key" 
-              type="password" 
-              placeholder="sk-..." 
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave blank to use your default OpenAI API key
-            </p>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="instructions">Custom Instructions (Required)</Label>
-            <Textarea 
-              id="instructions" 
-              placeholder="Write detailed instructions for how GPT should process cards in this column..." 
-              rows={5}
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Example: "Generate a poem based on the card title and description"
-            </p>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label>GPT Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {colorPalette.map((color) => (
-                <button
-                  key={color.name}
-                  type="button"
-                  className={`relative ${color.bg} ${color.text} ${color.border} flex items-center justify-center px-5 py-3 rounded-md border hover:opacity-90 transition-opacity ${
-                    gptColor === color.name ? 'ring-2 ring-offset-2 ring-primary' : ''
-                  }`}
-                  onClick={() => setGptColor(color.name)}
-                >
-                  <span>Text</span>
-                  {gptColor === color.name && (
-                    <div className="absolute top-1 right-1">
-                      <Check className="h-3 w-3" />
-                    </div>
-                  )}
-                </button>
-              ))}
+            
+            {/* Instructions */}
+            <div className="space-y-2">
+              <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
+              <Textarea 
+                id="instructions" 
+                placeholder="Write detailed instructions for how the AI should process cards in this column..." 
+                rows={4}
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                className="w-full resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Example: "Generate a poem based on the card title and description"
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              This color will be used to identify the AI assistant in chat
-            </p>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="auto-trigger" 
-              checked={autoTrigger}
-              onCheckedChange={(checked) => setAutoTrigger(!!checked)}
-            />
-            <Label htmlFor="auto-trigger" className="text-sm">
-              Auto-process cards when moved to this column
-            </Label>
+            
+            {/* Color Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Assistant Color</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {colorPalette.map((color) => (
+                  <button
+                    key={color.name}
+                    type="button"
+                    className={`relative ${color.bg} ${color.text} ${color.border} flex items-center justify-center py-3 rounded-md border hover:opacity-90 transition-opacity ${
+                      gptColor === color.name ? 'ring-2 ring-offset-1 ring-primary' : ''
+                    }`}
+                    onClick={() => setGptColor(color.name)}
+                  >
+                    <span>Text</span>
+                    {gptColor === color.name && (
+                      <div className="absolute top-1 right-1">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This color will be used to identify the AI assistant in chats
+              </p>
+            </div>
+            
+            {/* Auto-processing option */}
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox 
+                id="auto-trigger" 
+                checked={autoTrigger}
+                onCheckedChange={(checked) => setAutoTrigger(!!checked)}
+              />
+              <Label htmlFor="auto-trigger" className="text-sm cursor-pointer">
+                Auto-process cards when moved to this column
+              </Label>
+            </div>
           </div>
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+        {/* Footer with actions */}
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end space-x-2">
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting} size="sm">
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit} 
             disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            size="sm"
           >
             {isSubmitting ? "Saving..." : "Save Configuration"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   );
 }
