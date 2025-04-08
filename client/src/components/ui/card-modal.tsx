@@ -436,7 +436,11 @@ export function CardModal({
                   {attachments.map((attachment) => (
                     <div key={attachment.id} className="w-full">
                       <AttachmentItem 
-                        attachment={attachment} 
+                        attachment={attachment}
+                        onDelete={() => {
+                          // This will refresh attachments
+                          // We rely on the AttachmentItem component to handle the actual deletion
+                        }}
                       />
                     </div>
                   ))}

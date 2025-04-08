@@ -79,7 +79,13 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
             <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1">
               {visibleAttachments.map(attachment => (
                 <div key={attachment.id} className="w-full">
-                  <AttachmentItem attachment={attachment} />
+                  <AttachmentItem 
+                    attachment={attachment} 
+                    onDelete={() => {
+                      // This will refresh the query after deletion
+                      // We rely on the AttachmentItem component to handle the actual deletion
+                    }}
+                  />
                 </div>
               ))}
             </div>

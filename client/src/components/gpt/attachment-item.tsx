@@ -9,9 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface AttachmentItemProps {
   attachment: Attachment;
+  onDelete?: () => void;
 }
 
-export function AttachmentItem({ attachment }: AttachmentItemProps) {
+export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const { toast } = useToast();
@@ -32,6 +33,12 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
     try {
       await apiRequest("DELETE", `/api/attachments/${attachment.id}`, {});
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      
+      // Call the onDelete callback if provided
+      if (onDelete) {
+        onDelete();
+      }
+      
       toast({
         title: "Success",
         description: "Attachment deleted",
@@ -75,10 +82,28 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
             className="relative cursor-pointer aspect-square" 
             onClick={() => setShowImagePreview(true)}
           >
+            {/* Expand Button */}
             <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
               <Maximize2 className="h-2 w-2 mr-0.5" />
               <span>Expand</span>
             </div>
+            
+            {/* Delete Button - Absolute positioned in top right with slight transparency */}
+            <div 
+              className="absolute top-0 right-0 z-10 bg-red-500/80 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening the preview
+                handleDelete();
+              }}
+              title="Delete attachment"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-2.5 w-2.5" />
+              )}
+            </div>
+            
             <img 
               src={getAttachmentUrl()} 
               alt={attachment.filename} 
@@ -100,7 +125,10 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
               variant="ghost"
               size="icon"
               className="h-4 w-4 p-0 ml-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
-              onClick={handleDownload}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening the preview
+                handleDownload();
+              }}
               title="Download"
             >
               <Download className="h-2 w-2" />
@@ -124,7 +152,7 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full transition-colors"
               onClick={handleDownload}
               title="Download"
             >
@@ -133,7 +161,7 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
               onClick={handleDelete}
               disabled={isDeleting}
               title="Delete"
