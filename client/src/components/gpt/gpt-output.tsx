@@ -75,16 +75,20 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
               {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
             </Badge>
           </div>
-          <div className="p-3 space-y-2">
-            {visibleAttachments.map(attachment => (
-              <AttachmentItem key={attachment.id} attachment={attachment} />
-            ))}
+          <div className="p-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+              {visibleAttachments.map(attachment => (
+                <div key={attachment.id} className="w-full">
+                  <AttachmentItem attachment={attachment} />
+                </div>
+              ))}
+            </div>
             
             {hasMoreAttachments && (
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 mt-1 flex items-center justify-center"
+                className="w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 mt-3 flex items-center justify-center"
                 onClick={() => setShowAllAttachments(!showAllAttachments)}
               >
                 {showAllAttachments ? (

@@ -69,58 +69,58 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
   return (
     <>
       {isImage ? (
-        <div className="flex flex-col rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors group overflow-hidden">
-          {/* Image Preview */}
+        <div className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors group overflow-hidden h-full flex flex-col">
+          {/* Square Image Preview */}
           <div 
-            className="relative cursor-pointer" 
+            className="relative cursor-pointer aspect-square" 
             onClick={() => setShowImagePreview(true)}
           >
-            <div className="absolute top-0 left-0 bg-black/60 text-white px-1 py-0.5 text-xs rounded-br flex items-center">
+            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-1 py-0.5 text-xs rounded-br flex items-center">
               <Maximize2 className="h-3 w-3 mr-1" />
-              <span>Click to expand</span>
+              <span>Expand</span>
             </div>
             <img 
               src={getAttachmentUrl()} 
               alt={attachment.filename} 
-              className="w-full h-32 object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           </div>
           
           {/* File Info & Actions */}
-          <div className="flex items-center p-2">
-            <div className="h-7 w-7 rounded-md bg-indigo-50 flex items-center justify-center mr-2 border border-indigo-100">
+          <div className="flex items-center p-1.5 border-t border-gray-100 mt-auto">
+            <div className="h-6 w-6 rounded-md bg-indigo-50 flex items-center justify-center mr-1.5 border border-indigo-100">
               {renderIcon()}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium text-gray-700 truncate">
                 {attachment.filename}
               </div>
-              <div className="text-[10px] text-gray-500">
-                AI generated image
+              <div className="text-[9px] text-gray-500">
+                AI generated
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full"
+                className="h-5 w-5 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full"
                 onClick={handleDownload}
                 title="Download"
               >
-                <Download className="h-3 w-3" />
+                <Download className="h-2.5 w-2.5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
+                className="h-5 w-5 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
                 onClick={handleDelete}
                 disabled={isDeleting}
                 title="Delete"
               >
                 {isDeleting ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
                 ) : (
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-2.5 w-2.5" />
                 )}
               </Button>
             </div>
