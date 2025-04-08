@@ -252,7 +252,52 @@ export function GPTChat({
     const renderImageInMarkdown = (src: string, alt: string) => {
       console.log("Image source received:", src);
       
-      // First, check for direct references to attachment IDs in the card's attachments
+      // First, check if we need to handle a generic "Generated image" alt text
+      if (alt === "Generated image" && src === "") {
+        // Find the most recent attachment (which is likely to be the one mentioned in the text)
+        if (attachments && attachments.length > 0) {
+          // Sort attachments by timestamp (descending) to get the most recent first
+          const sortedAttachments = [...attachments].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          const mostRecentAttachment = sortedAttachments[0];
+          console.log("Using most recent attachment for generic image reference:", mostRecentAttachment?.id);
+          
+          if (mostRecentAttachment) {
+            return (
+              <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                  AI Generated
+                </div>
+                <img 
+                  src={`/api/attachments/${mostRecentAttachment.id}`} 
+                  alt={'AI Generated Image'} 
+                  className="max-w-full object-cover"
+                  onLoad={(e) => {
+                    console.log("Image successfully loaded:", mostRecentAttachment.id);
+                  }}
+                  onError={(e) => {
+                    console.error("Attachment image failed to load:", mostRecentAttachment.id);
+                    // Replace with error message on load failure
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'text-red-500 text-xs p-2';
+                      errorDiv.textContent = `Failed to load image (ID: ${mostRecentAttachment.id})`;
+                      parent.appendChild(errorDiv);
+                    }
+                  }}
+                />
+              </div>
+            );
+          }
+        }
+      }
+
+      // Next, check for direct references to attachment IDs in the card's attachments
       const imageMatch = alt.match(/dalle_.*?_(\d+)\.png$/);
       if (imageMatch) {
         // Look for matching attachment in the card's attachments
@@ -360,6 +405,50 @@ export function GPTChat({
       } else if (!src || src === '') {
         // Special case: empty src could be an incomplete markdown
         console.error("Empty image source in markdown");
+        
+        // Look for an attachment that matches the context of the message
+        // This is a fallback mechanism for generic image references
+        if (attachments && attachments.length > 0) {
+          // First try the latest attachment
+          const sortedAttachments = [...attachments].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          const mostRecentAttachment = sortedAttachments[0];
+          console.log("Using most recent attachment as fallback for empty src:", mostRecentAttachment?.id);
+          
+          if (mostRecentAttachment) {
+            return (
+              <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                  AI Generated
+                </div>
+                <img 
+                  src={`/api/attachments/${mostRecentAttachment.id}`} 
+                  alt={'AI Generated Image'} 
+                  className="max-w-full object-cover"
+                  onLoad={(e) => {
+                    console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
+                  }}
+                  onError={(e) => {
+                    console.error("Fallback attachment image failed to load:", mostRecentAttachment.id);
+                    // Show the original fallback message
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50';
+                      errorDiv.textContent = `Image reference missing. Refresh may be needed.`;
+                      parent.appendChild(errorDiv);
+                    }
+                  }}
+                />
+              </div>
+            );
+          }
+        }
+        
         return (
           <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
             Image reference missing. Refresh may be needed.
