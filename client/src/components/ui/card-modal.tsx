@@ -21,6 +21,7 @@ import {
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
 import { AttachmentItem } from "@/components/gpt/attachment-item";
+import { FileUpload } from "@/components/ui/file-upload";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useCardProcessing } from "@/hooks/use-card-processing";
@@ -419,13 +420,14 @@ export function CardModal({
               </div>
               
               {/* Attachments Section - Clear separation and grouping */}
-              {attachments.length > 0 && (
-                <div className="mt-4 pt-2 border-t border-gray-100">
-                  <div className="flex items-center mb-2 gap-1.5">
-                    <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                    <h3 className="text-xs font-medium">Attachments ({attachments.length})</h3>
-                  </div>
-                  <div className="grid gap-1.5 pl-5">
+              <div className="mt-4 pt-2 border-t border-gray-100">
+                <div className="flex items-center mb-2 gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h3 className="text-xs font-medium">Attachments ({attachments.length})</h3>
+                </div>
+                
+                {attachments.length > 0 ? (
+                  <div className="grid gap-1.5 pl-5 mb-3">
                     {attachments.map((attachment) => (
                       <AttachmentItem 
                         key={attachment.id} 
@@ -433,8 +435,15 @@ export function CardModal({
                       />
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-xs text-gray-500 italic mb-3 pl-5">
+                    No attachments yet. Upload files below.
+                  </p>
+                )}
+                
+                {/* File upload component */}
+                <FileUpload cardId={card.id} />
+              </div>
             </div>
           )}
         </div>

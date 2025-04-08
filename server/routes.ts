@@ -398,6 +398,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ATTACHMENT ROUTES
+  // Upload a new attachment to a card
+  app.post("/api/cards/:cardId/attachments", upload.single('file'), async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file provided" });
+      }
+      
+      // Get card to verify it exists
+      const card = await storage.getCardById(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // Read file content as base64
+      const fileContent = fs.readFileSync(file.path).toString('base64');
+      
+      // Create attachment
+      const attachment = await storage.createAttachment({
+        cardId,
+        filename: file.originalname,
+        fileType: file.mimetype,
+        content: fileContent
+      });
+      
+      // Delete temp file
+      fs.unlinkSync(file.path);
+      
+      return res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Error uploading attachment:", error);
+      return res.status(500).json({ message: "Error uploading attachment" });
+    }
+  });
+  
   app.delete("/api/attachments/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
