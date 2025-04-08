@@ -708,125 +708,118 @@ export function GPTChat({
     );
   };
 
-  // If embedded in another component (specifically the card modal), 
-  // just return the messages and input without header/container
-  if (embedded) {
-    return (
-      <>
-        <div className="flex flex-col h-full">
-          {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
-          {chats.length > 3 && !userHasScrolled && (
-            <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
-              <ChevronUp className="h-3 w-3 mx-auto" />
-              Scroll for earlier messages
-            </div>
-          )}
-          
-          <div 
-            ref={chatContainerRef}
-            className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
-          >
-            <ChatMessages />
-          </div>
-          
-          {/* Chat Input - Always at the bottom */}
-          <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
-            <Input
-              type="text"
-              placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
-              className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={isSending}
-            />
-            
-            <Button
-              size="sm"
-              className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-                isSending 
-                  ? 'bg-gray-300 text-gray-600' 
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
-              onClick={handleSendMessage}
-              disabled={isSending}
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+  // Prepare the content based on whether it's embedded or not
+  const chatContent = embedded ? (
+    <div className="flex flex-col h-full">
+      {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
+      {chats.length > 3 && !userHasScrolled && (
+        <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
+          <ChevronUp className="h-3 w-3 mx-auto" />
+          Scroll for earlier messages
         </div>
-
-        {/* Use the shared image dialog component */}
-        <ImageDialogModal selectedImage={selectedImage} setSelectedImage={setSelectedImage} />
-      </>
-    );
-  }
-
-  // Standard standalone component
-  return (
-    <>
-      <div className="flex flex-col">
-        <div className="px-3 py-2 border-b border-gray-100">
-          <div className="text-sm font-medium text-gray-700">
-            Conversation with {gptName || 'AI Assistant'}
-          </div>
-        </div>
+      )}
+      
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
+      >
+        <ChatMessages />
+      </div>
+      
+      {/* Chat Input - Always at the bottom */}
+      <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
+        <Input
+          type="text"
+          placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
+          className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+          disabled={isSending}
+        />
         
-        <div className="flex flex-col">
-          <div 
-            ref={chatContainerRef}
-            className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
-          >
-            <ChatMessages />
-          </div>
-          
-          {/* Chat Input - Fixed at the bottom */}
-          <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
-            <Input
-              type="text"
-              placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
-              className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={isSending}
-            />
-            
-            <Button
-              size="sm"
-              className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-                isSending 
-                  ? 'bg-gray-300 text-gray-600' 
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
-              onClick={handleSendMessage}
-              disabled={isSending}
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+        <Button
+          size="sm"
+          className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+            isSending 
+              ? 'bg-gray-300 text-gray-600' 
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+          onClick={handleSendMessage}
+          disabled={isSending}
+        >
+          {isSending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex flex-col">
+      <div className="px-3 py-2 border-b border-gray-100">
+        <div className="text-sm font-medium text-gray-700">
+          Conversation with {gptName || 'AI Assistant'}
         </div>
       </div>
+      
+      <div className="flex flex-col">
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
+        >
+          <ChatMessages />
+        </div>
+        
+        {/* Chat Input - Fixed at the bottom */}
+        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
+          <Input
+            type="text"
+            placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
+            className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={isSending}
+          />
+          
+          <Button
+            size="sm"
+            className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+              isSending 
+                ? 'bg-gray-300 text-gray-600' 
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+            onClick={handleSendMessage}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
-      {/* Use the shared image dialog component */}
+  // Return a single component with only one instance of the ImageDialogModal
+  return (
+    <>
+      {chatContent}
+      {/* Only include the shared image dialog component once for both embedded and standard views */}
       <ImageDialogModal selectedImage={selectedImage} setSelectedImage={setSelectedImage} />
     </>
   );
