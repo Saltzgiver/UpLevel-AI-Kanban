@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, Image as ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, Send, Loader2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Chat } from "@shared/schema";
+import { Chat, Attachment } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -57,9 +56,6 @@ export function GPTChat({
 }: GPTChatProps) {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -218,46 +214,6 @@ export function GPTChat({
       setIsSending(false);
     }
   };
-  
-  const handleGenerateImage = async () => {
-    if (!imagePrompt.trim()) return;
-    
-    setIsGeneratingImage(true);
-    
-    try {
-      // Send the image generation request to the server
-      const response = await apiRequest("POST", `/api/cards/${cardId}/generate-image`, {
-        prompt: imagePrompt.trim()
-      });
-      
-      // Close the dialog
-      setImageDialogOpen(false);
-      
-      // Clear the prompt field
-      setImagePrompt("");
-      
-      // Show success toast
-      toast({
-        title: "Image Created",
-        description: "The AI has generated an image based on your prompt",
-        variant: "default"
-      });
-      
-      // Start polling for processing status to get new attachments
-      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
-      // Also update the board data
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate image. Check your OpenAI API key in column settings.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
 
   // Chat messages component - separated for cleaner structure
   const ChatMessages = () => {
@@ -289,6 +245,25 @@ export function GPTChat({
         <span className="text-sm text-green-700">Processing with AI...</span>
       </div>
     );
+    
+    // Function to render attachment images in messages
+    const renderImageInMarkdown = (src: string, alt: string) => {
+      // Check if this is an attachment reference
+      if (src.startsWith('attachment:')) {
+        const attachmentId = parseInt(src.substring(11));
+        return (
+          <div className="my-2 rounded-lg overflow-hidden border border-gray-200">
+            <img 
+              src={`/api/attachments/${attachmentId}`} 
+              alt={alt || 'AI Generated Image'} 
+              className="max-w-full object-cover" 
+            />
+          </div>
+        );
+      }
+      // Regular image URL
+      return <img src={src} alt={alt} className="max-w-full my-2 rounded-lg" />;
+    };
     
     return (
       <div className="space-y-6 flex flex-col">
@@ -381,6 +356,7 @@ export function GPTChat({
                         pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
                         strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                         em: (props: any) => <em className="italic text-xs" {...props} />,
+                        img: (props: any) => renderImageInMarkdown(props.src, props.alt),
                       }}
                     >
                       {chat.content}
@@ -423,7 +399,7 @@ export function GPTChat({
         <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
           <Input
             type="text"
-            placeholder={`Ask ${gptName || 'AI'} a question...`}
+            placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
             className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -435,61 +411,6 @@ export function GPTChat({
             }}
             disabled={isSending}
           />
-          
-          {/* Image generation button */}
-          <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-full p-2 h-9 w-9 flex-shrink-0 border-gray-200"
-                disabled={isSending || isGeneratingImage}
-              >
-                <ImageIcon className="h-4 w-4 text-gray-500" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Generate an AI Image</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Input
-                    id="image-prompt"
-                    placeholder="Enter a detailed description of the image you want to create..."
-                    className="col-span-3"
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    disabled={isGeneratingImage}
-                  />
-                </div>
-              </div>
-              <DialogFooter className="sm:justify-start">
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  onClick={() => setImageDialogOpen(false)}
-                  disabled={isGeneratingImage}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage || !imagePrompt.trim()}
-                >
-                  {isGeneratingImage ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate Image"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           
           <Button
             size="sm"
@@ -533,7 +454,7 @@ export function GPTChat({
         <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
           <Input
             type="text"
-            placeholder={`Ask ${gptName || 'AI'} a question...`}
+            placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
             className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -545,61 +466,6 @@ export function GPTChat({
             }}
             disabled={isSending}
           />
-          
-          {/* Image generation button */}
-          <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-full p-2 h-9 w-9 flex-shrink-0 border-gray-200"
-                disabled={isSending || isGeneratingImage}
-              >
-                <ImageIcon className="h-4 w-4 text-gray-500" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Generate an AI Image</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Input
-                    id="image-prompt"
-                    placeholder="Enter a detailed description of the image you want to create..."
-                    className="col-span-3"
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    disabled={isGeneratingImage}
-                  />
-                </div>
-              </div>
-              <DialogFooter className="sm:justify-start">
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  onClick={() => setImageDialogOpen(false)}
-                  disabled={isGeneratingImage}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage || !imagePrompt.trim()}
-                >
-                  {isGeneratingImage ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate Image"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           
           <Button
             size="sm"

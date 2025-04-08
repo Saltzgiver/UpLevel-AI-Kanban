@@ -328,58 +328,89 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
     }
   }
   
-  // Check for image generation directives in the response
-  const imageRegex = /```generate-image:\s*([^`]+)```/g;
-  let imageMatch;
+  // Check for image generation directives in the response or image description requests
+  // Support both explicit directives and natural language requests
+  const imagePatterns = [
+    // Explicit image generation directive
+    { regex: /```generate-image:\s*([^`]+)```/g, type: 'explicit' },
+    // Image file creation pattern
+    { regex: /```(?:file|attachment):([^,]+\.(?:png|jpg|jpeg|gif)),\s*image\/[^,]+,\s*([^`]+)```/g, type: 'file' },
+    // Natural language pattern for image generation requests
+    { regex: /create an image (?:of|showing|with|depicting)(?:\s+a)?\s+([^.!?]+)/gi, type: 'natural' },
+    // Alternative natural language pattern
+    { regex: /generate (?:a|an) image (?:of|showing|with|depicting)(?:\s+a)?\s+([^.!?]+)/gi, type: 'natural' },
+    // Another alternative pattern
+    { regex: /make (?:a|an) image (?:of|showing|with|depicting)(?:\s+a)?\s+([^.!?]+)/gi, type: 'natural' },
+    // Simple pattern - just "image of X"
+    { regex: /image of (?:a |an )?([^.!?]+)/gi, type: 'natural' }
+  ];
   
-  while ((imageMatch = imageRegex.exec(response)) !== null) {
-    try {
-      const [_, prompt] = imageMatch;
-      
-      // Get the card's column to use column-specific API key if available
-      const card = await storage.getCardById(cardId);
-      if (!card) continue;
-      
-      const column = await storage.getColumnById(card.columnId);
-      if (!column) continue;
-      
-      // Generate the image
-      const apiKey = column.apiKey || undefined; // Convert null to undefined
-      const imageUrl = await generateImage(prompt.trim(), apiKey);
-      
-      if (!imageUrl) {
-        console.error("Failed to generate image URL");
-        continue;
+  for (const pattern of imagePatterns) {
+    let match;
+    while ((match = pattern.regex.exec(response)) !== null) {
+      try {
+        let prompt;
+        if (pattern.type === 'file') {
+          // Extract from file pattern - the filename is in match[1], ignore it
+          // The base64 content would be in match[2], but we want to generate a new image
+          // Use the filename (without extension) as the prompt
+          const filename = match[1];
+          prompt = filename.split('.')[0].replace(/_/g, ' ');
+        } else {
+          // For explicit and natural language patterns, extract the prompt
+          prompt = match[1];
+        }
+        
+        // Skip if prompt is too short
+        if (prompt.trim().length < 3) continue;
+        
+        // Get the card's column to use column-specific API key if available
+        const card = await storage.getCardById(cardId);
+        if (!card) continue;
+        
+        const column = await storage.getColumnById(card.columnId);
+        if (!column) continue;
+        
+        // Generate the image
+        const apiKey = column.apiKey || undefined; // Convert null to undefined
+        const imageUrl = await generateImage(prompt.trim(), apiKey);
+        
+        if (!imageUrl) {
+          console.error("Failed to generate image URL");
+          continue;
+        }
+        
+        // Fetch the image and convert to base64
+        const imgResponse = await fetch(imageUrl);
+        const imageBuffer = await imgResponse.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        
+        // Create a descriptive filename
+        const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `dalle_${safePrompt}_${Date.now()}.png`;
+        
+        // Create attachment
+        const attachment = await storage.createAttachment({
+          cardId,
+          filename,
+          fileType: 'image/png',
+          content: base64Image
+        });
+        
+        // Add message indicating image was generated
+        await storage.createChat({
+          cardId,
+          role: "assistant",
+          content: `✨ Generated an image based on your request: "${prompt.trim()}"\n\n![${filename}](attachment:${attachment.id})`,
+          gptName: column.gptName || "AI Assistant",
+          gptColor: column.gptColor
+        });
+        
+        // Only process one image request per pattern to avoid multiple similar images
+        break;
+      } catch (error) {
+        console.error("Error generating image from prompt in response:", error);
       }
-      
-      // Fetch the image and convert to base64
-      const imgResponse = await fetch(imageUrl);
-      const imageBuffer = await imgResponse.arrayBuffer();
-      const base64Image = Buffer.from(imageBuffer).toString('base64');
-      
-      // Create a descriptive filename
-      const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `dalle_${safePrompt}_${Date.now()}.png`;
-      
-      // Create attachment
-      await storage.createAttachment({
-        cardId,
-        filename,
-        fileType: 'image/png',
-        content: base64Image
-      });
-      
-      // Add message indicating image was generated
-      await storage.createChat({
-        cardId,
-        role: "assistant",
-        content: `✨ Generated an image: "${prompt.trim()}"`,
-        gptName: column.gptName || "AI Assistant",
-        gptColor: column.gptColor
-      });
-      
-    } catch (error) {
-      console.error("Error generating image from prompt in response:", error);
     }
   }
 }
