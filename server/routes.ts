@@ -435,6 +435,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get attachment by ID
+  app.get("/api/attachments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      // Use 0 as a placeholder for cardId since we're fetching by attachment ID
+      const attachments = await storage.getAttachmentsByCardId(0, id);
+      
+      if (!attachments || attachments.length === 0) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+      
+      const attachment = attachments[0];
+      
+      // If it's an image, serve it as an image
+      if (attachment.fileType.startsWith('image/')) {
+        const imageBuffer = Buffer.from(attachment.content, 'base64');
+        res.set('Content-Type', attachment.fileType);
+        return res.send(imageBuffer);
+      }
+      
+      // For other file types, return the attachment object
+      return res.json(attachment);
+    } catch (error) {
+      console.error("Error fetching attachment:", error);
+      return res.status(500).json({ message: "Error fetching attachment" });
+    }
+  });
+  
   app.delete("/api/attachments/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

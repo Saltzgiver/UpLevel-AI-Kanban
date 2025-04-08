@@ -45,7 +45,7 @@ export interface IStorage {
   createChat(chat: InsertChat): Promise<Chat>;
   
   // Attachment operations
-  getAttachmentsByCardId(cardId: number): Promise<Attachment[]>;
+  getAttachmentsByCardId(cardId: number, attachmentId?: number): Promise<Attachment[]>;
   createAttachment(attachment: InsertAttachment): Promise<Attachment>;
   deleteAttachment(id: number): Promise<void>;
   
@@ -457,7 +457,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Attachment Methods
-  async getAttachmentsByCardId(cardId: number): Promise<Attachment[]> {
+  async getAttachmentsByCardId(cardId: number, attachmentId?: number): Promise<Attachment[]> {
+    // If attachmentId is provided, fetch that specific attachment
+    if (attachmentId !== undefined) {
+      return db
+        .select()
+        .from(attachments)
+        .where(eq(attachments.id, attachmentId));
+    }
+    
+    // Otherwise fetch all attachments for the card
     return db
       .select()
       .from(attachments)

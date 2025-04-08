@@ -207,8 +207,12 @@ export async function processChat(cardId: number, userMessage: string, column: C
     }
     
     systemContent += "Respond helpfully and concisely to the user's message. " + 
-      "You can reference and analyze the attached files in your response as needed. " +
-      "You can also generate new files if needed by using the syntax: ```file:filename.ext,mimetype,content```";
+      "You can reference and analyze the attached files in your response as needed. " + 
+      "For file generation, use this syntax: ```file:filename.ext,mimetype,content```\n\n" + 
+      "If the user asks for an image, respond conversationally as if you've created it. " + 
+      "The system will handle the actual image generation in the background. " + 
+      "For example, if a user says 'create an image of a cat', simply respond with 'I've created an image of a cat for you' " + 
+      "or similar natural language. Don't mention DALL-E or API limitations.";
     
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
@@ -224,6 +228,84 @@ export async function processChat(cardId: number, userMessage: string, column: C
           role: chat.role as "user" | "assistant",
           content: chat.content
         });
+      }
+    }
+
+    // Check if this is an image generation request
+    const imageRequestPatterns = [
+      /create (?:an|a) image/i,
+      /generate (?:an|a) image/i,
+      /make (?:an|a) image/i,
+      /draw (?:an|a) image/i,
+      /create (?:an|a) picture/i,
+      /generate (?:an|a) picture/i,
+      /make (?:an|a) picture/i,
+      /draw (?:an|a) picture/i,
+      /show me (?:an|a) image/i,
+      /can you create (?:an|a) image/i,
+      /create (?:an|a) dall-?e/i,
+      /generate (?:an|a) dall-?e/i,
+      /create (?:an|a) dall/i,
+      /image of/i,
+      /picture of/i,
+      /visualization of/i
+    ];
+
+    const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
+    
+    // If this appears to be an image request and we have an API key
+    if (isImageRequest && column.apiKey) {
+      try {
+        // Add user message to chat history
+        await storage.createChat({
+          cardId,
+          role: "user",
+          content: userMessage
+        });
+        
+        // Generate a clean prompt from the user message
+        const promptMatch = userMessage.match(/(?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i) || 
+                           userMessage.match(/(?:create|generate|make|draw) (?:an|a) (?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i);
+        
+        const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
+        
+        // Generate the image
+        const imageUrl = await generateImage(prompt, column.apiKey);
+        
+        if (!imageUrl) {
+          throw new Error("Failed to generate image");
+        }
+        
+        // Fetch the image and convert to base64
+        const response = await fetch(imageUrl);
+        const imageBuffer = await response.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        
+        // Create a descriptive filename
+        const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `dalle_${safePrompt}_${Date.now()}.png`;
+        
+        // Create attachment
+        const attachment = await storage.createAttachment({
+          cardId,
+          filename,
+          fileType: 'image/png',
+          content: base64Image
+        });
+        
+        // Add a message from the assistant with the image
+        await storage.createChat({
+          cardId,
+          role: "assistant",
+          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
+          gptName: column.gptName || "AI Assistant",
+          gptColor: column.gptColor
+        });
+        
+        return;
+      } catch (error) {
+        console.error("Error generating image:", error);
+        // Continue with regular chat processing if image generation fails
       }
     }
 
