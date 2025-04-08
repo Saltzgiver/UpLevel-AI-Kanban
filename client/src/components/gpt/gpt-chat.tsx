@@ -53,6 +53,55 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
   return colorPalette[defaultColor];
 };
 
+// Shared Image Dialog Modal Component to be used by GPTChat
+function ImageDialogModal({ 
+  selectedImage, 
+  setSelectedImage 
+}: { 
+  selectedImage: {src: string, alt: string} | null, 
+  setSelectedImage: (image: {src: string, alt: string} | null) => void 
+}) {
+  return (
+    <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogHeader className="p-4 bg-gray-50">
+          <DialogTitle className="flex items-center justify-between">
+            <span className="text-gray-800 font-medium">
+              {selectedImage?.alt || 'Image Viewer'}
+            </span>
+            <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="p-6 flex items-center justify-center bg-black/5">
+          {selectedImage && (
+            <img 
+              src={selectedImage.src} 
+              alt={selectedImage.alt} 
+              className="max-w-full max-h-[70vh] object-contain" 
+            />
+          )}
+        </div>
+        <div className="p-3 bg-gray-50 flex justify-between border-t">
+          <span className="text-xs text-gray-500">
+            Click outside to close
+          </span>
+          <a 
+            href={selectedImage?.src || '#'} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+          >
+            <ExternalLink className="h-3 w-3 mr-1" />
+            Open original
+          </a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function GPTChat({ 
   cardId, 
   chats, 
@@ -710,44 +759,8 @@ export function GPTChat({
           </div>
         </div>
 
-        {/* Image Dialog Modal - Shared between embedded and standalone views */}
-        <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-          <DialogContent className="max-w-4xl p-0 overflow-hidden">
-            <DialogHeader className="p-4 bg-gray-50">
-              <DialogTitle className="flex items-center justify-between">
-                <span className="text-gray-800 font-medium">
-                  {selectedImage?.alt || 'Image Viewer'}
-                </span>
-                <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
-                  <X className="h-4 w-4" />
-                </DialogClose>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="p-6 flex items-center justify-center bg-black/5">
-              {selectedImage && (
-                <img 
-                  src={selectedImage.src} 
-                  alt={selectedImage.alt} 
-                  className="max-w-full max-h-[70vh] object-contain" 
-                />
-              )}
-            </div>
-            <div className="p-3 bg-gray-50 flex justify-between border-t">
-              <span className="text-xs text-gray-500">
-                Click outside to close
-              </span>
-              <a 
-                href={selectedImage?.src || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Open in new tab
-              </a>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Use the shared image dialog component */}
+        <ImageDialogModal selectedImage={selectedImage} setSelectedImage={setSelectedImage} />
       </>
     );
   }
@@ -807,44 +820,8 @@ export function GPTChat({
         </div>
       </div>
 
-      {/* Image Dialog Modal */}
-      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <DialogHeader className="p-4 bg-gray-50">
-            <DialogTitle className="flex items-center justify-between">
-              <span className="text-gray-800 font-medium">
-                {selectedImage?.alt || 'Image Viewer'}
-              </span>
-              <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
-                <X className="h-4 w-4" />
-              </DialogClose>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-6 flex items-center justify-center bg-black/5">
-            {selectedImage && (
-              <img 
-                src={selectedImage.src} 
-                alt={selectedImage.alt} 
-                className="max-w-full max-h-[70vh] object-contain" 
-              />
-            )}
-          </div>
-          <div className="p-3 bg-gray-50 flex justify-between border-t">
-            <span className="text-xs text-gray-500">
-              Click outside to close
-            </span>
-            <a 
-              href={selectedImage?.src || '#'} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Open in new tab
-            </a>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Use the shared image dialog component */}
+      <ImageDialogModal selectedImage={selectedImage} setSelectedImage={setSelectedImage} />
     </>
   );
 }
