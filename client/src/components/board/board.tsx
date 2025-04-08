@@ -460,10 +460,10 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full overflow-hidden">
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
-        {/* Horizontal scrolling container */}
-        <div className="flex flex-nowrap gap-4 pb-6 overflow-x-auto min-w-full">
+        {/* Horizontal scrolling container - add position relative to contain dragged items */}
+        <div className="flex flex-nowrap gap-4 pb-6 overflow-x-auto min-w-full relative" style={{ minHeight: 'calc(100vh - 120px)' }}>
           {columns.map((column, index) => (
             <Column
               key={column.id}

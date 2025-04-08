@@ -74,8 +74,8 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
   };
   
   return (
-    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 flex min-h-[200px]">
-      <div className="p-2 flex flex-col w-full">
+    <div className="column bg-white rounded-lg shadow-sm w-72 flex-shrink-0 flex min-h-[200px] h-fit">
+      <div className="p-2 flex flex-col w-full h-full">
         {/* Column header */}
         <div className="column-header flex items-center justify-between mb-3">
           {/* Column title - No longer draggable */}
@@ -165,15 +165,16 @@ export function Column({ column, index, onCardClick, onDeleteColumn }: ColumnPro
         
         <GPTBanner column={column} />
         
-        {/* Cards container - completely separate from column dragging */}
+        {/* Cards container - non-scrolling version */}
         <Droppable droppableId={column.id.toString()} type="card">
           {(provided, snapshot) => (
             <div
-              className={`column-content flex-1 overflow-y-auto min-h-[100px] pr-1 max-h-[500px] overflow-x-hidden ${
+              className={`column-content flex-1 min-h-[100px] pr-1 overflow-x-hidden ${
                 snapshot.isDraggingOver ? "bg-primary/5" : ""
               }`}
               ref={provided.innerRef}
               {...provided.droppableProps}
+              style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'visible' }}
             >
               {column.cards.map((card, index) => (
                 <CardComponent 
