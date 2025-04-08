@@ -51,9 +51,34 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       }
       prompt += "\n";
     }
+    
+    // Include attachments if any
+    if (card.attachments && card.attachments.length > 0) {
+      prompt += "Attached files:\n";
+      for (const attachment of card.attachments) {
+        prompt += `- ${attachment.filename} (${attachment.fileType})\n`;
+        
+        // For text-based files (txt, csv, md, etc.), include the content directly
+        if (attachment.fileType.includes('text') || 
+            attachment.filename.endsWith('.txt') || 
+            attachment.filename.endsWith('.csv') || 
+            attachment.filename.endsWith('.md')) {
+          prompt += `Content of ${attachment.filename}:\n${attachment.content}\n\n`;
+        } else if (attachment.fileType.includes('image')) {
+          // For images, just note that there's an image attached
+          prompt += `Note: This is an image file. Please reference it by filename if needed.\n\n`;
+        } else {
+          // For other file types, add a generic note
+          prompt += `Note: This is a ${attachment.fileType} file. You can reference it by filename.\n\n`;
+        }
+      }
+    }
 
     prompt += "Please process this information and provide a helpful response. " +
-      "You can include file content if needed (specify the filename and content type).\n" +
+      "You can reference the attached files in your analysis. " +
+      "You can also generate new files if appropriate, using the following syntax:\n" +
+      "```file:filename.ext,mimetype,content```\n" +
+      "For example, to create a CSV file: ```file:data.csv,text/csv,column1,column2\nvalue1,value2```\n" +
       "If you want to generate tags for this card to help with categorization, include a line at the end starting with 'TAGS:' followed by comma-separated tags.";
 
     // Call OpenAI API
@@ -154,13 +179,41 @@ export async function processChat(cardId: number, userMessage: string, column: C
     const openai = getOpenAIClient(column.apiKey || undefined);
 
     // Build conversation history
+    // Create system message with context about the card, including attachments
+    let systemContent = `You are ${column.gptName || "an AI assistant"}. ${column.gptInstructions || ""}\n\n` +
+      `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
+      `${card.gptTags ? `This card has the following tags: ${card.gptTags}` : ""}\n\n`;
+    
+    // Include attachments if any
+    if (card.attachments && card.attachments.length > 0) {
+      systemContent += "This card has the following attachments:\n";
+      for (const attachment of card.attachments) {
+        systemContent += `- ${attachment.filename} (${attachment.fileType})\n`;
+        
+        // For text-based files (txt, csv, md, etc.), include the content directly
+        if (attachment.fileType.includes('text') || 
+            attachment.filename.endsWith('.txt') || 
+            attachment.filename.endsWith('.csv') || 
+            attachment.filename.endsWith('.md')) {
+          systemContent += `Content of ${attachment.filename}:\n${attachment.content}\n\n`;
+        } else if (attachment.fileType.includes('image')) {
+          // For images, just note that there's an image attached
+          systemContent += `Note: This is an image file. Please reference it by filename if needed.\n\n`;
+        } else {
+          // For other file types, add a generic note
+          systemContent += `Note: This is a ${attachment.fileType} file. You can reference it by filename.\n\n`;
+        }
+      }
+    }
+    
+    systemContent += "Respond helpfully and concisely to the user's message. " + 
+      "You can reference and analyze the attached files in your response as needed. " +
+      "You can also generate new files if needed by using the syntax: ```file:filename.ext,mimetype,content```";
+    
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
-        content: `You are ${column.gptName || "an AI assistant"}. ${column.gptInstructions || ""}\n\n` +
-          `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
-          `${card.gptTags ? `This card has the following tags: ${card.gptTags}` : ""}` +
-          "Respond helpfully and concisely to the user's message."
+        content: systemContent
       }
     ];
 
