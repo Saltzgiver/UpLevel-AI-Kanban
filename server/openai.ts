@@ -294,10 +294,11 @@ export async function processChat(cardId: number, userMessage: string, column: C
         });
         
         // Add a message from the assistant with the image
+        // Use "Generated image" as the alt text for better compatibility with image renderer
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![${filename}](attachment:${attachment.id})`,
+          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
@@ -480,10 +481,11 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
         });
         
         // Add message indicating image was generated
+        // Use "Generated image" as the alt text for better compatibility with image renderer
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt.trim()}"\n\n![${filename}](attachment:${attachment.id})`,
+          content: `✨ Generated an image based on your request: "${prompt.trim()}"\n\n![Generated image](attachment:${attachment.id})`,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });

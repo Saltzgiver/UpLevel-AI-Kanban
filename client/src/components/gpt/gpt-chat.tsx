@@ -248,30 +248,85 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      // Check if this is an attachment reference
-      if (src.startsWith('attachment:')) {
-        // Extract attachment ID directly after the colon
-        const attachmentId = parseInt(src.substring('attachment:'.length));
+      console.log("Image source received:", src);
+      
+      // Check if this is an attachment reference using includes to capture all possible formats
+      if (src && src.includes('attachment:')) {
+        // Extract attachment ID from various potential formats
+        let attachmentId: number | undefined = undefined;
         
-        if (isNaN(attachmentId)) {
-          console.error("Invalid attachment ID:", src);
-          return <div className="text-red-500 text-xs">Invalid image reference</div>;
+        // Try to extract the attachment ID with a regex pattern to handle all cases
+        const match = src.match(/attachment:(\d+)/);
+        if (match && match[1]) {
+          attachmentId = parseInt(match[1]);
+        } else {
+          // Fallback to direct parsing if the regex didn't work
+          if (src.startsWith('attachment:')) {
+            // Direct format: attachment:123
+            attachmentId = parseInt(src.substring('attachment:'.length));
+          }
         }
         
-        console.log("Rendering attachment image:", { src, attachmentId });
+        if (isNaN(attachmentId as number) || attachmentId === undefined) {
+          console.error("Invalid attachment ID:", src);
+          return (
+            <div className="text-red-500 text-xs p-2 border border-red-200 rounded bg-red-50">
+              Invalid image reference: {src}
+            </div>
+          );
+        }
         
+        console.log("Rendering attachment image:", { src, attachmentId, url: `/api/attachments/${attachmentId as number}` });
+        
+        // Use the attachment ID to create the proper image URL
         return (
-          <div className="my-2 rounded-lg overflow-hidden border border-gray-200">
+          <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+            <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+              AI Generated
+            </div>
             <img 
-              src={`/api/attachments/${attachmentId}`} 
+              src={`/api/attachments/${attachmentId as number}`} 
               alt={alt || 'AI Generated Image'} 
-              className="max-w-full object-cover" 
+              className="max-w-full object-cover"
+              onLoad={(e) => {
+                console.log("Image successfully loaded:", attachmentId as number);
+              }}
+              onError={(e) => {
+                console.error("Attachment image failed to load:", attachmentId as number);
+                // Replace with error message on load failure
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const errorDiv = document.createElement('div');
+                  errorDiv.className = 'text-red-500 text-xs p-2';
+                  errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
+                  parent.appendChild(errorDiv);
+                }
+              }}
             />
           </div>
         );
+      } else if (!src || src === '') {
+        // Special case: empty src could be an incomplete markdown
+        console.error("Empty image source in markdown");
+        return (
+          <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
+            Image reference missing. Refresh may be needed.
+          </div>
+        );
       }
+      
       // Regular image URL
-      return <img src={src} alt={alt} className="max-w-full my-2 rounded-lg" />;
+      console.log("Rendering regular image URL:", src);
+      return <img 
+        src={src} 
+        alt={alt} 
+        className="max-w-full my-2 rounded-lg"
+        onError={(e) => {
+          console.error("Regular image failed to load:", src);
+        }}
+      />;
     };
     
     return (
@@ -349,27 +404,41 @@ export function GPTChat({
                     </div>
                   )}
                   {chat.role === 'assistant' ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
-                        ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
-                        ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
-                        li: (props: any) => <li className="my-0 text-xs" {...props} />,
-                        a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
-                        blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
-                        code: (props: any) => 
-                          props.inline 
-                            ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
-                            : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
-                        pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
-                        strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
-                        em: (props: any) => <em className="italic text-xs" {...props} />,
-                        img: (props: any) => renderImageInMarkdown(props.src, props.alt),
-                      }}
-                    >
-                      {chat.content}
-                    </ReactMarkdown>
+                    <>
+                      {/* Additional debug element to show raw message content */}
+                      <div className="hidden">
+                        <div className="border border-red-300 rounded p-1 mb-2 text-[10px] bg-red-50">
+                          <pre>DEBUG CONTENT: {JSON.stringify(chat.content)}</pre>
+                        </div>
+                      </div>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: (props: any) => {
+                            console.log("Rendering paragraph with props:", props);
+                            return <p className="my-0.5 text-xs" {...props} />;
+                          },
+                          ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
+                          ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
+                          li: (props: any) => <li className="my-0 text-xs" {...props} />,
+                          a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
+                          blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
+                          code: (props: any) => 
+                            props.inline 
+                              ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
+                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                          pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                          strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
+                          em: (props: any) => <em className="italic text-xs" {...props} />,
+                          img: (props: any) => {
+                            console.log("Rendering image with props:", props);
+                            return renderImageInMarkdown(props.src, props.alt);
+                          },
+                        }}
+                      >
+                        {chat.content}
+                      </ReactMarkdown>
+                    </>
                   ) : (
                     <div>{chat.content}</div>
                   )}

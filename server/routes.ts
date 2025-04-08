@@ -439,23 +439,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attachments/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log(`Fetching attachment with ID: ${id}`);
+      
       // Use 0 as a placeholder for cardId since we're fetching by attachment ID
       const attachments = await storage.getAttachmentsByCardId(0, id);
       
       if (!attachments || attachments.length === 0) {
+        console.error(`Attachment not found with ID: ${id}`);
         return res.status(404).json({ message: "Attachment not found" });
       }
       
       const attachment = attachments[0];
+      console.log(`Attachment found:`, { 
+        id: attachment.id,
+        filename: attachment.filename,
+        fileType: attachment.fileType,
+        contentLength: attachment.content ? attachment.content.length : 0
+      });
       
       // If it's an image, serve it as an image
       if (attachment.fileType.startsWith('image/')) {
-        const imageBuffer = Buffer.from(attachment.content, 'base64');
-        res.set('Content-Type', attachment.fileType);
-        return res.send(imageBuffer);
+        try {
+          // Verify base64 content is valid before trying to decode
+          if (!attachment.content) {
+            console.error(`Empty content for attachment ID: ${id}`);
+            return res.status(500).json({ message: "Attachment has no content" });
+          }
+          
+          // Decode base64 content
+          const imageBuffer = Buffer.from(attachment.content, 'base64');
+          
+          // Set proper headers for caching and content type
+          res.set('Content-Type', attachment.fileType);
+          res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+          res.set('Content-Length', imageBuffer.length.toString());
+          
+          console.log(`Serving attachment as image: ${attachment.fileType}, size: ${imageBuffer.length} bytes`);
+          return res.send(imageBuffer);
+        } catch (decodeError) {
+          console.error(`Error decoding base64 content for attachment ID: ${id}`, decodeError);
+          return res.status(500).json({ message: "Error decoding attachment content" });
+        }
       }
       
       // For other file types, return the attachment object
+      console.log(`Serving attachment as JSON: ${attachment.fileType}`);
       return res.json(attachment);
     } catch (error) {
       console.error("Error fetching attachment:", error);
