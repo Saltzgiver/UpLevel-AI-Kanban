@@ -31,7 +31,7 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     // Initialize OpenAI client with column's API key if available
     const openai = getOpenAIClient(column.apiKey || undefined);
 
-    // Build the prompt for GPT with enhanced context
+    // Build the prompt for GPT
     let prompt = `You are ${column.gptName || "an AI assistant"}. `;
     
     if (column.gptInstructions) {
@@ -40,22 +40,8 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       prompt += "Your task is to analyze and process the following card content.\n\n";
     }
 
-    // Card basic info
     prompt += `Card Title: ${card.title}\n`;
-    prompt += `Card Description: ${card.description || "No description provided."}\n`;
-    
-    // Include GPT output from previous column if available
-    if (card.gptOutput) {
-      prompt += `\nPrevious AI Analysis:\n${card.gptOutput}\n`;
-    }
-    
-    // Include any assigned tags
-    if (card.gptTags) {
-      prompt += `\nAssigned Tags: ${card.gptTags}\n`;
-    }
-
-    prompt += "\nYour role is to build upon any previous analysis while staying focused on your specific instructions. ";
-    prompt += "Feel free to reference and incorporate insights from the previous AI's output if relevant.\n\n";
+    prompt += `Card Description: ${card.description || "No description provided."}\n\n`;
 
     // Include existing chats for context if any
     if (card.chats && card.chats.length > 0) {
