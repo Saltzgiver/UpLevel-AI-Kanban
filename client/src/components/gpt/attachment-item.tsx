@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink } from "lucide-react";
+import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Attachment } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CSVViewer } from "./csv-viewer";
 
 interface AttachmentItemProps {
   attachment: Attachment;
@@ -13,17 +14,17 @@ interface AttachmentItemProps {
 
 export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
   
   // Handle keyboard events for the modal
   useEffect(() => {
     // Only add the event listener when the modal is open
-    if (!showImagePreview) return;
+    if (!showPreview) return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setShowImagePreview(false);
+        setShowPreview(false);
       }
     };
     
@@ -38,7 +39,7 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [showImagePreview]);
+  }, [showPreview]);
 
   const handleDownload = () => {
     // Create a download link for the attachment
@@ -83,6 +84,8 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       return <Image className="h-4 w-4 text-indigo-500" />;
     } else if (attachment.fileType.includes('document') || attachment.fileType.includes('pdf')) {
       return <FileText className="h-4 w-4 text-indigo-500" />;
+    } else if (attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv')) {
+      return <FileText className="h-4 w-4 text-green-500" />;
     } else {
       return <File className="h-4 w-4 text-indigo-500" />;
     }
@@ -96,6 +99,22 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   // Check if this is an image attachment
   const isImage = attachment.fileType.startsWith('image/');
 
+  // Check if this is a CSV file
+  const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
+  
+  // Decode base64 content for CSV files
+  const getCSVContent = () => {
+    try {
+      if (attachment.content) {
+        return atob(attachment.content);
+      }
+      return "";
+    } catch (error) {
+      console.error("Error decoding CSV content:", error);
+      return "Error decoding CSV content";
+    }
+  };
+
   return (
     <>
       {isImage ? (
@@ -103,7 +122,7 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           {/* Square Image Preview */}
           <div 
             className="relative cursor-pointer aspect-square" 
-            onClick={() => setShowImagePreview(true)}
+            onClick={() => setShowPreview(true)}
           >
             {/* Expand Button */}
             <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
@@ -163,12 +182,12 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           <div className="h-8 w-8 rounded-md bg-indigo-50 flex items-center justify-center mr-3 border border-indigo-100">
             {renderIcon()}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" onClick={() => setShowPreview(true)} style={{ cursor: 'pointer' }}>
             <div className="text-sm font-medium text-gray-700 truncate">
               {attachment.filename}
             </div>
             <div className="text-xs text-gray-500">
-              AI generated file
+              {isCSV ? "CSV Data" : "AI generated file"}
             </div>
           </div>
           <div className="flex gap-1">
@@ -199,11 +218,11 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
         </div>
       )}
       
-      {/* Custom Image Preview Dialog that avoids duplicate close buttons */}
-      {showImagePreview && (
+      {/* Preview Modal for Images and CSV Files */}
+      {showPreview && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in duration-200"
-          onClick={() => setShowImagePreview(false)}
+          onClick={() => setShowPreview(false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="attachment-preview-title"
@@ -221,14 +240,14 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 p-0 rounded-full"
-                onClick={() => setShowImagePreview(false)}
+                onClick={() => setShowPreview(false)}
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
               </Button>
             </div>
             
-            {/* Image container */}
+            {/* Content container */}
             <div className="p-6 flex items-center justify-center bg-black/5 min-h-[300px]">
               {isImage && (
                 <img 
@@ -236,6 +255,16 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
                   alt={attachment.filename} 
                   className="max-w-full max-h-[70vh] object-contain" 
                 />
+              )}
+              {isCSV && (
+                <CSVViewer content={getCSVContent()} maxRows={100} />
+              )}
+              {!isImage && !isCSV && (
+                <div className="text-center p-4">
+                  <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Preview not available for this file type.</p>
+                  <p className="text-gray-500 text-sm mt-2">Click the download button to access the file.</p>
+                </div>
               )}
             </div>
             

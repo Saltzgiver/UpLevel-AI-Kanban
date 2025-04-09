@@ -58,12 +58,52 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       for (const attachment of card.attachments) {
         prompt += `- ${attachment.filename} (${attachment.fileType})\n`;
         
-        // For text-based files (txt, csv, md, etc.), include the content directly
+        // For text-based files (txt, md, etc.), include the content directly
         if (attachment.fileType.includes('text') || 
             attachment.filename.endsWith('.txt') || 
-            attachment.filename.endsWith('.csv') || 
             attachment.filename.endsWith('.md')) {
           prompt += `Content of ${attachment.filename}:\n${attachment.content}\n\n`;
+        } 
+        // Special handling for CSV files to help the model understand the structure
+        else if (attachment.filename.endsWith('.csv') || attachment.fileType.includes('csv')) {
+          try {
+            // Attempt to decode the content
+            let csvContent = '';
+            try {
+              csvContent = Buffer.from(attachment.content, 'base64').toString('utf-8');
+            } catch (e) {
+              csvContent = attachment.content; // Fallback to the raw content if not base64
+            }
+            
+            // Add some context about the CSV structure
+            prompt += `CSV data from ${attachment.filename}:\n`;
+            
+            // Get first few lines to show structure
+            const lines = csvContent.split('\n').slice(0, 10);
+            if (lines.length > 0) {
+              // Assume first line might be header
+              const header = lines[0];
+              prompt += `Headers: ${header}\n\n`;
+              
+              // Show a few data rows
+              prompt += `Sample data (first ${Math.min(5, lines.length - 1)} rows):\n`;
+              for (let i = 1; i < Math.min(6, lines.length); i++) {
+                prompt += `${lines[i]}\n`;
+              }
+              
+              if (lines.length > 6) {
+                prompt += `...and ${lines.length - 6} more rows\n`;
+              }
+              
+              // Add instructions for CSV analysis
+              prompt += `\nPlease analyze this CSV data in your response. You can reference columns by name and extract insights from the data.\n\n`;
+            } else {
+              prompt += `CSV appears to be empty.\n\n`;
+            }
+          } catch (error) {
+            console.error("Error processing CSV content:", error);
+            prompt += `Content of ${attachment.filename} (CSV file - could not be parsed):\n${attachment.content.substring(0, 500)}...\n\n`;
+          }
         } else if (attachment.fileType.includes('image')) {
           // For images, just note that there's an image attached
           prompt += `Note: This is an image file. Please reference it by filename if needed.\n\n`;
@@ -190,12 +230,52 @@ export async function processChat(cardId: number, userMessage: string, column: C
       for (const attachment of card.attachments) {
         systemContent += `- ${attachment.filename} (${attachment.fileType})\n`;
         
-        // For text-based files (txt, csv, md, etc.), include the content directly
+        // For text-based files (txt, md, etc.), include the content directly
         if (attachment.fileType.includes('text') || 
             attachment.filename.endsWith('.txt') || 
-            attachment.filename.endsWith('.csv') || 
             attachment.filename.endsWith('.md')) {
           systemContent += `Content of ${attachment.filename}:\n${attachment.content}\n\n`;
+        } 
+        // Special handling for CSV files to help the model understand the structure
+        else if (attachment.filename.endsWith('.csv') || attachment.fileType.includes('csv')) {
+          try {
+            // Attempt to decode the content
+            let csvContent = '';
+            try {
+              csvContent = Buffer.from(attachment.content, 'base64').toString('utf-8');
+            } catch (e) {
+              csvContent = attachment.content; // Fallback to the raw content if not base64
+            }
+            
+            // Add some context about the CSV structure
+            systemContent += `CSV data from ${attachment.filename}:\n`;
+            
+            // Get first few lines to show structure
+            const lines = csvContent.split('\n').slice(0, 10);
+            if (lines.length > 0) {
+              // Assume first line might be header
+              const header = lines[0];
+              systemContent += `Headers: ${header}\n\n`;
+              
+              // Show a few data rows
+              systemContent += `Sample data (first ${Math.min(5, lines.length - 1)} rows):\n`;
+              for (let i = 1; i < Math.min(6, lines.length); i++) {
+                systemContent += `${lines[i]}\n`;
+              }
+              
+              if (lines.length > 6) {
+                systemContent += `...and ${lines.length - 6} more rows\n`;
+              }
+              
+              // Add instructions for CSV analysis
+              systemContent += `\nPlease analyze this CSV data in your response if the user asks about it. You can reference columns by name.\n\n`;
+            } else {
+              systemContent += `CSV appears to be empty.\n\n`;
+            }
+          } catch (error) {
+            console.error("Error processing CSV content:", error);
+            systemContent += `Content of ${attachment.filename} (CSV file - could not be parsed):\n${attachment.content.substring(0, 500)}...\n\n`;
+          }
         } else if (attachment.fileType.includes('image')) {
           // For images, just note that there's an image attached
           systemContent += `Note: This is an image file. Please reference it by filename if needed.\n\n`;
@@ -399,13 +479,48 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
     try {
       const [_, filename, fileType, content] = match;
       
-      // Create attachment
-      await storage.createAttachment({
-        cardId,
-        filename: filename.trim(),
-        fileType: fileType.trim(),
-        content: content.trim()
-      });
+      // Special handling for CSV files to ensure content is properly formatted
+      if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
+        console.log(`Handling CSV file generation: ${filename.trim()}`);
+        
+        // Clean up the content - remove extra whitespace but preserve newlines
+        let cleanContent = content.trim();
+        
+        // Ensure content is not base64 encoded
+        try {
+          // Check if it's already in text format by trying to parse it
+          const lines = cleanContent.split('\n');
+          if (lines.length > 0) {
+            // If it's valid CSV data, we'll use it as-is
+            console.log(`CSV file appears to be valid with ${lines.length} lines`);
+          }
+          
+          // Create attachment with cleaned content
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: 'text/csv',  // Ensure correct MIME type for CSV
+            content: cleanContent
+          });
+        } catch (err) {
+          console.error("Error processing CSV content:", err);
+          // Fallback to storing as-is
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: 'text/csv',
+            content: content.trim()
+          });
+        }
+      } else {
+        // Handle all other file types normally
+        await storage.createAttachment({
+          cardId,
+          filename: filename.trim(),
+          fileType: fileType.trim(),
+          content: content.trim()
+        });
+      }
     } catch (error) {
       console.error("Error creating attachment:", error);
     }
