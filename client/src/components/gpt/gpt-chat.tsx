@@ -280,10 +280,15 @@ export function GPTChat({
   // Chat messages component - separated for cleaner structure
   const ChatMessages = () => {
     if (chats.length === 0 && !isProcessing) {
+      // Determine the message based on whether this is a GPT column or not
+      const message = gptName === "Comments" 
+        ? "No comments yet. Leave a comment about this card." 
+        : "No messages yet. Ask the AI a question to start the conversation.";
+        
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-sm text-center text-muted-foreground p-4">
-            No messages yet. Ask the AI a question to start the conversation.
+            {message}
           </div>
         </div>
       );
@@ -727,7 +732,9 @@ export function GPTChat({
       <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
         <Input
           type="text"
-          placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
+          placeholder={gptName === "Comments" 
+            ? "Add a comment..." 
+            : `Ask ${gptName || 'AI'} a question or "create an image of..."`}
           className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -762,7 +769,7 @@ export function GPTChat({
     <div className="flex flex-col">
       <div className="px-3 py-2 border-b border-gray-100">
         <div className="text-sm font-medium text-gray-700">
-          Conversation with {gptName || 'AI Assistant'}
+          {gptName === "Comments" ? "Comments" : `Conversation with ${gptName || 'AI Assistant'}`}
         </div>
       </div>
       
@@ -778,7 +785,9 @@ export function GPTChat({
         <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
           <Input
             type="text"
-            placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
+            placeholder={gptName === "Comments" 
+              ? "Add a comment..." 
+              : `Ask ${gptName || 'AI'} a question or "create an image of..."`}
             className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
             value={message}
             onChange={(e) => setMessage(e.target.value)}

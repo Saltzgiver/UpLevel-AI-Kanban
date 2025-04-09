@@ -115,7 +115,7 @@ export function CardModal({
   // Scroll to the bottom of the chat container when the modal opens
   // or when new messages arrive
   useEffect(() => {
-    if (isOpen && chatContainerRef.current && column.gptAssigned) {
+    if (isOpen && chatContainerRef.current) {
       // Small delay to ensure the content is rendered
       const timer = setTimeout(() => {
         if (chatContainerRef.current) {
@@ -125,7 +125,7 @@ export function CardModal({
       
       return () => clearTimeout(timer);
     }
-  }, [isOpen, chats, gptOutput, column.gptAssigned]);
+  }, [isOpen, chats, gptOutput]);
 
   if (!isOpen) return null;
 
@@ -374,85 +374,94 @@ export function CardModal({
           <Separator className="my-3" />
           
           {/* GPT Content & Chat Interface - Expanded and prominent */}
-          {column.gptAssigned && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center">
-                    <span className="text-xs font-bold text-green-700">AI</span>
+          <div className="space-y-4">
+            {column.gptAssigned ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-xs font-bold text-green-700">AI</span>
+                    </div>
+                    <h3 className="font-medium text-gray-800 text-sm">{column.gptName || "AI Assistant"}</h3>
                   </div>
-                  <h3 className="font-medium text-gray-800 text-sm">{column.gptName || "AI Assistant"}</h3>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
-                  onClick={handleRetriggerGPT}
-                  disabled={rawProcessingStatus}
-                >
-                  <Zap className="h-3 w-3 mr-1" />
-                  Retrigger
-                </Button>
-              </div>
-              
-              {/* Processing indicator is now completely hidden in the card detail view as per user requirement */}
-              {/* <ProcessingIndicator 
-                isProcessing={rawProcessingStatus}
-              /> */}
-              
-              {/* Unified Chat Interface with Output */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                <div 
-                  ref={chatContainerRef}
-                  className="flex flex-col h-[280px] overflow-y-auto"
-                > 
-                  {/* GPTChat component contains both the message area and the input */}
-                  <GPTChat 
-                    cardId={card.id} 
-                    chats={chats} 
-                    gptName={column.gptName || "AI Assistant"}
-                    gptColor={column.gptColor}
-                    embedded={true}
-                    finalOutput={gptOutput}
-                    isProcessing={rawProcessingStatus}
-                    attachments={card.attachments || []}
-                  />
-                </div>
-              </div>
-              
-              {/* Attachments Section - Clear separation and grouping */}
-              <div className="mt-4 pt-2 border-t border-gray-100">
-                <div className="flex items-center mb-2 gap-1.5">
-                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h3 className="text-xs font-medium">
-                    {attachments.length > 0 
-                      ? `Attachments (${attachments.length})` 
-                      : "Upload Attachment"}
-                  </h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
+                    onClick={handleRetriggerGPT}
+                    disabled={rawProcessingStatus}
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    Retrigger
+                  </Button>
                 </div>
                 
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1 pl-1 mb-3">
-                  {/* Display existing attachments */}
-                  {attachments.map((attachment) => (
-                    <div key={attachment.id} className="w-full">
-                      <AttachmentItem 
-                        attachment={attachment}
-                        onDelete={() => {
-                          // This will refresh attachments
-                          // We rely on the AttachmentItem component to handle the actual deletion
-                        }}
-                      />
-                    </div>
-                  ))}
-                  
-                  {/* Add the upload component as the last item in the grid */}
-                  <div className="w-full">
-                    <FileUpload cardId={card.id} />
+                {/* Processing indicator is now completely hidden in the card detail view as per user requirement */}
+                {/* <ProcessingIndicator 
+                  isProcessing={rawProcessingStatus}
+                /> */}
+              </>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare className="h-4 w-4 text-gray-500" />
+                  <h3 className="font-medium text-gray-700 text-sm">Comments & Attachments</h3>
+                </div>
+              </div>
+            )}
+            
+            {/* Unified Chat Interface with Output - shown for all columns now */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+              <div 
+                ref={chatContainerRef}
+                className="flex flex-col h-[280px] overflow-y-auto"
+              > 
+                {/* GPTChat component contains both the message area and the input */}
+                <GPTChat 
+                  cardId={card.id} 
+                  chats={chats} 
+                  gptName={column.gptName || "Comments"}
+                  gptColor={column.gptColor}
+                  embedded={true}
+                  finalOutput={gptOutput}
+                  isProcessing={rawProcessingStatus}
+                  attachments={card.attachments || []}
+                />
+              </div>
+            </div>
+            
+            {/* Attachments Section - Clear separation and grouping */}
+            <div className="mt-4 pt-2 border-t border-gray-100">
+              <div className="flex items-center mb-2 gap-1.5">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                <h3 className="text-xs font-medium">
+                  {attachments.length > 0 
+                    ? `Attachments (${attachments.length})` 
+                    : "Upload Attachment"}
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1 pl-1 mb-3">
+                {/* Display existing attachments */}
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="w-full">
+                    <AttachmentItem 
+                      attachment={attachment}
+                      onDelete={() => {
+                        // This will refresh attachments
+                        // We rely on the AttachmentItem component to handle the actual deletion
+                      }}
+                    />
                   </div>
+                ))}
+                
+                {/* Add the upload component as the last item in the grid */}
+                <div className="w-full">
+                  <FileUpload cardId={card.id} />
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
         
         {/* Footer Actions - Fixed at bottom */}
