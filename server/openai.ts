@@ -41,7 +41,14 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     }
 
     prompt += `Card Title: ${card.title}\n`;
-    prompt += `Card Description: ${card.description || "No description provided."}\n\n`;
+    prompt += `Card Description: ${card.description || "No description provided."}\n`;
+    
+    // Include previous GPT output if it exists
+    if (card.gptOutput) {
+      prompt += `\nPrevious AI Analysis: ${card.gptOutput}\n\n`;
+    } else {
+      prompt += '\n';
+    }
 
     // Include existing chats for context if any
     if (card.chats && card.chats.length > 0) {
@@ -222,7 +229,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
     // Create system message with context about the card, including attachments
     let systemContent = `You are ${column.gptName || "an AI assistant"}. ${column.gptInstructions || ""}\n\n` +
       `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
-      `${card.gptTags ? `This card has the following tags: ${card.gptTags}` : ""}\n\n`;
+      `${card.gptTags ? `This card has the following tags: ${card.gptTags}` : ""}\n\n` +
+      `${card.gptOutput ? `Previous AI Analysis: ${card.gptOutput}\n\n` : ""}`;
     
     // Include attachments if any
     if (card.attachments && card.attachments.length > 0) {
