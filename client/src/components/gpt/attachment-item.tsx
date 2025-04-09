@@ -102,16 +102,31 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   // Check if this is a CSV file
   const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
   
-  // Decode base64 content for CSV files
+  // Safely decode base64 content for CSV files
   const getCSVContent = () => {
     try {
-      if (attachment.content) {
-        return atob(attachment.content);
+      if (!attachment.content) return "";
+      
+      // Check if content is already in text format
+      if (attachment.content.trim().startsWith('id,') || 
+          attachment.content.trim().startsWith('name,') ||
+          attachment.content.includes('\n') || 
+          attachment.content.includes(',')) {
+        return attachment.content;
       }
-      return "";
+      
+      // Try to decode base64 using a safer method
+      try {
+        // Use TextDecoder for safer decoding
+        const base64Decoded = Uint8Array.from(atob(attachment.content), c => c.charCodeAt(0));
+        return new TextDecoder().decode(base64Decoded);
+      } catch (decodeError) {
+        console.log("Base64 decoding failed, returning content as-is");
+        return attachment.content;
+      }
     } catch (error) {
-      console.error("Error decoding CSV content:", error);
-      return "Error decoding CSV content";
+      console.error("Error processing CSV content:", error);
+      return "Error processing CSV content. Please download the file to view its contents.";
     }
   };
 

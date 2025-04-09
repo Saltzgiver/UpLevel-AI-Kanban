@@ -1,0 +1,194 @@
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+Error decoding CSV content: 
+DOMException {}
+
+at t.value (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://be73c173-fdaa-439d-95f3-8f8ba00c5acf-00-3g7rsdfju2gji.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Kanban
+Test Board
+
+
+Share
+
+New Card
+backlog
+1
+Column options
+GPT not assigned
+Automate
+test csv
+Add a card
+write a paragraph
+0
+Column options
+Paragrapher
+
+write a paragraph about this. ignore the title, and dont giv...
+Add a card
+summarize
+3
+Column options
+Summarizer
+
+summarize the details in this card into a few concise bullet...
+hoho
+Last GPT Output
+Create a visual representation of a bird.
+Blend artistic skill with interpretive thinking.
+Envision a bird in a unique or metaphorical context.
+Align with the broader theme or narrative of the prompt.
+Enhance artistic abilities and connect with bird symbolism.
+Show more
+test
+Last GPT Output
+Tests are beneficial for evaluating knowledge and skills.
+Provide a structured, objective way to measure progress and identify areas for improvement.
+Motivate improvement, ensure accountability, and maintain standards.
+Help educators tailor teaching strategies to student needs.
+Facilitate personal growth, educational advancement, and professional readiness.
+Show more
+test add
+Last GPT Output
+CSV file includes order-related data.
+Columns: original name, seller ID, order number, shipment ID, package ID, package count, creation date, weight, weight unit, dimensions (length, width, height), quantity, carrier fee, postal codes, zone, carrier revenue per label.
+Each row represents a specific order or shipment.
+Data includes numeric values, dates, and identifiers.
+Potential uses: logistics, shipping analysis, inventory management.
+Show more
+Add a card
+make a poem
+3
+Column options
+Poet
+
+write a poem using this cards details. ignore the title and ...
+my coworker
+Last GPT Output
+In the realm of work, where days are spun,
+Lies a tale of a colleague, second to none.
+Alex, cool as a breeze in a summer's glow,
+Brings a light to the tasks, where our efforts flow.
+
+With knowledge vast and a heart so kind,
+He stands as a beacon, a true mastermind.
+In high-pressure storms, he sails with grace,
+Calm and collected, he sets the pace.
+
+In professional duties, he shines so bright,
+Fostering camaraderie, a guiding light.
+An innovator at heart, problem-solving his art,
+Ready to lend a hand, from the very start.
+
+In his presence, the workplace blooms,
+Dynamic and supportive, in all its rooms.
+With every project we dare to embark,
+Alex's spirit leaves a lasting mark.
+
+So here's to Alex, our colleague, our friend,
+In the tapestry of work, his threads transcend.
+Inspiring and motivating, each step we take,
+In the world of work, his legacy we partake.
+
+Show more
+gogo
+Last GPT Output
+In the quiet depths where the waters swirl,
+Lies the slow, patient journey of a turtle.
+Her shell, a mosaic of time's gentle caress,
+Carries stories of oceans, of life's endless quest.
+
+Through currents she glides, with a grace unhurried,
+A witness to secrets in the deep, unburied.
+The world above rushes, a tempest in haste,
+Yet she moves with a rhythm, no moment to waste.
+
+With eyes like the moon, she sees eons unfold,
+In silence she travels, her spirit bold.
+A guardian of dreams beneath the ocean's sheen,
+In her heart, a universe serene.
+
+Oh, gentle creature of ancient lore,
+May your journey be peaceful, forevermore.
+In your slow dance, the wisdom of ages unfurl,
+Teach us to wander, dear timeless turtle.
+
+Show more
+testing
+Last GPT Output
+In the realm where engines roar,
+And sleek designs make spirits soar,
+A world of testing, trials unfold,
+Where stories of cool cars are told.
+
+On asphalt tracks, they take their flight,
+Glistening under the morning light.
+With engines humming, a symphony plays,
+As each cool car its prowess displays.
+
+Performance metrics, the ultimate quest,
+Pushing the limits, we seek the best.
+Speed and safety, style and grace,
+In this testing ground, they find their place.
+
+With every curve and every turn,
+The tires grip, the engines churn.
+Data and numbers, the results we seek,
+In the language of cars, they softly speak.
+
+Elegance and power, a fusion rare,
+In these cool cars, we find our flair.
+In the world of testing, dreams ignite,
+As we journey onward into the night.
+
+Show more
+Add a card
+joke
+1
+Column options
+Comedian
+
+create a joke based on the card. dont respond with any other...
+goldfish
+Last GPT Output
+Why did the goldfish bring a ladder to the fishbowl? Because it heard the water was over its head!
+
+Add a card
+Funny Insult
+1
+Column options
+Insulter
+
+create a funny insult based on the card. dont include any ex...
+test
+Last GPT Output
+Congratulations, your daughter is so awesome that even her shadow is more accomplished than most people!
+
+Show more
+Add a card
+
+Add another column
