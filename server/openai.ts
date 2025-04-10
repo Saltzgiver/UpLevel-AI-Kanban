@@ -479,6 +479,9 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
         
+        console.log(`Creating image attachment for prompt "${prompt}"`);
+        console.log(`Image data size: ${base64Image.length} bytes`);
+        
         // Create attachment
         const attachment = await storage.createAttachment({
           cardId,
@@ -486,6 +489,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
           fileType: 'image/png',
           content: base64Image
         });
+        
+        console.log(`Successfully created image attachment with ID: ${attachment.id}`);
         
         // Add a message from the assistant with the image
         // Use "Generated image" as the alt text for better compatibility with image renderer
@@ -496,6 +501,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
+        
+        console.log(`Added chat message with image reference to attachment ${attachment.id}`);
         
         return;
       } catch (error) {
