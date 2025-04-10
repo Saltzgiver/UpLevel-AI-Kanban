@@ -315,7 +315,19 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      console.log("Image source received:", src);
+      console.log("[DEBUG] Image rendering - source:", src, "alt:", alt);
+      
+      // Log all available attachments for debugging
+      if (attachments && attachments.length > 0) {
+        console.log("[DEBUG] Available attachments:", attachments.map(a => ({
+          id: a.id,
+          filename: a.filename,
+          type: a.fileType,
+          createdAt: a.createdAt
+        })));
+      } else {
+        console.log("[DEBUG] No attachments available for this card");
+      }
       
       // First, check if we need to handle a generic "Generated image" alt text
       if (alt === "Generated image" && src === "") {
