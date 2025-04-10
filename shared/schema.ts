@@ -72,6 +72,7 @@ export const insertCardSchema = createInsertSchema(cards).pick({
   description: true,
   columnId: true,
   order: true,
+  includeChatHistory: true,
 });
 
 // Chats table for GPT conversations
