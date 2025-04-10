@@ -472,6 +472,11 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         // Fetch the image and convert to base64
         const response = await fetch(imageUrl);
+        
+        // Get content type from response headers to ensure proper MIME type
+        const contentType = response.headers.get('content-type') || 'image/png';
+        console.log(`Image content type from DALL-E: ${contentType}`);
+        
         const imageBuffer = await response.arrayBuffer();
         const base64Image = Buffer.from(imageBuffer).toString('base64');
         
@@ -479,20 +484,21 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
         
-        // Create attachment
+        // Create attachment with proper MIME type from the response
         const attachment = await storage.createAttachment({
           cardId,
           filename,
-          fileType: 'image/png',
+          fileType: contentType,  // Use detected content type from response
           content: base64Image
         });
         
         // Add a message from the assistant with the image
-        // Use "Generated image" as the alt text for better compatibility with image renderer
+        // Using "Generated image" as the alt text and empty src for better compatibility with image renderer
+        // The frontend's renderImageInMarkdown will automatically handle this pattern
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
+          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image]()`,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
