@@ -55,9 +55,9 @@ export function FileUpload({ cardId }: FileUploadProps) {
       console.log(`Preparing to upload ${files.length} files:`, files.map(f => 
         `${f.name} (${f.type}, ${Math.round(f.size/1024)}KB)`).join(', '));
       
-      // Append each file to the FormData with the 'file' name
+      // Append each file to the FormData with the 'files' name to match server expectation
       files.forEach(file => {
-        formData.append('file', file);
+        formData.append('files', file);
       });
       
       console.log(`Sending upload request to /api/cards/${cardId}/attachments`);

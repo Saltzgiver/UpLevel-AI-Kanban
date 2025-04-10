@@ -484,8 +484,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/cards/:cardId/attachments", (req, res, next) => {
     console.log("Received file upload request for card:", req.params.cardId);
     console.log("Request content type:", req.headers['content-type']);
+    console.log("Request field names:", Object.keys(req.body || {}).join(', '));
     
-    upload.array('file', 10)(req, res, (err) => {
+    // Increase the file limit to 20
+    upload.array('files', 20)(req, res, (err) => {
       if (err) {
         console.error("Multer upload error:", err);
         return handleMulterErrors(err, req, res, next);
