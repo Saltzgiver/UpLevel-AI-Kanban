@@ -48,8 +48,8 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       prompt += `Previous GPT Output: ${card.gptOutput}\n\n`;
     }
 
-    // Include existing chats for context if any
-    if (card.chats && card.chats.length > 0) {
+    // Include existing chats for context if enabled for this card
+    if (card.includeChatHistory && card.chats && card.chats.length > 0) {
       prompt += "Previous conversations:\n";
       for (const chat of card.chats) {
         prompt += `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}\n`;
@@ -307,8 +307,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     ];
 
-    // Add chat history
-    if (card.chats && card.chats.length > 0) {
+    // Add chat history if enabled for this card
+    if (card.includeChatHistory && card.chats && card.chats.length > 0) {
       for (const chat of card.chats) {
         messages.push({
           role: chat.role as "user" | "assistant",

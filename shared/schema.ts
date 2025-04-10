@@ -63,6 +63,7 @@ export const cards = pgTable("cards", {
   gptOutput: text("gpt_output"),
   gptTags: text("gpt_tags"),
   processing: boolean("processing").default(false),
+  includeChatHistory: boolean("include_chat_history").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
