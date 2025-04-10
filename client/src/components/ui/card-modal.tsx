@@ -415,16 +415,29 @@ export function CardModal({
                     </div>
                     <h3 className="font-medium text-gray-800 text-sm">{column.gptName || "AI Assistant"}</h3>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
-                    onClick={handleRetriggerGPT}
-                    disabled={rawProcessingStatus}
-                  >
-                    <Zap className="h-3 w-3 mr-1" />
-                    Retrigger
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center space-x-2">
+                      <History className="h-4 w-4 text-gray-500" />
+                      <Label htmlFor="include-chat-history" className="text-xs font-normal text-gray-600">
+                        Include chat history
+                      </Label>
+                      <Switch
+                        id="include-chat-history"
+                        checked={includeChatHistory}
+                        onCheckedChange={handleChatHistoryToggle}
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
+                      onClick={handleRetriggerGPT}
+                      disabled={rawProcessingStatus}
+                    >
+                      <Zap className="h-3 w-3 mr-1" />
+                      Retrigger
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Processing indicator is now completely hidden in the card detail view as per user requirement */}
@@ -531,22 +544,7 @@ export function CardModal({
               )}
             </div>
             
-            {/* Chat history toggle - Only displayed if the card is currently in a GPT column */}
-            {column.gptAssigned && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center space-x-2">
-                  <History className="h-4 w-4 text-gray-500" />
-                  <Label htmlFor="include-chat-history" className="text-xs font-normal text-gray-600">
-                    Include chat history
-                  </Label>
-                  <Switch
-                    id="include-chat-history"
-                    checked={includeChatHistory}
-                    onCheckedChange={handleChatHistoryToggle}
-                  />
-                </div>
-              </div>
-            )}
+            {/* Chat history toggle removed from here and moved next to the retrigger button */}
           </div>
           
           {/* Delete button on the right */}
