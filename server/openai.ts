@@ -449,6 +449,9 @@ export async function processChat(cardId: number, userMessage: string, column: C
     
     // If this appears to be an image request and we have an API key
     if (isImageRequest && column.apiKey) {
+      // Update card to show processing state
+      await storage.updateCard(cardId, { processing: true });
+    
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -463,11 +466,30 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
         
+        console.log(`====== IMAGE GENERATION REQUEST =======`);
+        console.log(`Card ID: ${cardId}`);
+        console.log(`User message: "${userMessage}"`);
+        console.log(`Extracted prompt: "${prompt}"`);
+        console.log(`Using API key from column ${column.id}`);
+        
         // Generate the image
         const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
-          throw new Error("Failed to generate image");
+          console.error(`Image generation returned empty URL for prompt: "${prompt}"`);
+          
+          // Add error message to chat
+          await storage.createChat({
+            cardId,
+            role: "assistant",
+            content: `⚠️ Image generation failed: OpenAI returned an empty response.\n\nPlease check your OpenAI API key has proper permissions for DALL-E image generation.`,
+            gptName: column.gptName || "AI Assistant",
+            gptColor: column.gptColor
+          });
+          
+          // Reset processing state
+          await storage.updateCard(cardId, { processing: false });
+          return;
         }
         
         // Fetch the image and convert to base64
@@ -755,6 +777,10 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
+    // Log the request details for better debugging
+    console.log(`[DALL-E] Generating image with prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
+    console.log(`[DALL-E] Using API key: ${apiKey ? 'Custom key provided' : 'Default environment key'}`);
+    
     const openai = getOpenAIClient(apiKey || undefined);
     
     const response = await openai.images.generate({
@@ -765,9 +791,40 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
-    return response.data[0].url || "";
-  } catch (error) {
-    console.error("Error generating image with DALL-E:", error);
-    throw error;
+    if (!response.data || response.data.length === 0 || !response.data[0].url) {
+      console.error("[DALL-E] Empty response received from OpenAI");
+      throw new Error("OpenAI returned an empty response for image generation");
+    }
+    
+    console.log(`[DALL-E] Successfully generated image, URL length: ${response.data[0].url.length}`);
+    return response.data[0].url;
+    
+  } catch (error: any) {
+    // Enhanced error handling with more specific messages
+    console.error("[DALL-E] Error generating image:", error);
+    
+    // Check for common DALL-E specific errors
+    const errorMessage = error.message || "Unknown error";
+    
+    if (errorMessage.includes("API key")) {
+      console.error("[DALL-E] API key error:", errorMessage);
+      throw new Error("Invalid API key or missing DALL-E access. Please check your OpenAI API key has DALL-E permissions.");
+    } 
+    else if (errorMessage.includes("billing")) {
+      console.error("[DALL-E] Billing error:", errorMessage);
+      throw new Error("OpenAI billing issue. Please check your account status and payment method.");
+    }
+    else if (errorMessage.includes("content policy")) {
+      console.error("[DALL-E] Content policy violation:", errorMessage);
+      throw new Error("Your image prompt was rejected due to content policy. Please try a different prompt.");
+    }
+    else if (errorMessage.includes("capacity")) {
+      console.error("[DALL-E] Capacity error:", errorMessage);
+      throw new Error("OpenAI is currently experiencing high demand. Please try again later.");
+    }
+    else {
+      console.error("[DALL-E] General error:", errorMessage);
+      throw new Error(`Image generation failed: ${errorMessage}`);
+    }
   }
 }
