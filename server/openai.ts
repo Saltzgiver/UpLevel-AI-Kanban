@@ -482,6 +482,9 @@ export async function processChat(cardId: number, userMessage: string, column: C
         console.log(`IMAGE-CHAT-DETECT: Fetching image from URL: ${imageUrl.substring(0, 50)}...`);
         const response = await fetch(imageUrl);
         const imageBuffer = await response.arrayBuffer();
+        
+        // When storing the image, just use the raw buffer converted to base64
+        // Don't add any encoding prefix - that will be handled by the client
         const base64Image = Buffer.from(imageBuffer).toString('base64');
         console.log(`IMAGE-CHAT-DETECT: Successfully converted image to base64 (${base64Image.length} chars)`);
         
@@ -490,7 +493,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
         console.log(`IMAGE-CHAT-DETECT: Created filename: ${filename}`);
         
-        // Create attachment
+        // Create attachment - store the raw base64 data
         const attachment = await storage.createAttachment({
           cardId,
           filename,
@@ -688,9 +691,19 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
           if (success) {
             attachmentsCreated++;
           }
+        } else if (fileType.trim().includes('image')) {
+          // Handle image file types - don't trim the content as it might corrupt the base64 data
+          console.log(`Creating image attachment: ${filename.trim()} (${fileType.trim()})`);
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content // Don't trim image content
+          });
+          attachmentsCreated++;
         } else {
-          // Handle all other file types normally
-          console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
+          // Handle all other non-image file types normally
+          console.log(`Creating non-CSV/non-image attachment: ${filename.trim()} (${fileType.trim()})`);
           await storage.createAttachment({
             cardId,
             filename: filename.trim(),
@@ -765,20 +778,53 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     const openai = getOpenAIClient(apiKey || undefined);
     
     console.log(`IMAGE-GEN: Initialized OpenAI client, calling DALL-E API...`);
+    console.log(`IMAGE-GEN: Model: dall-e-3, Size: 1024x1024, Quality: standard`);
     
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-    });
+    // Use a more detailed try block for the DALL-E API call
+    let generationResponse;
+    try {
+      generationResponse = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      });
+      console.log(`IMAGE-GEN: Call to OpenAI's images.generate() completed successfully`);
+    } catch (apiError) {
+      console.error(`IMAGE-GEN: Error during OpenAI image generation API call:`, apiError);
+      if (apiError instanceof Error) {
+        console.error(`IMAGE-GEN: API Error message: ${apiError.message}`);
+        console.error(`IMAGE-GEN: API Error name: ${apiError.name}`);
+        console.error(`IMAGE-GEN: API Error stack: ${apiError.stack}`);
+      }
+      throw apiError;
+    }
+    
+    const response = generationResponse;
+    console.log(`IMAGE-GEN: Response structure: ${JSON.stringify(Object.keys(response))}`);
+    
+    try {
+      console.log(`IMAGE-GEN: Response data structure: ${JSON.stringify(Object.keys(response.data[0]))}`);
+    } catch (e) {
+      console.error(`IMAGE-GEN: Could not get response data structure`, e);
+    }
 
     if (response && response.data && response.data.length > 0 && response.data[0].url) {
       console.log(`IMAGE-GEN: Successfully generated image, received URL: ${response.data[0].url.substring(0, 50)}...`);
+      
+      // Safely access properties that might not exist
+      try {
+        const imageData = response.data[0] as any; // Cast to any to avoid TypeScript errors
+        console.log(`IMAGE-GEN: Image model used: ${imageData.model || 'unknown'}`);
+        console.log(`IMAGE-GEN: Image revised prompt: ${imageData.revised_prompt ? imageData.revised_prompt.substring(0, 50) + '...' : 'none'}`);
+      } catch (e) {
+        console.error(`IMAGE-GEN: Error accessing image metadata`, e);
+      }
+      
       return response.data[0].url;
     } else {
-      console.error(`IMAGE-GEN: Response missing expected data structure`, response);
+      console.error(`IMAGE-GEN: Response missing expected data structure`, JSON.stringify(response));
       return "";
     }
   } catch (error) {
