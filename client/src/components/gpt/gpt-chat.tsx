@@ -58,8 +58,10 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
 const preprocessMessageContent = (content: string): string => {
   if (!content) return '';
   
-  // Process file references in the format file:name.png,image/png,base64content
-  return content.replace(/file:([^,]+),\s*(image\/[^,]+),\s*([^\s]+)/g, (match, filename, fileType, content) => {
+  let processedContent = content;
+  
+  // Pattern 1: Process file references in the format file:name.png,image/png,base64content
+  processedContent = processedContent.replace(/file:([^,]+),\s*(image\/[^,]+),\s*([^\s]+)/g, (match, filename, fileType, content) => {
     console.log(`Found inline image reference: ${filename}, converting to markdown image`);
     if (fileType.includes('image')) {
       // For images with base64 content, convert to proper markdown image syntax
@@ -67,6 +69,19 @@ const preprocessMessageContent = (content: string): string => {
     }
     return match; // Keep as is for non-images
   });
+  
+  // Pattern 2: Fix incomplete or malformed markdown image references 
+  // Such as ![image.png](data:image/png;base64,<base64_encoded_image_content>)
+  processedContent = processedContent.replace(/!\[(.*?)\]\(data:image\/([^;]+);base64,\s*<base64_encoded_image_content>\s*\)/g, (match, filename, imageType) => {
+    console.log(`Found incomplete image reference: ${filename}, replacing with attachment placeholder`);
+    // Replace with a placeholder that indicates an image should be here
+    return `<div class="image-placeholder p-2 bg-gray-100 border rounded text-xs text-center">
+      [Image: ${filename}] <br/>
+      <span class="text-gray-500">(Unable to render: Missing image data)</span>
+    </div>`;
+  });
+  
+  return processedContent;
 };
 
 // Shared Image Dialog Modal Component to be used by GPTChat
