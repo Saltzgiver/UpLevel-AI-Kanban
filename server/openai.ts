@@ -246,7 +246,26 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     console.log(`Successfully completed request with model ${OPENAI_MODEL}`);
     
     const response = completion.choices[0].message.content || "";
-
+    
+    // Log the response to check for image markdown references
+    console.log("==========================================================");
+    console.log("OPENAI RESPONSE ANALYSIS - Card ID:", cardId);
+    console.log("Checking for image references in response");
+    console.log("Response length:", response.length);
+    console.log("Response contains '![' (image markdown):", response.includes("!["));
+    console.log("Response contains 'attachment:':", response.includes("attachment:"));
+    
+    // Check for image pattern
+    const imageMarkdownPattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const imageMatches = [...response.matchAll(imageMarkdownPattern)];
+    console.log("Image markdown matches found:", imageMatches.length);
+    for (const match of imageMatches) {
+      console.log("- Image markdown:", match[0]);
+      console.log("  - Alt text:", match[1]);
+      console.log("  - URL/src:", match[2]);
+    }
+    console.log("==========================================================");
+    
     // Extract tags if provided
     let gptOutput = response;
     let gptTags = null;
@@ -558,6 +577,25 @@ export async function processChat(cardId: number, userMessage: string, column: C
     });
 
     const response = completion.choices[0].message.content || "";
+    
+    // Log the chat response to check for image markdown references
+    console.log("==========================================================");
+    console.log("CHAT RESPONSE ANALYSIS - Card ID:", cardId);
+    console.log("Checking for image references in chat response");
+    console.log("Response length:", response.length);
+    console.log("Response contains '![' (image markdown):", response.includes("!["));
+    console.log("Response contains 'attachment:':", response.includes("attachment:"));
+    
+    // Check for image pattern
+    const imageMarkdownPattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const imageMatches = [...response.matchAll(imageMarkdownPattern)];
+    console.log("Image markdown matches found:", imageMatches.length);
+    for (const match of imageMatches) {
+      console.log("- Image markdown:", match[0]);
+      console.log("  - Alt text:", match[1]);
+      console.log("  - URL/src:", match[2]);
+    }
+    console.log("==========================================================");
 
     // Save the assistant's response with GPT name and color
     await storage.createChat({

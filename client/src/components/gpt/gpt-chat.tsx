@@ -438,6 +438,8 @@ export function GPTChat({
       
       // Check if this is an attachment reference using includes to capture all possible formats
       if (src && src.includes('attachment:')) {
+        console.log("[DEBUG] Processing attachment reference in markdown:", src);
+        
         // Extract attachment ID from various potential formats
         let attachmentId: number | undefined = undefined;
         
@@ -445,9 +447,11 @@ export function GPTChat({
         // This pattern matches both "attachment:123" and "(attachment:123)"
         const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
         
+        console.log("[DEBUG] Regex match result:", match);
+        
         if (match && match[1]) {
           attachmentId = parseInt(match[1]);
-          console.log("Extracted attachment ID:", attachmentId, "from src:", src);
+          console.log("[DEBUG] Extracted attachment ID:", attachmentId, "from src:", src);
         } else {
           // Fallback to direct parsing if the regex didn't work
           if (src.startsWith('attachment:')) {
