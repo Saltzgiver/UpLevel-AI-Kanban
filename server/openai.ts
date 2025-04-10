@@ -507,11 +507,21 @@ export async function processChat(cardId: number, userMessage: string, column: C
         });
         
         // Add a message from the assistant with the image
-        // Use "Generated image" as the alt text for better compatibility with image renderer
+        // Format the message to clearly indicate an image was generated successfully
+        const imageMessage = `
+✨ **Image Generated Successfully**
+
+**Prompt:** "${prompt}"
+
+![Generated image](attachment:${attachment.id})
+
+_Image generated using DALL-E 3_
+`;
+        
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
+          content: imageMessage,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
@@ -522,15 +532,31 @@ export async function processChat(cardId: number, userMessage: string, column: C
         console.error("ERROR GENERATING IMAGE");
         console.error("Prompt:", prompt);
         console.error("Column API Key present:", !!column.apiKey);
+        console.error("Environment API Key present:", !!process.env.OPENAI_API_KEY);
         console.error("Error details:", error instanceof Error ? error.message : String(error));
         console.error("Full error:", error);
         console.error("===========================================");
         
-        // Add error message to chat for transparency
+        // Construct a user-friendly error message
+        let errorMessage = "I was unable to generate the requested image.";
+        
+        if (error instanceof Error) {
+          if (error.message.includes("status code 401")) {
+            errorMessage += " The API key is invalid or not authorized for DALL-E image generation.";
+          } else if (error.message.includes("status code 429")) {
+            errorMessage += " The API rate limit has been exceeded. Please try again in a few moments.";
+          } else if (error.message.includes("status code 400")) {
+            errorMessage += " Your prompt may contain content that violates OpenAI's content policy.";
+          } else {
+            errorMessage += " " + error.message;
+          }
+        }
+        
+        // Add detailed error message to chat for transparency
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `I attempted to create an image, but encountered an error. ${error instanceof Error ? error.message : "Check if the OpenAI API key is valid and has proper permissions for image generation."}`,
+          content: `❌ **Image Generation Failed**\n\n${errorMessage}`,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
@@ -803,7 +829,19 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
-    const openai = getOpenAIClient(apiKey || undefined);
+    console.log("Image generation requested for prompt:", prompt.substring(0, 30) + "...");
+    
+    // Use provided API key, column key, or environment variable (in that order)
+    const effectiveApiKey = apiKey || process.env.OPENAI_API_KEY;
+    
+    if (!effectiveApiKey) {
+      console.error("No API key available for image generation");
+      throw new Error("Missing OpenAI API key for image generation");
+    }
+    
+    console.log("Using API key for DALL-E image generation (first 4 chars):", effectiveApiKey.substring(0, 4) + "...");
+    
+    const openai = getOpenAIClient(effectiveApiKey);
     
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -813,9 +851,34 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
-    return response.data[0].url || "";
+    if (!response.data || !response.data[0] || !response.data[0].url) {
+      console.error("DALL-E response missing URL:", response);
+      throw new Error("Invalid response from DALL-E image generation");
+    }
+    
+    console.log("Successfully generated image URL (length):", response.data[0].url.length);
+    return response.data[0].url;
   } catch (error) {
-    console.error("Error generating image with DALL-E:", error);
-    throw error;
+    console.error("===========================================");
+    console.error("ERROR GENERATING IMAGE WITH DALL-E");
+    console.error("Prompt:", prompt);
+    console.error("Error details:", error instanceof Error ? error.message : String(error));
+    console.error("Full error:", error);
+    console.error("===========================================");
+    
+    // Include a more specific error message based on the error
+    let errorMessage = "Failed to generate image with DALL-E";
+    
+    if (error instanceof Error) {
+      if (error.message.includes("status code 401")) {
+        errorMessage = "Invalid or unauthorized OpenAI API key. Please check your API key or billing status.";
+      } else if (error.message.includes("status code 429")) {
+        errorMessage = "OpenAI API rate limit exceeded. Please try again in a few moments.";
+      } else if (error.message.includes("status code 400")) {
+        errorMessage = "Bad request to OpenAI API. Your prompt may contain content that violates OpenAI's content policy.";
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
 }
