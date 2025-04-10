@@ -570,34 +570,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contentLength: attachment.content ? attachment.content.length : 0
       });
       
-      // If it's an image, serve it as an image
-      if (attachment.fileType.startsWith('image/')) {
-        try {
-          // Verify base64 content is valid before trying to decode
-          if (!attachment.content) {
-            console.error(`Empty content for attachment ID: ${id}`);
-            return res.status(500).json({ message: "Attachment has no content" });
-          }
-          
-          // Decode base64 content
-          const imageBuffer = Buffer.from(attachment.content, 'base64');
-          
-          // Set proper headers for caching and content type
-          res.set('Content-Type', attachment.fileType);
-          res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-          res.set('Content-Length', imageBuffer.length.toString());
-          
-          console.log(`Serving attachment as image: ${attachment.fileType}, size: ${imageBuffer.length} bytes`);
-          return res.send(imageBuffer);
-        } catch (decodeError) {
-          console.error(`Error decoding base64 content for attachment ID: ${id}`, decodeError);
-          return res.status(500).json({ message: "Error decoding attachment content" });
+      // Serve file contents for direct download (both images and other files like CSV)
+      try {
+        // Verify base64 content is valid before trying to decode
+        if (!attachment.content) {
+          console.error(`Empty content for attachment ID: ${id}`);
+          return res.status(500).json({ message: "Attachment has no content" });
         }
+        
+        // Decode base64 content
+        const fileBuffer = Buffer.from(attachment.content, 'base64');
+        
+        // Set proper headers for direct download
+        res.set('Content-Type', attachment.fileType);
+        res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
+        res.set('Content-Length', fileBuffer.length.toString());
+        
+        // Different cache settings based on file type
+        if (attachment.fileType.startsWith('image/')) {
+          res.set('Cache-Control', 'public, max-age=86400'); // Cache images for 24 hours
+          console.log(`Serving image attachment: ${attachment.fileType}, size: ${fileBuffer.length} bytes`);
+        } else {
+          res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate'); // Don't cache CSVs
+          console.log(`Serving ${attachment.fileType} attachment as download, size: ${fileBuffer.length} bytes`);
+        }
+        
+        return res.send(fileBuffer);
+      } catch (decodeError) {
+        console.error(`Error decoding content for attachment ID: ${id}`, decodeError);
+        return res.status(500).json({ message: "Error decoding attachment content" });
       }
-      
-      // For other file types, return the attachment object
-      console.log(`Serving attachment as JSON: ${attachment.fileType}`);
-      return res.json(attachment);
     } catch (error) {
       console.error("Error fetching attachment:", error);
       return res.status(500).json({ message: "Error fetching attachment" });
