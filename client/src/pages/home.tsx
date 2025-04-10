@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Board } from "@shared/schema";
+import { ImageGenerationTest } from "@/components/ui/image-test";
 
 export default function Home() {
   const { toast } = useToast();
@@ -149,6 +150,9 @@ export default function Home() {
     <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
       <Header board={activeBoard} />
       <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8">
+        <div className="mb-6 mt-4">
+          <ImageGenerationTest />
+        </div>
         <div className="py-6">
           <BoardComponent 
             board={activeBoard}
