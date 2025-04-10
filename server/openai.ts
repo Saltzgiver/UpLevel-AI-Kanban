@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { Column } from "@shared/schema";
+import { Column, Attachment } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL = "gpt-4o";
@@ -12,6 +12,11 @@ const getOpenAIClient = (apiKey?: string) => {
     throw new Error("No OpenAI API key provided");
   }
   return new OpenAI({ apiKey: key });
+};
+
+// Helper function to convert base64 image to data URL for OpenAI vision API
+const base64ToDataURL = (base64: string, mimeType: string): string => {
+  return `data:${mimeType};base64,${base64}`;
 };
 
 /**
@@ -283,8 +288,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
             systemContent += `Content of ${attachment.filename} (CSV file - could not be parsed):\n${attachment.content.substring(0, 500)}...\n\n`;
           }
         } else if (attachment.fileType.includes('image')) {
-          // For images, just note that there's an image attached
-          systemContent += `Note: This is an image file. Please reference it by filename if needed.\n\n`;
+          // For images, we'll include them in the actual message content later
+          systemContent += `Note: This is an image file (${attachment.filename}). You'll be able to view and analyze it.\n\n`;
         } else {
           // For other file types, add a generic note
           systemContent += `Note: This is a ${attachment.fileType} file. You can reference it by filename.\n\n`;
@@ -396,12 +401,57 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     }
 
-    // Add the new user message
+    // Prepare to add the user message and potentially any image attachments
+    let userContent: string | { type: string, text?: string, image_url?: { url: string } }[] = userMessage;
+    
+    // Check for image attachments that we can include with the message
+    if (card.attachments && card.attachments.length > 0) {
+      // Get the image attachments
+      const imageAttachments = card.attachments.filter(att => att.fileType.includes('image'));
+      
+      // If we have image attachments, we'll need to format the content as an array with text and images
+      if (imageAttachments.length > 0) {
+        // Convert to the format expected by OpenAI's API
+        userContent = [
+          { type: "text", text: userMessage }
+        ];
+        
+        // Add all image attachments to the user message
+        for (const attachment of imageAttachments) {
+          try {
+            // Convert base64 to data URL for GPT-4o's vision feature
+            const dataUrl = base64ToDataURL(attachment.content, attachment.fileType);
+            
+            userContent.push({
+              type: "image_url",
+              image_url: {
+                url: dataUrl
+              }
+            });
+            
+            console.log(`Added image attachment ${attachment.id} (${attachment.filename}) to the chat message`);
+          } catch (error) {
+            console.error(`Error processing image attachment ${attachment.id}:`, error);
+          }
+        }
+      }
+    }
+    
+    // Add the new user message (potentially with images)
     messages.push({
+      role: "user",
+      content: userContent
+    });
+    
+    // Save the plain text message to the chat history
+    await storage.createChat({
+      cardId,
       role: "user",
       content: userMessage
     });
 
+    console.log(`Sending message to OpenAI with model ${OPENAI_MODEL}, including ${typeof userContent === 'string' ? 0 : userContent.length - 1} images`);
+    
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
       model: OPENAI_MODEL,
