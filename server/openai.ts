@@ -446,12 +446,9 @@ export async function processChat(cardId: number, userMessage: string, column: C
     ];
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
-    console.log(`===== IMAGE REQUEST DETECTION =====`);
-    console.log(`Message: "${userMessage.slice(0, 50)}..."`);
-    console.log(`Is image request detected: ${isImageRequest}`);
     
-    // If this appears to be an image request
-    if (isImageRequest) {
+    // If this appears to be an image request and we have an API key
+    if (isImageRequest && column.apiKey) {
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -466,8 +463,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
         
-        // Use column.apiKey if available, otherwise use environment OPENAI_API_KEY
-        const imageUrl = await generateImage(prompt, column.apiKey || undefined);
+        // Generate the image
+        const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
           throw new Error("Failed to generate image");
@@ -750,14 +747,9 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  * Generates an image with DALL-E based on prompt
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
-  console.log(`===== DALLE IMAGE GENERATION =====`);
-  console.log(`Attempting to generate image with prompt: "${prompt.slice(0, 50)}..."`);
-  console.log(`Using API key: ${apiKey ? 'Custom column API key' : 'Environment OPENAI_API_KEY'}`);
-  
   try {
     const openai = getOpenAIClient(apiKey || undefined);
     
-    console.log(`Calling OpenAI image API with model: dall-e-3`);
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt,
@@ -766,13 +758,9 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
-    const imageUrl = response.data[0].url || "";
-    console.log(`Image generation successful, received URL: ${imageUrl.slice(0, 40)}...`);
-    console.log(`===== END DALLE IMAGE GENERATION =====`);
-    return imageUrl;
+    return response.data[0].url || "";
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
-    console.log(`===== DALLE IMAGE GENERATION FAILED =====`);
     throw error;
   }
 }
