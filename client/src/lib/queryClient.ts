@@ -96,8 +96,13 @@ export const getQueryFn: <T>(options: {
       // Create a timeout promise
       const timeoutPromise = new Promise<Response>((_, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error('Request timed out after 10 seconds'));
-          controller.abort(); // Abort the fetch
+          try {
+            controller.abort(); // Abort the fetch
+            reject(new Error('Request timed out after 10 seconds'));
+          } catch (error) {
+            console.error('Error aborting fetch:', error);
+            reject(new Error('Request timed out after 10 seconds'));
+          }
         }, 10000); // 10 second timeout - increased from 5sec
       });
       
