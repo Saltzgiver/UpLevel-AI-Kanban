@@ -5,11 +5,13 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { DndProvider } from "@/components/board/board";
+import TestUploadPage from "@/pages/test-upload";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/test-upload" component={TestUploadPage} />
       <Route component={NotFound} />
     </Switch>
   );
