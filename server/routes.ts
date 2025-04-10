@@ -427,9 +427,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ATTACHMENT ROUTES
-  // Upload multiple attachments to a card
-  app.post("/api/cards/:cardId/attachments", upload.array('file', 10), async (req, res) => {
+  // Custom error handler for multer
+  const handleMulterErrors = (err: any, req: any, res: any, next: any) => {
+    console.error("Multer error:", err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ 
+        message: "File too large", 
+        error: err.message,
+        code: err.code 
+      });
+    }
+    
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ 
+        message: "Too many files or wrong field name", 
+        error: err.message,
+        code: err.code 
+      });
+    }
+    
+    return res.status(500).json({ 
+      message: "Error uploading file", 
+      error: err.message,
+      code: err.code || 'UNKNOWN_ERROR' 
+    });
+  };
+
+  // Simple test endpoint for file uploads
+  app.post("/api/test-upload", upload.single('file'), (req, res) => {
     try {
+      console.log("Received test file upload");
+      if (!req.file) {
+        return res.status(400).json({ message: "No file provided" });
+      }
+      
+      console.log("Test file received:", req.file.originalname, req.file.mimetype, req.file.size, "bytes");
+      
+      // Clean up the file
+      fs.unlinkSync(req.file.path);
+      
+      return res.status(200).json({ 
+        message: "Test upload successful",
+        fileInfo: {
+          name: req.file.originalname,
+          type: req.file.mimetype,
+          size: req.file.size
+        }
+      });
+    } catch (error) {
+      console.error("Error in test upload:", error);
+      return res.status(500).json({ message: "Error in test upload" });
+    }
+  });
+
+  // Upload multiple attachments to a card
+  app.post("/api/cards/:cardId/attachments", (req, res, next) => {
+    console.log("Received file upload request for card:", req.params.cardId);
+    console.log("Request content type:", req.headers['content-type']);
+    
+    upload.array('file', 10)(req, res, (err) => {
+      if (err) {
+        console.error("Multer upload error:", err);
+        return handleMulterErrors(err, req, res, next);
+      }
+      
+      next();
+    });
+  }, async (req, res) => {
+    try {
+      console.log("Upload middleware passed, processing files...");
       const cardId = parseInt(req.params.cardId);
       const files = req.files as Express.Multer.File[];
       

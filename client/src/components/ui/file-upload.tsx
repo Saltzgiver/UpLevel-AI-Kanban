@@ -47,23 +47,39 @@ export function FileUpload({ cardId }: FileUploadProps) {
 
   const uploadFiles = async (files: File[]) => {
     setIsUploading(true);
+    let response;
     
     try {
       const formData = new FormData();
+      
+      console.log(`Preparing to upload ${files.length} files:`, files.map(f => 
+        `${f.name} (${f.type}, ${Math.round(f.size/1024)}KB)`).join(', '));
       
       // Append each file to the FormData with the 'file' name
       files.forEach(file => {
         formData.append('file', file);
       });
       
+      console.log(`Sending upload request to /api/cards/${cardId}/attachments`);
+      
       // Use fetch instead of apiRequest because we need to send FormData
-      const response = await fetch(`/api/cards/${cardId}/attachments`, {
+      response = await fetch(`/api/cards/${cardId}/attachments`, {
         method: 'POST',
         body: formData,
       });
       
+      console.log(`Upload response status: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
-        throw new Error('Failed to upload files');
+        // Try to get error details from the response
+        const errorData = await response.json().catch(() => null);
+        console.error("Server error response:", errorData);
+        
+        if (errorData && errorData.message) {
+          throw new Error(`Server error: ${errorData.message}`);
+        } else {
+          throw new Error(`Failed to upload files (Status: ${response.status})`);
+        }
       }
       
       // Invalidate queries to refresh the list of attachments
