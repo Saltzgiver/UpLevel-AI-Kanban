@@ -447,8 +447,13 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
+    console.log(`IMAGE-CHAT-DETECT: Analyzing message for image request: "${userMessage.substring(0, 50)}..."`);
+    console.log(`IMAGE-CHAT-DETECT: Is it an image request? ${isImageRequest ? 'Yes' : 'No'}`);
+    console.log(`IMAGE-CHAT-DETECT: Does column have API key? ${column.apiKey ? 'Yes' : 'No'}`);
+    
     // If this appears to be an image request and we have an API key
     if (isImageRequest && column.apiKey) {
+      console.log(`IMAGE-CHAT-DETECT: Processing detected image request...`);
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -462,22 +467,28 @@ export async function processChat(cardId: number, userMessage: string, column: C
                            userMessage.match(/(?:create|generate|make|draw) (?:an|a) (?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i);
         
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
+        console.log(`IMAGE-CHAT-DETECT: Extracted prompt: "${prompt}"`);
         
         // Generate the image
+        console.log(`IMAGE-CHAT-DETECT: Calling generateImage function...`);
         const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
+          console.error(`IMAGE-CHAT-DETECT: No image URL returned from generateImage`);
           throw new Error("Failed to generate image");
         }
         
         // Fetch the image and convert to base64
+        console.log(`IMAGE-CHAT-DETECT: Fetching image from URL: ${imageUrl.substring(0, 50)}...`);
         const response = await fetch(imageUrl);
         const imageBuffer = await response.arrayBuffer();
         const base64Image = Buffer.from(imageBuffer).toString('base64');
+        console.log(`IMAGE-CHAT-DETECT: Successfully converted image to base64 (${base64Image.length} chars)`);
         
         // Create a descriptive filename
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
+        console.log(`IMAGE-CHAT-DETECT: Created filename: ${filename}`);
         
         // Create attachment
         const attachment = await storage.createAttachment({
@@ -748,7 +759,12 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
+    console.log(`IMAGE-GEN: Starting image generation for prompt: "${prompt.substring(0, 50)}..."`);
+    console.log(`IMAGE-GEN: Using API key: ${apiKey ? 'Provided' : 'Default'}`);
+    
     const openai = getOpenAIClient(apiKey || undefined);
+    
+    console.log(`IMAGE-GEN: Initialized OpenAI client, calling DALL-E API...`);
     
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -758,9 +774,24 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
-    return response.data[0].url || "";
+    if (response && response.data && response.data.length > 0 && response.data[0].url) {
+      console.log(`IMAGE-GEN: Successfully generated image, received URL: ${response.data[0].url.substring(0, 50)}...`);
+      return response.data[0].url;
+    } else {
+      console.error(`IMAGE-GEN: Response missing expected data structure`, response);
+      return "";
+    }
   } catch (error) {
-    console.error("Error generating image with DALL-E:", error);
+    console.error("IMAGE-GEN: Error generating image with DALL-E:", error);
+    // Check for specific error types
+    if (error instanceof Error) {
+      console.error(`IMAGE-GEN: Error message: ${error.message}`);
+      if (error.message.includes("API key")) {
+        console.error("IMAGE-GEN: API key error detected - check if valid key is provided");
+      } else if (error.message.includes("limit")) {
+        console.error("IMAGE-GEN: Rate limit or quota error detected");
+      }
+    }
     throw error;
   }
 }

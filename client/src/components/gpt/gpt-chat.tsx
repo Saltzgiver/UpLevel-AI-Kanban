@@ -315,19 +315,26 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      console.log("Image source received:", src);
+      console.log("IMAGE-RENDER: Image source received:", src);
+      console.log("IMAGE-RENDER: Alt text:", alt);
+      console.log("IMAGE-RENDER: Has attachments?", attachments ? `Yes (${attachments.length})` : "No");
       
       // First, check if we need to handle a generic "Generated image" alt text
       if (alt === "Generated image" && src === "") {
+        console.log("IMAGE-RENDER: Detected generic 'Generated image' reference with empty src");
+        
         // Find the most recent attachment (which is likely to be the one mentioned in the text)
         if (attachments && attachments.length > 0) {
+          console.log("IMAGE-RENDER: Available attachments:", attachments.map(a => `${a.id}:${a.filename}:${a.fileType}`).join(', '));
+          
           // Sort attachments by timestamp (descending) to get the most recent first
           const sortedAttachments = [...attachments].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           
           const mostRecentAttachment = sortedAttachments[0];
-          console.log("Using most recent attachment for generic image reference:", mostRecentAttachment?.id);
+          console.log("IMAGE-RENDER: Using most recent attachment for generic image reference:", 
+            mostRecentAttachment ? `id=${mostRecentAttachment.id}, type=${mostRecentAttachment.fileType}` : "none found");
           
           if (mostRecentAttachment) {
             const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
@@ -375,15 +382,19 @@ export function GPTChat({
       // Next, check for direct references to attachment IDs in the card's attachments
       const imageMatch = alt.match(/dalle_.*?_(\d+)\.png$/);
       if (imageMatch) {
+        console.log("IMAGE-RENDER: Detected DALL-E filename pattern in alt text:", alt);
+        
         // Look for matching attachment in the card's attachments
-        const matchingAttachment = attachments.find(att => 
+        const matchingAttachment = attachments?.find(att => 
           att.filename.includes(alt) || 
           att.filename.toLowerCase().includes(alt.toLowerCase())
         );
         
+        console.log("IMAGE-RENDER: Found matching attachment?", matchingAttachment ? `Yes (id=${matchingAttachment.id})` : "No"); 
+        
         if (matchingAttachment) {
           const imageSrc = `/api/attachments/${matchingAttachment.id}`;
-          console.log("Found direct matching attachment by filename:", matchingAttachment.id);
+          console.log("IMAGE-RENDER: Found direct matching attachment by filename:", matchingAttachment.id);
           return (
             <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
               <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
