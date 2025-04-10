@@ -12,6 +12,7 @@ const getOpenAIClient = (apiKey?: string) => {
   if (!key) {
     throw new Error("No OpenAI API key provided");
   }
+  console.log("Creating new OpenAI client, using model: " + OPENAI_MODEL);
   return new OpenAI({ apiKey: key });
 };
 
@@ -200,14 +201,20 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     
     console.log(`Sending card to OpenAI with model ${OPENAI_MODEL}, including ${typeof userContent === 'string' ? 0 : userContent.length - 1} images`);
     
-    // Call OpenAI API
+    // Log the exact model we're using to see if it's being overridden somewhere
+    console.log(`Using OpenAI model: ${OPENAI_MODEL}`);
+    
+    // Call OpenAI API with explicit model parameter
     const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: OPENAI_MODEL, // gpt-4o has vision capabilities built in
       messages,
       temperature: 0.7,
       max_tokens: 2000,
     });
-
+  
+    // If we get here, the API call was successful
+    console.log(`Successfully completed request with model ${OPENAI_MODEL}`);
+    
     const response = completion.choices[0].message.content || "";
 
     // Extract tags if provided
