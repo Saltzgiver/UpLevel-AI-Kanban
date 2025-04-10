@@ -17,7 +17,14 @@ const getOpenAIClient = (apiKey?: string) => {
 
 // Helper function to convert base64 image to data URL for OpenAI vision API
 const base64ToDataURL = (base64: string, mimeType: string): string => {
-  return `data:${mimeType};base64,${base64}`;
+  // Remove any existing 'data:' prefixes if they exist
+  const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, '');
+  
+  // Ensure valid MIME type format
+  const validMimeType = mimeType.includes('/') ? mimeType : `image/${mimeType}`;
+  
+  // Return properly formatted data URL
+  return `data:${validMimeType};base64,${cleanBase64}`;
 };
 
 // Helper function to create OpenAI chat content with images
@@ -26,17 +33,22 @@ const createContentWithImages = (
   attachments: Attachment[]
 ): ChatCompletionContentPart[] => {
   const contentParts: ChatCompletionContentPart[] = [
-    { type: "text", text }
+    { type: "text", text: `${text}\n\nImportant: This message includes images that you should analyze. You are GPT-4o with vision capabilities, so please examine any attached images and include your observations in your response.` }
   ];
   
   // Filter for image attachments
   const imageAttachments = attachments.filter(att => att.fileType.includes('image'));
+  
+  console.log(`Creating content with ${imageAttachments.length} images`);
   
   // Add all image attachments to the content
   for (const attachment of imageAttachments) {
     try {
       // Convert base64 to data URL for GPT-4o's vision feature
       const dataUrl = base64ToDataURL(attachment.content, attachment.fileType);
+      
+      // Log the first 100 chars of the data URL to verify format
+      console.log(`Image data URL (prefix): ${dataUrl.substring(0, Math.min(100, dataUrl.length))}...`);
       
       contentParts.push({
         type: "image_url",
@@ -464,6 +476,12 @@ export async function processChat(cardId: number, userMessage: string, column: C
       
       // If we have image attachments, format the content with text and images
       if (imageAttachments.length > 0) {
+        // Update the system message to explicitly mention vision capabilities
+        systemContent += "\n\nIMPORTANT: You are GPT-4o with vision capabilities. You CAN analyze and interpret images. Please examine all images carefully and include observations in your response.";
+        
+        // Update the messages array with the enhanced system content
+        messages[0].content = systemContent;
+        
         userContent = createContentWithImages(userMessage, card.attachments);
         console.log(`Prepared user message with ${imageAttachments.length} images`);
       }
