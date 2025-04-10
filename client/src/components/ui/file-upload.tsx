@@ -18,8 +18,8 @@ export function FileUpload({ cardId }: FileUploadProps) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
-    await uploadFile(files[0]);
-    // Clear the input so the same file can be uploaded again if needed
+    await uploadFiles(Array.from(files));
+    // Clear the input so the same files can be uploaded again if needed
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -39,15 +39,19 @@ export function FileUpload({ cardId }: FileUploadProps) {
     const files = e.dataTransfer.files;
     if (!files || files.length === 0) return;
     
-    await uploadFile(files[0]);
+    await uploadFiles(Array.from(files));
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFiles = async (files: File[]) => {
     setIsUploading(true);
     
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      
+      // Append each file to the FormData with the 'files' name
+      files.forEach(file => {
+        formData.append('files', file);
+      });
       
       // Use fetch instead of apiRequest because we need to send FormData
       const response = await fetch(`/api/cards/${cardId}/attachments`, {
@@ -56,22 +60,23 @@ export function FileUpload({ cardId }: FileUploadProps) {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to upload file');
+        throw new Error('Failed to upload files');
       }
       
       // Invalidate queries to refresh the list of attachments
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
       
+      const fileText = files.length > 1 ? 'Files' : 'File';
       toast({
         title: "Success",
-        description: "File uploaded successfully",
+        description: `${fileText} uploaded successfully`,
       });
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error uploading files:", error);
       toast({
         title: "Error",
-        description: "Failed to upload file",
+        description: "Failed to upload files",
         variant: "destructive",
       });
     } finally {
@@ -94,7 +99,8 @@ export function FileUpload({ cardId }: FileUploadProps) {
       onClick={handleButtonClick}
     >
       <input 
-        type="file" 
+        type="file"
+        multiple 
         ref={fileInputRef} 
         onChange={handleFileChange} 
         className="hidden" 
@@ -114,7 +120,7 @@ export function FileUpload({ cardId }: FileUploadProps) {
             <div className="flex flex-col items-center justify-center">
               <Upload className="h-6 w-6 text-blue-500 mb-1" />
               <p className="text-[9px] text-center text-gray-500 px-1">
-                Upload file
+                Upload files
               </p>
             </div>
           )}
@@ -128,7 +134,7 @@ export function FileUpload({ cardId }: FileUploadProps) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[9px] font-medium text-gray-700 truncate">
-            Add attachment
+            Add attachments
           </div>
         </div>
       </div>
