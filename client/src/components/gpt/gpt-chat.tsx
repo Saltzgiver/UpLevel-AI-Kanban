@@ -478,22 +478,18 @@ export function GPTChat({
                 alt={alt || 'AI Generated Image'} 
                 className="max-w-full object-cover h-48 w-auto"
                 onLoad={(e) => {
-                  console.log("Image successfully loaded:", attachmentId as number, "Source:", imageSrc);
+                  console.log("Image successfully loaded:", attachmentId as number);
                 }}
                 onError={(e) => {
-                  console.error("Attachment image failed to load:", {
-                    id: attachmentId as number,
-                    src: imageSrc,
-                    element: e.target
-                  });
+                  console.error("Attachment image failed to load:", attachmentId as number);
                   // Replace with error message on load failure
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   const parent = target.parentElement;
                   if (parent) {
                     const errorDiv = document.createElement('div');
-                    errorDiv.className = 'text-red-500 text-xs p-2 border border-red-200 rounded bg-red-50';
-                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number}) - Try refreshing`;
+                    errorDiv.className = 'text-red-500 text-xs p-2';
+                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
                     parent.appendChild(errorDiv);
                   }
                 }}
@@ -536,15 +532,10 @@ export function GPTChat({
                     alt={'AI Generated Image'} 
                     className="max-w-full object-cover h-48 w-auto"
                     onLoad={(e) => {
-                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id, "Source:", imageSrc);
+                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
                     }}
                     onError={(e) => {
-                      console.error("Fallback attachment image failed to load:", {
-                        id: mostRecentAttachment.id,
-                        src: imageSrc,
-                        filename: mostRecentAttachment.filename,
-                        element: e.target
-                      });
+                      console.error("Fallback attachment image failed to load:", mostRecentAttachment.id);
                       // Show the original fallback message
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -698,12 +689,6 @@ export function GPTChat({
                           em: (props: any) => <em className="italic text-xs" {...props} />,
                           img: (props: any) => {
                             console.log("Rendering image with props:", props);
-                            // Add context of the containing message to help with debugging
-                            console.log("Image in chat message:", {
-                              chatId: chat.id, 
-                              messageIndex: index,
-                              containsAttachmentRef: chat.content.includes('attachment:')
-                            });
                             return renderImageInMarkdown(props.src, props.alt);
                           },
                         }}

@@ -603,19 +603,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.set('Content-Type', attachment.fileType);
         }
         
-        // Set Content-Length for all attachments
+        // Force download with Content-Disposition header
+        res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
         res.set('Content-Length', fileBuffer.length.toString());
         
-        // Handle content disposition based on file type
+        // Different cache settings based on file type
         if (attachment.fileType.startsWith('image/')) {
-          // For images, allow them to be displayed inline (don't force download)
-          // This is critical for showing images in chat messages
-          res.set('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.filename)}"`);
           res.set('Cache-Control', 'public, max-age=86400'); // Cache images for 24 hours
-          console.log(`Serving image attachment inline: ${attachment.fileType}, size: ${fileBuffer.length} bytes`);
+          console.log(`Serving image attachment: ${attachment.fileType}, size: ${fileBuffer.length} bytes`);
         } else {
-          // For non-image files like CSV, force download
-          res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
           res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate'); // Don't cache CSVs
           console.log(`Serving ${attachment.fileType} attachment as download, size: ${fileBuffer.length} bytes`);
         }
