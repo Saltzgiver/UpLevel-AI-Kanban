@@ -409,6 +409,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.cardId);
       const files = req.files as Express.Multer.File[];
       
+      console.log("Files received:", files ? files.length : 0, "files");
+      if (files && files.length > 0) {
+        console.log("File names:", files.map(f => f.originalname).join(", "));
+      }
+      
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "No files provided" });
       }
@@ -422,7 +427,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attachments = [];
       
       // Process each file
+      console.log("Processing files on server, count:", files.length);
+      
       for (const file of files) {
+        console.log("Processing file:", file.originalname, file.mimetype);
+        
         // Read file content as base64
         const fileContent = fs.readFileSync(file.path).toString('base64');
         

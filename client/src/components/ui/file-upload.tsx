@@ -16,8 +16,11 @@ export function FileUpload({ cardId }: FileUploadProps) {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
+    console.log("Files selected via click:", files ? files.length : 0);
+    
     if (!files || files.length === 0) return;
     
+    console.log("Files being uploaded:", Array.from(files).map(f => f.name).join(", "));
     await uploadFiles(Array.from(files));
     // Clear the input so the same files can be uploaded again if needed
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -84,7 +87,11 @@ export function FileUpload({ cardId }: FileUploadProps) {
     }
   };
 
-  const handleButtonClick = () => {
+  // Make the click handler separate from the button click
+  const handleButtonClick = (e: React.MouseEvent) => {
+    // Stop propagation to prevent event bubbling
+    e.stopPropagation(); 
+    
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -120,7 +127,7 @@ export function FileUpload({ cardId }: FileUploadProps) {
             <div className="flex flex-col items-center justify-center">
               <Upload className="h-6 w-6 text-blue-500 mb-1" />
               <p className="text-[9px] text-center text-gray-500 px-1">
-                Upload files
+                Select multiple files
               </p>
             </div>
           )}
