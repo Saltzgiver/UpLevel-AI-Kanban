@@ -627,12 +627,33 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
   console.log(`=== FILE GENERATION START: Card ${cardId} ===`);
   let attachmentsCreated = 0;
   
+  // Keep track of created CSV content hashes to prevent duplicates
+  const processedHashes = new Set<string>();
+  
+  // Helper function to hash content and check for duplicates
+  const createCSVIfUnique = async (content: string, filename: string): Promise<boolean> => {
+    // Create a simple hash of the content to check for duplicates
+    // We normalize whitespace to avoid treating similar CSVs as different
+    const normalizedContent = content.trim().replace(/\s+/g, ' ');
+    const contentHash = Buffer.from(normalizedContent).toString('base64');
+    
+    if (processedHashes.has(contentHash)) {
+      console.log(`Skipping duplicate CSV content for ${filename} (already processed)`);
+      return false;
+    }
+    
+    // Store hash and create attachment
+    processedHashes.add(contentHash);
+    const success = await createCSVAttachmentFromText(cardId, content, filename);
+    return success;
+  };
+  
   try {
     // First, try to extract CSV content using various patterns
     const csvContent = extractCSVContent(response);
     if (csvContent) {
       console.log(`Found CSV content using pattern: ${csvContent.format}`);
-      const success = await createCSVAttachmentFromText(cardId, csvContent.content, `data_${Date.now()}.csv`);
+      const success = await createCSVIfUnique(csvContent.content, `data_${Date.now()}.csv`);
       if (success) {
         attachmentsCreated++;
       }
@@ -651,8 +672,8 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
         if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
           console.log(`Handling CSV file with standard format: ${filename.trim()}`);
           
-          // Use our helper for better CSV handling
-          const success = await createCSVAttachmentFromText(cardId, content.trim(), filename.trim());
+          // Use our helper for better CSV handling with duplicate detection
+          const success = await createCSVIfUnique(content.trim(), filename.trim());
           if (success) {
             attachmentsCreated++;
           }
@@ -679,7 +700,7 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       try {
         console.log(`Found CSV block, attempting to create attachment`);
         const csvContent = csvMatch[1].trim();
-        const success = await createCSVAttachmentFromText(cardId, csvContent, `data_${Date.now()}.csv`);
+        const success = await createCSVIfUnique(csvContent, `data_${Date.now()}.csv`);
         if (success) {
           attachmentsCreated++;
         }
@@ -709,7 +730,7 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       if (csvLines.length > 1) {
         console.log(`Found Monthly Average Spending format, extracted ${csvLines.length} lines`);
         const csvContent = csvLines.join('\n');
-        const success = await createCSVAttachmentFromText(cardId, csvContent, `monthly_average_spending_${Date.now()}.csv`);
+        const success = await createCSVIfUnique(csvContent, `monthly_average_spending_${Date.now()}.csv`);
         if (success) {
           attachmentsCreated++;
         }
