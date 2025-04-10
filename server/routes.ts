@@ -222,9 +222,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/cards/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { title, description } = req.body;
+      const { title, description, processing, includeChatHistory } = req.body;
       
-      const card = await storage.updateCard(id, { title, description });
+      const card = await storage.updateCard(id, { 
+        ...(title !== undefined && { title }), 
+        ...(description !== undefined && { description }),
+        ...(processing !== undefined && { processing }),
+        ...(includeChatHistory !== undefined && { includeChatHistory })
+      });
       
       if (!card) {
         return res.status(404).json({ message: "Card not found" });
