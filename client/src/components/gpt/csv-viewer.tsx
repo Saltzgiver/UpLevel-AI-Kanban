@@ -28,8 +28,18 @@ export function CSVViewer({ content, maxRows = 100 }: CSVViewerProps) {
         try {
           // Extract base64 part
           const base64Part = content.split("base64,")[1];
-          const decoded = atob(base64Part);
-          csvContent = decoded;
+          // Using a safer way to decode base64
+          try {
+            const binaryStr = window.atob(base64Part);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+              bytes[i] = binaryStr.charCodeAt(i);
+            }
+            csvContent = new TextDecoder().decode(bytes);
+          } catch (decodeError) {
+            console.error("Error decoding CSV content:", decodeError);
+            csvContent = content; // Fallback to original content
+          }
         } catch (e) {
           console.log("Not a valid base64 data URL, using as-is");
         }

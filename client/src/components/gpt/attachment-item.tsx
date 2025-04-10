@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Attachment } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -17,29 +18,8 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
   
-  // Handle keyboard events for the modal
-  useEffect(() => {
-    // Only add the event listener when the modal is open
-    if (!showPreview) return;
-    
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setShowPreview(false);
-      }
-    };
-    
-    // Add event listener
-    window.addEventListener("keydown", handleKeyDown);
-    
-    // Disable body scrolling when modal is open
-    document.body.style.overflow = "hidden";
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [showPreview]);
+  // No need for keyboard event handlers or body style management
+  // as the Dialog component handles all of this automatically
 
   const handleDownload = () => {
     // Create a download link for the attachment
@@ -117,11 +97,15 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       
       // Try to decode base64 using a safer method
       try {
-        // Use TextDecoder for safer decoding
-        const base64Decoded = Uint8Array.from(atob(attachment.content), c => c.charCodeAt(0));
-        return new TextDecoder().decode(base64Decoded);
+        // Use a safer approach to decode base64
+        const binaryStr = window.atob(attachment.content);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        return new TextDecoder().decode(bytes);
       } catch (decodeError) {
-        console.log("Base64 decoding failed, returning content as-is");
+        console.error("Base64 decoding failed:", decodeError);
         return attachment.content;
       }
     } catch (error) {
@@ -304,74 +288,47 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
         </div>
       )}
       
-      {/* Preview Modal for Images and CSV Files */}
-      {showPreview && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in duration-200"
-          onClick={() => setShowPreview(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="attachment-preview-title"
-        >
-          <div 
-            className="relative bg-white rounded-lg overflow-hidden max-w-4xl w-full mx-4 animate-in zoom-in-95 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Custom header with single close button */}
-            <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-              <h2 id="attachment-preview-title" className="text-lg font-medium text-gray-800">
-                {attachment.filename}
-              </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 p-0 rounded-full"
-                onClick={() => setShowPreview(false)}
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </div>
-            
-            {/* Content container */}
-            <div className="p-6 flex items-center justify-center bg-black/5 min-h-[300px]">
-              {isImage && (
-                <img 
-                  src={getAttachmentUrl()} 
-                  alt={attachment.filename} 
-                  className="max-w-full max-h-[70vh] object-contain" 
-                />
-              )}
-              {isCSV && (
-                <CSVViewer content={getCSVContent()} maxRows={100} />
-              )}
-              {!isImage && !isCSV && (
-                <div className="text-center p-4">
-                  <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Preview not available for this file type.</p>
-                  <p className="text-gray-500 text-sm mt-2">Click the download button to access the file.</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Footer with download button */}
-            <div className="p-3 bg-gray-50 flex justify-between border-t">
-              <span className="text-xs text-gray-500">
-                Click outside to close
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDownload}
-                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-              >
-                <Download className="h-3 w-3 mr-1" />
-                Download
-              </Button>
-            </div>
+      {/* Preview Modal for Images and CSV Files using Dialog component */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{attachment.filename}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center bg-black/5 min-h-[300px] p-6">
+            {isImage && (
+              <img 
+                src={getAttachmentUrl()} 
+                alt={attachment.filename} 
+                className="max-w-full max-h-[70vh] object-contain" 
+              />
+            )}
+            {isCSV && (
+              <CSVViewer content={getCSVContent()} maxRows={100} />
+            )}
+            {!isImage && !isCSV && (
+              <div className="text-center p-4">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Preview not available for this file type.</p>
+                <p className="text-gray-500 text-sm mt-2">Click the download button to access the file.</p>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+          <div className="p-3 bg-gray-50 flex justify-between border-t">
+            <span className="text-xs text-gray-500">
+              Press Escape to close
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDownload}
+              className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Download
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
