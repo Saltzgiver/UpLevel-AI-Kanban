@@ -30,7 +30,7 @@ export function TestUpload() {
       console.log(`Preparing to upload test file: ${file.name} (${file.type}, ${Math.round(file.size/1024)}KB)`);
       
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('files', file);
       
       console.log("Sending test upload request");
       

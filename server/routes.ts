@@ -454,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Simple test endpoint for file uploads
-  app.post("/api/test-upload", upload.single('file'), (req, res) => {
+  app.post("/api/test-upload", upload.single('files'), (req, res) => {
     try {
       console.log("Received test file upload");
       if (!req.file) {
