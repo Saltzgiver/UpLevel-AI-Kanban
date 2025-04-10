@@ -673,12 +673,17 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
-    // Proceed with standard file attachment pattern
-    const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
+    // Proceed with standard file attachment pattern - look for both code block and inline formats
+    // Match both enclosed in code blocks: ```file:name.png,type,content``` 
+    // and inline: file:name.png,type,content
+    const codeBlockFileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
+    const inlineFileRegex = /(?:^|\s)(?:file|attachment):([^,]+),\s*([^,]+),\s*([^\s]+)(?:\s|$)/g;
+    
     let match;
 
-    console.log(`Checking for file attachments with standard format`);
-    while ((match = fileRegex.exec(response)) !== null) {
+    // First check for code block format
+    console.log(`Checking for file attachments with code block format`);
+    while ((match = codeBlockFileRegex.exec(response)) !== null) {
       try {
         const [_, filename, fileType, content] = match;
         
@@ -714,6 +719,48 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
         }
       } catch (error) {
         console.error("Error creating attachment:", error);
+      }
+    }
+    
+    // Then check for inline format
+    console.log(`Checking for file attachments with inline format`);
+    while ((match = inlineFileRegex.exec(response)) !== null) {
+      try {
+        const [full, filename, fileType, content] = match;
+        console.log(`Found inline file reference: ${filename.trim()} (${fileType.trim()})`);
+        
+        // Special handling for CSV files to ensure content is properly formatted
+        if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
+          console.log(`Handling CSV file with inline format: ${filename.trim()}`);
+          
+          // Use our helper for better CSV handling with duplicate detection
+          const success = await createCSVIfUnique(content.trim(), filename.trim());
+          if (success) {
+            attachmentsCreated++;
+          }
+        } else if (fileType.trim().includes('image')) {
+          // Handle image file types - don't trim the content as it might corrupt the base64 data
+          console.log(`Creating image attachment from inline format: ${filename.trim()} (${fileType.trim()})`);
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content // Don't trim image content
+          });
+          attachmentsCreated++;
+        } else {
+          // Handle all other non-image file types normally
+          console.log(`Creating non-CSV/non-image attachment from inline format: ${filename.trim()} (${fileType.trim()})`);
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content.trim()
+          });
+          attachmentsCreated++;
+        }
+      } catch (error) {
+        console.error("Error creating attachment from inline format:", error);
       }
     }
     
