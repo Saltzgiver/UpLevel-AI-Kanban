@@ -19,42 +19,14 @@ const getOpenAIClient = (apiKey?: string) => {
 
 // Helper function to convert base64 image to data URL for OpenAI vision API
 const base64ToDataURL = (base64: string, mimeType: string): string => {
-  try {
-    // Remove any existing 'data:' prefixes if they exist
-    const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, '');
-    
-    // Ensure valid MIME type format
-    let validMimeType = mimeType.includes('/') ? mimeType : `image/${mimeType}`;
-    
-    // Make sure we're using a supported mime type for OpenAI
-    if (!validMimeType.match(/^image\/(png|jpeg|jpg|gif|webp)$/i)) {
-      console.log(`Converting unsupported mime type ${validMimeType} to image/png`);
-      validMimeType = 'image/png';
-    }
-    
-    // Validate that the base64 string is valid
-    try {
-      // Attempt to decode a small portion to verify it's valid base64
-      const testBuffer = Buffer.from(cleanBase64.substring(0, 100), 'base64');
-      
-      // Check if the test buffer has a reasonable length (if input is valid base64)
-      if (testBuffer.length < 10) {
-        console.warn("Base64 validation warning: Small decoded buffer size");
-      }
-      
-      console.log(`Base64 validation passed - decoded test buffer length: ${testBuffer.length}`);
-    } catch (error) {
-      console.warn(`Base64 validation failed: ${error}`);
-      // Continue anyway - the OpenAI API will handle the error
-    }
-    
-    // Return properly formatted data URL
-    return `data:${validMimeType};base64,${cleanBase64}`;
-  } catch (error) {
-    console.error(`Error in base64ToDataURL: ${error}`);
-    // Fallback to a safe return path
-    return `data:image/png;base64,${base64}`;
-  }
+  // Remove any existing 'data:' prefixes if they exist
+  const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, '');
+  
+  // Ensure valid MIME type format
+  const validMimeType = mimeType.includes('/') ? mimeType : `image/${mimeType}`;
+  
+  // Return properly formatted data URL
+  return `data:${validMimeType};base64,${cleanBase64}`;
 };
 
 // Helper function to create OpenAI chat content with images
@@ -498,51 +470,22 @@ export async function processChat(cardId: number, userMessage: string, column: C
           throw new Error("Failed to generate image");
         }
         
-        console.log(`Fetching image from URL (length: ${imageUrl.length})`);
-        
         // Fetch the image and convert to base64
         const response = await fetch(imageUrl);
-        
-        // Check that the response is valid
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image from URL: ${response.status} ${response.statusText}`);
-        }
-        
-        // Get the content type from the response headers
-        const contentType = response.headers.get('content-type') || 'image/png';
-        console.log(`Image content type from server: ${contentType}`);
-        
-        // Make sure we're only handling supported image types
-        const validImageType = contentType.match(/^image\/(png|jpeg|jpg|gif|webp)$/i) 
-          ? contentType
-          : 'image/png';
-        
-        if (validImageType !== contentType) {
-          console.log(`Converting unsupported content type ${contentType} to ${validImageType}`);
-        }
-        
-        // Get the binary data
         const imageBuffer = await response.arrayBuffer();
-        console.log(`Downloaded image data (size: ${imageBuffer.byteLength} bytes)`);
-        
-        // Create the base64 content with proper encoding
         const base64Image = Buffer.from(imageBuffer).toString('base64');
         
         // Create a descriptive filename
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
         
-        console.log(`Creating attachment for DALL-E image with filename: ${filename}`);
-        
-        // Create attachment with proper MIME type
+        // Create attachment
         const attachment = await storage.createAttachment({
           cardId,
           filename,
-          fileType: 'image/png', // Always use image/png for consistency
+          fileType: 'image/png',
           content: base64Image
         });
-        
-        console.log(`Successfully created image attachment with ID: ${attachment.id}`);
         
         // Add a message from the assistant with the image
         // Use "Generated image" as the alt text for better compatibility with image renderer
@@ -805,37 +748,19 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
-    console.log(`Generating image with prompt: "${prompt.slice(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
-    
     const openai = getOpenAIClient(apiKey || undefined);
-    
-    // Add some safety instructions to ensure the prompt is suitable for image generation
-    const safePrompt = `${prompt}. Create a high-quality, detailed image based on this description.`;
     
     const response = await openai.images.generate({
       model: "dall-e-3",
-      prompt: safePrompt,
+      prompt,
       n: 1,
       size: "1024x1024",
       quality: "standard",
     });
 
-    const imageUrl = response.data[0].url || "";
-    console.log(`Successfully generated image with DALL-E. URL length: ${imageUrl.length}`);
-    
-    return imageUrl;
+    return response.data[0].url || "";
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
-    
-    // Extract meaningful error message
-    let errorMessage = "Unknown error occurred during image generation";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      
-      // Log detailed error information
-      console.error(`DALL-E error details: ${JSON.stringify(error)}`);
-    }
-    
-    throw new Error(`Image generation failed: ${errorMessage}`);
+    throw error;
   }
 }

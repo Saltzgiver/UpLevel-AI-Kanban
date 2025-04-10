@@ -456,14 +456,6 @@ export function GPTChat({
           );
         }
         
-        // Find matching attachment, if any
-        const matchingAttachment = attachments.find(att => att.id === attachmentId);
-        if (matchingAttachment) {
-          console.log(`Found matching attachment in memory: ${matchingAttachment.id} (${matchingAttachment.filename})`);
-        } else {
-          console.log(`No matching attachment found in memory for ID: ${attachmentId}, will use API URL`);
-        }
-        
         console.log("Rendering attachment image:", { src, attachmentId, url: `/api/attachments/${attachmentId as number}` });
         
         // Use the attachment ID to create the proper image URL
@@ -485,12 +477,8 @@ export function GPTChat({
                 src={imageSrc}
                 alt={alt || 'AI Generated Image'} 
                 className="max-w-full object-cover h-48 w-auto"
-                loading="lazy"
                 onLoad={(e) => {
                   console.log("Image successfully loaded:", attachmentId as number);
-                  // Make visible in case it was hidden by error handler
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'block';
                 }}
                 onError={(e) => {
                   console.error("Attachment image failed to load:", attachmentId as number);
@@ -499,20 +487,10 @@ export function GPTChat({
                   target.style.display = 'none';
                   const parent = target.parentElement;
                   if (parent) {
-                    // Check if error message already exists
-                    const existing = parent.querySelector('.error-message');
-                    if (!existing) {
-                      const errorDiv = document.createElement('div');
-                      errorDiv.className = 'text-red-500 text-xs p-2 error-message';
-                      errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
-                      parent.appendChild(errorDiv);
-                    }
-                    
-                    // Try to reload the image after a short delay
-                    setTimeout(() => {
-                      target.src = `${imageSrc}?reload=${Date.now()}`;
-                      target.style.display = 'block';
-                    }, 2000);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-red-500 text-xs p-2';
+                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
+                    parent.appendChild(errorDiv);
                   }
                 }}
               />
