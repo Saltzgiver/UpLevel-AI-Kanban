@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { ChatCompletionContentPart, ChatCompletionMessageParam } from "openai/resources";
 import { storage } from "./storage";
 import { Column, Attachment } from "@shared/schema";
+import { extractCSVContent, createCSVAttachmentFromText } from './csv-helper';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities built in
@@ -623,146 +624,101 @@ export async function processChat(cardId: number, userMessage: string, column: C
  * Handles file generation based on response content
  */
 async function handleFileGeneration(cardId: number, response: string): Promise<void> {
-  // Check for file generation directives in the response
-  const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
-  let match;
+  console.log(`=== FILE GENERATION START: Card ${cardId} ===`);
+  let attachmentsCreated = 0;
+  
+  try {
+    // First, try to extract CSV content using various patterns
+    const csvContent = extractCSVContent(response);
+    if (csvContent) {
+      console.log(`Found CSV content using pattern: ${csvContent.format}`);
+      const success = await createCSVAttachmentFromText(cardId, csvContent.content, `data_${Date.now()}.csv`);
+      if (success) {
+        attachmentsCreated++;
+      }
+    }
+    
+    // Proceed with standard file attachment pattern
+    const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
+    let match;
 
-  while ((match = fileRegex.exec(response)) !== null) {
-    try {
-      const [_, filename, fileType, content] = match;
-      
-      // Special handling for CSV files to ensure content is properly formatted
-      if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
-        console.log(`Handling CSV file generation: ${filename.trim()}`);
+    console.log(`Checking for file attachments with standard format`);
+    while ((match = fileRegex.exec(response)) !== null) {
+      try {
+        const [_, filename, fileType, content] = match;
         
-        // Clean up the content - remove extra whitespace but preserve newlines
-        let cleanContent = content.trim();
-        
-        // Ensure content is not base64 encoded
-        try {
-          // Check if it's already in text format by trying to parse it
-          const lines = cleanContent.split('\n');
-          if (lines.length > 0) {
-            // If it's valid CSV data, we'll use it as-is
-            console.log(`CSV file appears to be valid with ${lines.length} lines`);
-          }
+        // Special handling for CSV files to ensure content is properly formatted
+        if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
+          console.log(`Handling CSV file with standard format: ${filename.trim()}`);
           
-          // Create attachment with cleaned content
+          // Use our helper for better CSV handling
+          const success = await createCSVAttachmentFromText(cardId, content.trim(), filename.trim());
+          if (success) {
+            attachmentsCreated++;
+          }
+        } else {
+          // Handle all other file types normally
+          console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
           await storage.createAttachment({
             cardId,
             filename: filename.trim(),
-            fileType: 'text/csv',  // Ensure correct MIME type for CSV
-            content: cleanContent
-          });
-        } catch (err) {
-          console.error("Error processing CSV content:", err);
-          // Fallback to storing as-is
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: 'text/csv',
+            fileType: fileType.trim(),
             content: content.trim()
           });
+          attachmentsCreated++;
         }
-      } else {
-        // Handle all other file types normally
-        await storage.createAttachment({
-          cardId,
-          filename: filename.trim(),
-          fileType: fileType.trim(),
-          content: content.trim()
-        });
-      }
-    } catch (error) {
-      console.error("Error creating attachment:", error);
-    }
-  }
-  
-  // Check for image generation directives in the response or image description requests
-  // Support both explicit directives and natural language requests
-  const imagePatterns = [
-    // Explicit image generation directive
-    { regex: /```generate-image:\s*([^`]+)```/g, type: 'explicit' },
-    // Image file creation pattern
-    { regex: /```(?:file|attachment):([^,]+\.(?:png|jpg|jpeg|gif)),\s*image\/[^,]+,\s*([^`]+)```/g, type: 'file' },
-    // Natural language pattern for image generation requests
-    { regex: /create an image (?:of|showing|with|depicting)(?:\s+a)?\s+([^.!?]+)/gi, type: 'natural' },
-    // Alternative natural language pattern
-    { regex: /generate (?:a|an) image (?:of|showing|with|depicting)(?:\s+a)?\s+([^.!?]+)/gi, type: 'natural' },
-    // Another alternative pattern
-    { regex: /make (?:a|an) image (?:of|showing|with|depicting)(?:\s+a)?\s+([^.!?]+)/gi, type: 'natural' },
-    // Simple pattern - just "image of X"
-    { regex: /image of (?:a |an )?([^.!?]+)/gi, type: 'natural' }
-  ];
-  
-  for (const pattern of imagePatterns) {
-    let match;
-    while ((match = pattern.regex.exec(response)) !== null) {
-      try {
-        let prompt;
-        if (pattern.type === 'file') {
-          // Extract from file pattern - the filename is in match[1], ignore it
-          // The base64 content would be in match[2], but we want to generate a new image
-          // Use the filename (without extension) as the prompt
-          const filename = match[1];
-          prompt = filename.split('.')[0].replace(/_/g, ' ');
-        } else {
-          // For explicit and natural language patterns, extract the prompt
-          prompt = match[1];
-        }
-        
-        // Skip if prompt is too short
-        if (prompt.trim().length < 3) continue;
-        
-        // Get the card's column to use column-specific API key if available
-        const card = await storage.getCardById(cardId);
-        if (!card) continue;
-        
-        const column = await storage.getColumnById(card.columnId);
-        if (!column) continue;
-        
-        // Generate the image
-        const apiKey = column.apiKey || undefined; // Convert null to undefined
-        const imageUrl = await generateImage(prompt.trim(), apiKey);
-        
-        if (!imageUrl) {
-          console.error("Failed to generate image URL");
-          continue;
-        }
-        
-        // Fetch the image and convert to base64
-        const imgResponse = await fetch(imageUrl);
-        const imageBuffer = await imgResponse.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
-        
-        // Create a descriptive filename
-        const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-        const filename = `dalle_${safePrompt}_${Date.now()}.png`;
-        
-        // Create attachment
-        const attachment = await storage.createAttachment({
-          cardId,
-          filename,
-          fileType: 'image/png',
-          content: base64Image
-        });
-        
-        // Add message indicating image was generated
-        // Use "Generated image" as the alt text for better compatibility with image renderer
-        await storage.createChat({
-          cardId,
-          role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt.trim()}"\n\n![Generated image](attachment:${attachment.id})`,
-          gptName: column.gptName || "AI Assistant",
-          gptColor: column.gptColor
-        });
-        
-        // Only process one image request per pattern to avoid multiple similar images
-        break;
       } catch (error) {
-        console.error("Error generating image from prompt in response:", error);
+        console.error("Error creating attachment:", error);
       }
     }
+    
+    // Also look for embedded CSV content in ```csv blocks
+    const csvBlockRegex = /```csv\s*\n([\s\S]*?)\n```/gi;
+    let csvMatch;
+    while ((csvMatch = csvBlockRegex.exec(response)) !== null) {
+      try {
+        console.log(`Found CSV block, attempting to create attachment`);
+        const csvContent = csvMatch[1].trim();
+        const success = await createCSVAttachmentFromText(cardId, csvContent, `data_${Date.now()}.csv`);
+        if (success) {
+          attachmentsCreated++;
+        }
+      } catch (error) {
+        console.error("Error creating CSV attachment from code block:", error);
+      }
+    }
+    
+    // Look for the Monthly Average Spending format in plaintext
+    if (response.includes("Monthly Average Spending")) {
+      const lines = response.split('\n');
+      const csvLines = [];
+      let capturing = false;
+      
+      for (const line of lines) {
+        if (line.includes("Monthly Average Spending")) {
+          capturing = true;
+          csvLines.push(line);
+        } else if (capturing && line.trim().length > 0 && line.includes(',')) {
+          csvLines.push(line);
+        } else if (capturing && line.trim().length === 0) {
+          // Empty line - stop capturing
+          break;
+        }
+      }
+      
+      if (csvLines.length > 1) {
+        console.log(`Found Monthly Average Spending format, extracted ${csvLines.length} lines`);
+        const csvContent = csvLines.join('\n');
+        const success = await createCSVAttachmentFromText(cardId, csvContent, `monthly_average_spending_${Date.now()}.csv`);
+        if (success) {
+          attachmentsCreated++;
+        }
+      }
+    }
+    
+    console.log(`=== FILE GENERATION END: Created ${attachmentsCreated} attachments ===`);
+  } catch (error) {
+    console.error("Error in file generation process:", error);
   }
 }
 
