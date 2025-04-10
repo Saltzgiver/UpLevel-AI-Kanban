@@ -318,11 +318,29 @@ export function GPTChat({
       console.log("Image source received:", src);
       
       // First, check if we need to handle a generic "Generated image" alt text
-      if (alt === "Generated image" && src === "") {
+      if (alt === "Generated image" && (!src || src === "")) {
         // Find the most recent attachment (which is likely to be the one mentioned in the text)
         if (attachments && attachments.length > 0) {
+          // Filter for image attachments first
+          const imageAttachments = attachments.filter(att => 
+            att.fileType.includes('image') || 
+            att.filename.toLowerCase().endsWith('.png') ||
+            att.filename.toLowerCase().endsWith('.jpg') ||
+            att.filename.toLowerCase().endsWith('.jpeg')
+          );
+          
+          if (imageAttachments.length === 0) {
+            console.log("No image attachments found in list of", attachments.length, "attachments");
+            console.log("Attachment types:", attachments.map(a => a.fileType).join(', '));
+            return (
+              <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
+                Image mentioned but no image attachments found.
+              </div>
+            );
+          }
+          
           // Sort attachments by timestamp (descending) to get the most recent first
-          const sortedAttachments = [...attachments].sort((a, b) => 
+          const sortedAttachments = [...imageAttachments].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           
@@ -504,8 +522,26 @@ export function GPTChat({
         // Look for an attachment that matches the context of the message
         // This is a fallback mechanism for generic image references
         if (attachments && attachments.length > 0) {
+          // Filter for image attachments first
+          const imageAttachments = attachments.filter(att => 
+            att.fileType.includes('image') || 
+            att.filename.toLowerCase().endsWith('.png') ||
+            att.filename.toLowerCase().endsWith('.jpg') ||
+            att.filename.toLowerCase().endsWith('.jpeg')
+          );
+          
+          console.log(`Found ${imageAttachments.length} image attachments out of ${attachments.length} total attachments`);
+          
+          if (imageAttachments.length === 0) {
+            return (
+              <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
+                Image reference found but no image attachments available.
+              </div>
+            );
+          }
+          
           // First try the latest attachment
-          const sortedAttachments = [...attachments].sort((a, b) => 
+          const sortedAttachments = [...imageAttachments].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           
@@ -517,7 +553,7 @@ export function GPTChat({
             return (
               <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
                 <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-                  AI Generated
+                  AI Generated Image
                 </div>
                 <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
                   <Maximize2 className="h-3 w-3 mr-1" />
@@ -543,7 +579,7 @@ export function GPTChat({
                       if (parent) {
                         const errorDiv = document.createElement('div');
                         errorDiv.className = 'text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50';
-                        errorDiv.textContent = `Image reference missing. Refresh may be needed.`;
+                        errorDiv.textContent = `Image failed to load (ID: ${mostRecentAttachment.id}). Try refreshing the page.`;
                         parent.appendChild(errorDiv);
                       }
                     }}
@@ -556,7 +592,7 @@ export function GPTChat({
         
         return (
           <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
-            Image reference missing. Refresh may be needed.
+            Image reference missing. No suitable attachments found.
           </div>
         );
       }
