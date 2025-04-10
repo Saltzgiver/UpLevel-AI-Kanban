@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { Column, Attachment } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const OPENAI_MODEL = "gpt-4-vision-preview";
+const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities built in
 
 // Initialize OpenAI client
 const getOpenAIClient = (apiKey?: string) => {
@@ -33,7 +33,7 @@ const createContentWithImages = (
   attachments: Attachment[]
 ): ChatCompletionContentPart[] => {
   const contentParts: ChatCompletionContentPart[] = [
-    { type: "text", text: `${text}\n\nImportant: This message includes images that you should analyze. You are GPT-4 with vision capabilities, so please examine any attached images and include your observations in your response.` }
+    { type: "text", text: `${text}\n\nImportant: This message includes images that you should analyze. You are GPT-4o with vision capabilities, so please examine any attached images and include your observations in your response.` }
   ];
   
   // Filter for image attachments
@@ -477,7 +477,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
       // If we have image attachments, format the content with text and images
       if (imageAttachments.length > 0) {
         // Update the system message to explicitly mention vision capabilities
-        systemContent += "\n\nIMPORTANT: You are GPT-4 with vision capabilities. You CAN analyze and interpret images. Please examine all images carefully and include observations in your response.";
+        systemContent += "\n\nIMPORTANT: You are GPT-4o with vision capabilities. You CAN analyze and interpret images. Please examine all images carefully and include observations in your response.";
         
         // Update the messages array with the enhanced system content
         messages[0].content = systemContent;
