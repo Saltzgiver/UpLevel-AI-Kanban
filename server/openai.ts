@@ -665,6 +665,55 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
+    // Check for inline base64 image directly in message (no code block)
+    // This pattern matches: file:filename.png,image/png,BASE64DATA
+    const inlineImageRegex = /file:([^,]+),\s*([^,]+),\s*([a-zA-Z0-9+/=]+)/g;
+    let inlineMatch;
+    
+    console.log(`Checking for inline image attachments`);
+    while ((inlineMatch = inlineImageRegex.exec(response)) !== null) {
+      try {
+        const [_, filename, fileType, content] = inlineMatch;
+        
+        if (fileType.trim().includes('image')) {
+          console.log(`Found inline image: ${filename.trim()} (${fileType.trim()})`);
+          
+          // Create the attachment directly
+          const attachment = await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content.trim()
+          });
+          
+          // Insert a proper image reference right after the content in the last chat message
+          // This helps the frontend correctly display the image
+          const chats = await storage.getChatsByCardId(cardId);
+          const lastChat = chats[chats.length - 1];
+          
+          if (lastChat && lastChat.role === 'assistant') {
+            // Update the chat message to include a proper image reference
+            // Replace the inline file pattern with a markdown image reference
+            const updatedContent = lastChat.content.replace(
+              inlineMatch[0], 
+              `\n\n![Generated image](/api/attachments/${attachment.id})`
+            );
+            
+            // Update the chat message
+            await storage.updateChat(lastChat.id, {
+              content: updatedContent
+            });
+            
+            console.log(`Updated chat message with proper image reference for ${attachment.id}`);
+          }
+          
+          attachmentsCreated++;
+        }
+      } catch (error) {
+        console.error("Error creating inline image attachment:", error);
+      }
+    }
+    
     // Proceed with standard file attachment pattern
     const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
     let match;

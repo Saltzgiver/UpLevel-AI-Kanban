@@ -43,6 +43,7 @@ export interface IStorage {
   // Chat operations
   getChatsByCardId(cardId: number): Promise<Chat[]>;
   createChat(chat: InsertChat): Promise<Chat>;
+  updateChat(id: number, data: Partial<Chat>): Promise<Chat | undefined>;
   
   // Attachment operations
   getAttachmentsByCardId(cardId: number, attachmentId?: number): Promise<Attachment[]>;
@@ -454,6 +455,17 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return newChat;
+  }
+
+  async updateChat(id: number, data: Partial<Chat>): Promise<Chat | undefined> {
+    // Update the chat message
+    const [updatedChat] = await db
+      .update(chats)
+      .set(data)
+      .where(eq(chats.id, id))
+      .returning();
+    
+    return updatedChat;
   }
 
   // Attachment Methods
