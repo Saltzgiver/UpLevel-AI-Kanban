@@ -53,37 +53,6 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
   return colorPalette[defaultColor];
 };
 
-// Helper function to preprocess message content before rendering
-// This transforms inline file references into proper markdown image syntax
-const preprocessMessageContent = (content: string): string => {
-  if (!content) return '';
-  
-  let processedContent = content;
-  
-  // Pattern 1: Process file references in the format file:name.png,image/png,base64content
-  processedContent = processedContent.replace(/file:([^,]+),\s*(image\/[^,]+),\s*([^\s]+)/g, (match, filename, fileType, content) => {
-    console.log(`Found inline image reference: ${filename}, converting to markdown image`);
-    if (fileType.includes('image')) {
-      // For images with base64 content, convert to proper markdown image syntax
-      return `![${filename}](data:${fileType};base64,${content})`;
-    }
-    return match; // Keep as is for non-images
-  });
-  
-  // Pattern 2: Fix incomplete or malformed markdown image references 
-  // Such as ![image.png](data:image/png;base64,<base64_encoded_image_content>)
-  processedContent = processedContent.replace(/!\[(.*?)\]\(data:image\/([^;]+);base64,\s*<base64_encoded_image_content>\s*\)/g, (match, filename, imageType) => {
-    console.log(`Found incomplete image reference: ${filename}, replacing with attachment placeholder`);
-    // Replace with a placeholder that indicates an image should be here
-    return `<div class="image-placeholder p-2 bg-gray-100 border rounded text-xs text-center">
-      [Image: ${filename}] <br/>
-      <span class="text-gray-500">(Unable to render: Missing image data)</span>
-    </div>`;
-  });
-  
-  return processedContent;
-};
-
 // Shared Image Dialog Modal Component to be used by GPTChat
 function ImageDialogModal({ 
   selectedImage, 
@@ -346,26 +315,19 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      console.log("IMAGE-RENDER: Image source received:", src);
-      console.log("IMAGE-RENDER: Alt text:", alt);
-      console.log("IMAGE-RENDER: Has attachments?", attachments ? `Yes (${attachments.length})` : "No");
+      console.log("Image source received:", src);
       
       // First, check if we need to handle a generic "Generated image" alt text
       if (alt === "Generated image" && src === "") {
-        console.log("IMAGE-RENDER: Detected generic 'Generated image' reference with empty src");
-        
         // Find the most recent attachment (which is likely to be the one mentioned in the text)
         if (attachments && attachments.length > 0) {
-          console.log("IMAGE-RENDER: Available attachments:", attachments.map(a => `${a.id}:${a.filename}:${a.fileType}`).join(', '));
-          
           // Sort attachments by timestamp (descending) to get the most recent first
           const sortedAttachments = [...attachments].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           
           const mostRecentAttachment = sortedAttachments[0];
-          console.log("IMAGE-RENDER: Using most recent attachment for generic image reference:", 
-            mostRecentAttachment ? `id=${mostRecentAttachment.id}, type=${mostRecentAttachment.fileType}` : "none found");
+          console.log("Using most recent attachment for generic image reference:", mostRecentAttachment?.id);
           
           if (mostRecentAttachment) {
             const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
@@ -413,19 +375,15 @@ export function GPTChat({
       // Next, check for direct references to attachment IDs in the card's attachments
       const imageMatch = alt.match(/dalle_.*?_(\d+)\.png$/);
       if (imageMatch) {
-        console.log("IMAGE-RENDER: Detected DALL-E filename pattern in alt text:", alt);
-        
         // Look for matching attachment in the card's attachments
-        const matchingAttachment = attachments?.find(att => 
+        const matchingAttachment = attachments.find(att => 
           att.filename.includes(alt) || 
           att.filename.toLowerCase().includes(alt.toLowerCase())
         );
         
-        console.log("IMAGE-RENDER: Found matching attachment?", matchingAttachment ? `Yes (id=${matchingAttachment.id})` : "No"); 
-        
         if (matchingAttachment) {
           const imageSrc = `/api/attachments/${matchingAttachment.id}`;
-          console.log("IMAGE-RENDER: Found direct matching attachment by filename:", matchingAttachment.id);
+          console.log("Found direct matching attachment by filename:", matchingAttachment.id);
           return (
             <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
               <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
@@ -735,12 +693,11 @@ export function GPTChat({
                           },
                         }}
                       >
-                        {/* Process raw content to detect and convert file patterns to proper markdown */}
-                        {preprocessMessageContent(chat.content)}
+                        {chat.content}
                       </ReactMarkdown>
                     </>
                   ) : (
-                    <div>{preprocessMessageContent(chat.content)}</div>
+                    <div>{chat.content}</div>
                   )}
                 </div>
                 

@@ -447,13 +447,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
-    console.log(`IMAGE-CHAT-DETECT: Analyzing message for image request: "${userMessage.substring(0, 50)}..."`);
-    console.log(`IMAGE-CHAT-DETECT: Is it an image request? ${isImageRequest ? 'Yes' : 'No'}`);
-    console.log(`IMAGE-CHAT-DETECT: Does column have API key? ${column.apiKey ? 'Yes' : 'No'}`);
-    
     // If this appears to be an image request and we have an API key
     if (isImageRequest && column.apiKey) {
-      console.log(`IMAGE-CHAT-DETECT: Processing detected image request...`);
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -467,33 +462,24 @@ export async function processChat(cardId: number, userMessage: string, column: C
                            userMessage.match(/(?:create|generate|make|draw) (?:an|a) (?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i);
         
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
-        console.log(`IMAGE-CHAT-DETECT: Extracted prompt: "${prompt}"`);
         
         // Generate the image
-        console.log(`IMAGE-CHAT-DETECT: Calling generateImage function...`);
         const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
-          console.error(`IMAGE-CHAT-DETECT: No image URL returned from generateImage`);
           throw new Error("Failed to generate image");
         }
         
         // Fetch the image and convert to base64
-        console.log(`IMAGE-CHAT-DETECT: Fetching image from URL: ${imageUrl.substring(0, 50)}...`);
         const response = await fetch(imageUrl);
         const imageBuffer = await response.arrayBuffer();
-        
-        // When storing the image, just use the raw buffer converted to base64
-        // Don't add any encoding prefix - that will be handled by the client
         const base64Image = Buffer.from(imageBuffer).toString('base64');
-        console.log(`IMAGE-CHAT-DETECT: Successfully converted image to base64 (${base64Image.length} chars)`);
         
         // Create a descriptive filename
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
-        console.log(`IMAGE-CHAT-DETECT: Created filename: ${filename}`);
         
-        // Create attachment - store the raw base64 data
+        // Create attachment
         const attachment = await storage.createAttachment({
           cardId,
           filename,
@@ -673,17 +659,12 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
-    // Proceed with standard file attachment pattern - look for both code block and inline formats
-    // Match both enclosed in code blocks: ```file:name.png,type,content``` 
-    // and inline: file:name.png,type,content
-    const codeBlockFileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
-    const inlineFileRegex = /(?:^|\s)(?:file|attachment):([^,]+),\s*([^,]+),\s*([^\s]+)(?:\s|$)/g;
-    
+    // Proceed with standard file attachment pattern
+    const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
     let match;
 
-    // First check for code block format
-    console.log(`Checking for file attachments with code block format`);
-    while ((match = codeBlockFileRegex.exec(response)) !== null) {
+    console.log(`Checking for file attachments with standard format`);
+    while ((match = fileRegex.exec(response)) !== null) {
       try {
         const [_, filename, fileType, content] = match;
         
@@ -696,19 +677,9 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
           if (success) {
             attachmentsCreated++;
           }
-        } else if (fileType.trim().includes('image')) {
-          // Handle image file types - don't trim the content as it might corrupt the base64 data
-          console.log(`Creating image attachment: ${filename.trim()} (${fileType.trim()})`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content // Don't trim image content
-          });
-          attachmentsCreated++;
         } else {
-          // Handle all other non-image file types normally
-          console.log(`Creating non-CSV/non-image attachment: ${filename.trim()} (${fileType.trim()})`);
+          // Handle all other file types normally
+          console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
           await storage.createAttachment({
             cardId,
             filename: filename.trim(),
@@ -719,48 +690,6 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
         }
       } catch (error) {
         console.error("Error creating attachment:", error);
-      }
-    }
-    
-    // Then check for inline format
-    console.log(`Checking for file attachments with inline format`);
-    while ((match = inlineFileRegex.exec(response)) !== null) {
-      try {
-        const [full, filename, fileType, content] = match;
-        console.log(`Found inline file reference: ${filename.trim()} (${fileType.trim()})`);
-        
-        // Special handling for CSV files to ensure content is properly formatted
-        if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
-          console.log(`Handling CSV file with inline format: ${filename.trim()}`);
-          
-          // Use our helper for better CSV handling with duplicate detection
-          const success = await createCSVIfUnique(content.trim(), filename.trim());
-          if (success) {
-            attachmentsCreated++;
-          }
-        } else if (fileType.trim().includes('image')) {
-          // Handle image file types - don't trim the content as it might corrupt the base64 data
-          console.log(`Creating image attachment from inline format: ${filename.trim()} (${fileType.trim()})`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content // Don't trim image content
-          });
-          attachmentsCreated++;
-        } else {
-          // Handle all other non-image file types normally
-          console.log(`Creating non-CSV/non-image attachment from inline format: ${filename.trim()} (${fileType.trim()})`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
-          attachmentsCreated++;
-        }
-      } catch (error) {
-        console.error("Error creating attachment from inline format:", error);
       }
     }
     
@@ -819,72 +748,19 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
-    console.log(`IMAGE-GEN: Starting image generation for prompt: "${prompt.substring(0, 50)}..."`);
-    console.log(`IMAGE-GEN: Using API key: ${apiKey ? 'Provided' : 'Default'}`);
-    
     const openai = getOpenAIClient(apiKey || undefined);
     
-    console.log(`IMAGE-GEN: Initialized OpenAI client, calling DALL-E API...`);
-    console.log(`IMAGE-GEN: Model: dall-e-3, Size: 1024x1024, Quality: standard`);
-    
-    // Use a more detailed try block for the DALL-E API call
-    let generationResponse;
-    try {
-      generationResponse = await openai.images.generate({
-        model: "dall-e-3",
-        prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-      });
-      console.log(`IMAGE-GEN: Call to OpenAI's images.generate() completed successfully`);
-    } catch (apiError) {
-      console.error(`IMAGE-GEN: Error during OpenAI image generation API call:`, apiError);
-      if (apiError instanceof Error) {
-        console.error(`IMAGE-GEN: API Error message: ${apiError.message}`);
-        console.error(`IMAGE-GEN: API Error name: ${apiError.name}`);
-        console.error(`IMAGE-GEN: API Error stack: ${apiError.stack}`);
-      }
-      throw apiError;
-    }
-    
-    const response = generationResponse;
-    console.log(`IMAGE-GEN: Response structure: ${JSON.stringify(Object.keys(response))}`);
-    
-    try {
-      console.log(`IMAGE-GEN: Response data structure: ${JSON.stringify(Object.keys(response.data[0]))}`);
-    } catch (e) {
-      console.error(`IMAGE-GEN: Could not get response data structure`, e);
-    }
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
 
-    if (response && response.data && response.data.length > 0 && response.data[0].url) {
-      console.log(`IMAGE-GEN: Successfully generated image, received URL: ${response.data[0].url.substring(0, 50)}...`);
-      
-      // Safely access properties that might not exist
-      try {
-        const imageData = response.data[0] as any; // Cast to any to avoid TypeScript errors
-        console.log(`IMAGE-GEN: Image model used: ${imageData.model || 'unknown'}`);
-        console.log(`IMAGE-GEN: Image revised prompt: ${imageData.revised_prompt ? imageData.revised_prompt.substring(0, 50) + '...' : 'none'}`);
-      } catch (e) {
-        console.error(`IMAGE-GEN: Error accessing image metadata`, e);
-      }
-      
-      return response.data[0].url;
-    } else {
-      console.error(`IMAGE-GEN: Response missing expected data structure`, JSON.stringify(response));
-      return "";
-    }
+    return response.data[0].url || "";
   } catch (error) {
-    console.error("IMAGE-GEN: Error generating image with DALL-E:", error);
-    // Check for specific error types
-    if (error instanceof Error) {
-      console.error(`IMAGE-GEN: Error message: ${error.message}`);
-      if (error.message.includes("API key")) {
-        console.error("IMAGE-GEN: API key error detected - check if valid key is provided");
-      } else if (error.message.includes("limit")) {
-        console.error("IMAGE-GEN: Rate limit or quota error detected");
-      }
-    }
+    console.error("Error generating image with DALL-E:", error);
     throw error;
   }
 }

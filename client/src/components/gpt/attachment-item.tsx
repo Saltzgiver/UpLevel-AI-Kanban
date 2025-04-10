@@ -36,16 +36,6 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } else if (attachment.fileType.includes('image')) {
-        // For image files, use the server API endpoint for better browser compatibility
-        console.log("Using server API endpoint for image download");
-        const link = document.createElement('a');
-        link.href = `/api/attachments/${attachment.id}`;
-        link.download = attachment.filename;
-        link.target = "_blank"; // Open in new tab to ensure proper download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
       } else {
         // For other files, use data URL approach
         console.log("Using data URL for file download");
@@ -104,14 +94,6 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   
   // Create a data URL for attachment content
   const getAttachmentUrl = () => {
-    // For images, use the server API endpoint
-    if (attachment.fileType.includes('image')) {
-      console.log("ATTACHMENT-ITEM: Using server API endpoint for image display");
-      return `/api/attachments/${attachment.id}`;
-    }
-    
-    // For other file types, use data URL with base64 content
-    console.log("ATTACHMENT-ITEM: Using data URL for file display");
     return `data:${attachment.fileType};base64,${attachment.content}`;
   };
   
