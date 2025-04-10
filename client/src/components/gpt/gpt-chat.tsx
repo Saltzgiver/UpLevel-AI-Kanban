@@ -317,54 +317,6 @@ export function GPTChat({
     const renderImageInMarkdown = (src: string, alt: string) => {
       console.log("Image source received:", src);
       
-      // Handle API attachment paths directly (from AI-generated content)
-      // This pattern matches /api/attachments/123 paths inserted by the server
-      if (src && src.includes('/api/attachments/')) {
-        // Extract the attachment ID from the path
-        const attachmentIdMatch = src.match(/\/api\/attachments\/(\d+)/);
-        if (attachmentIdMatch && attachmentIdMatch[1]) {
-          const attachmentId = parseInt(attachmentIdMatch[1]);
-          console.log("Direct API attachment reference found:", attachmentId);
-          
-          return (
-            <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-              <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-                AI Generated
-              </div>
-              <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-                <Maximize2 className="h-3 w-3 mr-1" />
-                <span>Click to expand</span>
-              </div>
-              <div 
-                className="cursor-pointer" 
-                onClick={() => setSelectedImage({ src, alt: 'AI Generated Image' })}
-              >
-                <img 
-                  src={src} 
-                  alt={alt || 'AI Generated Image'} 
-                  className="max-w-full object-cover h-48 w-auto"
-                  onLoad={(e) => {
-                    console.log("Direct API attachment image loaded successfully:", attachmentId);
-                  }}
-                  onError={(e) => {
-                    console.error("Direct API attachment image failed to load:", attachmentId);
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const errorDiv = document.createElement('div');
-                      errorDiv.className = 'text-red-500 text-xs p-2';
-                      errorDiv.textContent = `Failed to load image (ID: ${attachmentId})`;
-                      parent.appendChild(errorDiv);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          );
-        }
-      }
-      
       // First, check if we need to handle a generic "Generated image" alt text
       if (alt === "Generated image" && src === "") {
         // Find the most recent attachment (which is likely to be the one mentioned in the text)

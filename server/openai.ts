@@ -472,11 +472,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         // Fetch the image and convert to base64
         const response = await fetch(imageUrl);
-        
-        // Get content type from response headers to ensure proper MIME type
-        const contentType = response.headers.get('content-type') || 'image/png';
-        console.log(`Image content type from DALL-E: ${contentType}`);
-        
         const imageBuffer = await response.arrayBuffer();
         const base64Image = Buffer.from(imageBuffer).toString('base64');
         
@@ -484,21 +479,20 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
         
-        // Create attachment with proper MIME type from the response
+        // Create attachment
         const attachment = await storage.createAttachment({
           cardId,
           filename,
-          fileType: contentType,  // Use detected content type from response
+          fileType: 'image/png',
           content: base64Image
         });
         
         // Add a message from the assistant with the image
-        // Using "Generated image" as the alt text and empty src for better compatibility with image renderer
-        // The frontend's renderImageInMarkdown will automatically handle this pattern
+        // Use "Generated image" as the alt text for better compatibility with image renderer
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image]()`,
+          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
@@ -662,55 +656,6 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       const success = await createCSVIfUnique(csvContent.content, `data_${Date.now()}.csv`);
       if (success) {
         attachmentsCreated++;
-      }
-    }
-    
-    // Check for inline base64 image directly in message (no code block)
-    // This pattern matches: file:filename.png,image/png,BASE64DATA
-    const inlineImageRegex = /file:([^,]+),\s*([^,]+),\s*([a-zA-Z0-9+/=]+)/g;
-    let inlineMatch;
-    
-    console.log(`Checking for inline image attachments`);
-    while ((inlineMatch = inlineImageRegex.exec(response)) !== null) {
-      try {
-        const [_, filename, fileType, content] = inlineMatch;
-        
-        if (fileType.trim().includes('image')) {
-          console.log(`Found inline image: ${filename.trim()} (${fileType.trim()})`);
-          
-          // Create the attachment directly
-          const attachment = await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
-          
-          // Insert a proper image reference right after the content in the last chat message
-          // This helps the frontend correctly display the image
-          const chats = await storage.getChatsByCardId(cardId);
-          const lastChat = chats[chats.length - 1];
-          
-          if (lastChat && lastChat.role === 'assistant') {
-            // Update the chat message to include a proper image reference
-            // Replace the inline file pattern with a markdown image reference
-            const updatedContent = lastChat.content.replace(
-              inlineMatch[0], 
-              `\n\n![Generated image](/api/attachments/${attachment.id})`
-            );
-            
-            // Update the chat message
-            await storage.updateChat(lastChat.id, {
-              content: updatedContent
-            });
-            
-            console.log(`Updated chat message with proper image reference for ${attachment.id}`);
-          }
-          
-          attachmentsCreated++;
-        }
-      } catch (error) {
-        console.error("Error creating inline image attachment:", error);
       }
     }
     
