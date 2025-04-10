@@ -53,6 +53,22 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
   return colorPalette[defaultColor];
 };
 
+// Helper function to preprocess message content before rendering
+// This transforms inline file references into proper markdown image syntax
+const preprocessMessageContent = (content: string): string => {
+  if (!content) return '';
+  
+  // Process file references in the format file:name.png,image/png,base64content
+  return content.replace(/file:([^,]+),\s*(image\/[^,]+),\s*([^\s]+)/g, (match, filename, fileType, content) => {
+    console.log(`Found inline image reference: ${filename}, converting to markdown image`);
+    if (fileType.includes('image')) {
+      // For images with base64 content, convert to proper markdown image syntax
+      return `![${filename}](data:${fileType};base64,${content})`;
+    }
+    return match; // Keep as is for non-images
+  });
+};
+
 // Shared Image Dialog Modal Component to be used by GPTChat
 function ImageDialogModal({ 
   selectedImage, 
@@ -705,11 +721,11 @@ export function GPTChat({
                         }}
                       >
                         {/* Process raw content to detect and convert file patterns to proper markdown */}
-                        {chat.content}
+                        {preprocessMessageContent(chat.content)}
                       </ReactMarkdown>
                     </>
                   ) : (
-                    <div>{chat.content}</div>
+                    <div>{preprocessMessageContent(chat.content)}</div>
                   )}
                 </div>
                 
