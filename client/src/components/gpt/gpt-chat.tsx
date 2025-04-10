@@ -315,19 +315,7 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      console.log("[DEBUG] Image rendering - source:", src, "alt:", alt);
-      
-      // Log all available attachments for debugging
-      if (attachments && attachments.length > 0) {
-        console.log("[DEBUG] Available attachments:", attachments.map(a => ({
-          id: a.id,
-          filename: a.filename,
-          type: a.fileType,
-          createdAt: a.createdAt
-        })));
-      } else {
-        console.log("[DEBUG] No attachments available for this card");
-      }
+      console.log("Image source received:", src);
       
       // First, check if we need to handle a generic "Generated image" alt text
       if (alt === "Generated image" && src === "") {
@@ -438,8 +426,6 @@ export function GPTChat({
       
       // Check if this is an attachment reference using includes to capture all possible formats
       if (src && src.includes('attachment:')) {
-        console.log("[DEBUG] Processing attachment reference in markdown:", src);
-        
         // Extract attachment ID from various potential formats
         let attachmentId: number | undefined = undefined;
         
@@ -447,11 +433,9 @@ export function GPTChat({
         // This pattern matches both "attachment:123" and "(attachment:123)"
         const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
         
-        console.log("[DEBUG] Regex match result:", match);
-        
         if (match && match[1]) {
           attachmentId = parseInt(match[1]);
-          console.log("[DEBUG] Extracted attachment ID:", attachmentId, "from src:", src);
+          console.log("Extracted attachment ID:", attachmentId, "from src:", src);
         } else {
           // Fallback to direct parsing if the regex didn't work
           if (src.startsWith('attachment:')) {
