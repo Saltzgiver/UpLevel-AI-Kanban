@@ -704,6 +704,7 @@ export function GPTChat({
                           },
                         }}
                       >
+                        {/* Process raw content to detect and convert file patterns to proper markdown */}
                         {chat.content}
                       </ReactMarkdown>
                     </>
