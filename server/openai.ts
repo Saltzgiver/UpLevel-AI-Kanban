@@ -34,33 +34,46 @@ const createContentWithImages = (
   attachments: Attachment[]
 ): ChatCompletionContentPart[] => {
   const contentParts: ChatCompletionContentPart[] = [
-    { type: "text", text: `${text}\n\nImportant: This message includes images that you should analyze. You are GPT-4o with vision capabilities, so please examine any attached images and include your observations in your response.` }
+    { type: "text", text: `${text}\n\nIMPORTANT: Examine all attached images in this message and include detailed observations in your response. You have vision capabilities to analyze images.` }
   ];
   
-  // Filter for image attachments
+  // Filter for image attachments and log them
   const imageAttachments = attachments.filter(att => att.fileType.includes('image'));
   
+  console.log(`======== VISION REQUEST ========`);
   console.log(`Creating content with ${imageAttachments.length} images`);
+  console.log(`Image attachments found: ${imageAttachments.map(a => `${a.id}:${a.filename}`).join(', ')}`);
+  
+  if (imageAttachments.length === 0) {
+    console.log("WARNING: No image attachments found despite expecting images");
+    console.log(`All attachments: ${attachments.map(a => `${a.id}:${a.filename}:${a.fileType}`).join(', ')}`);
+  }
   
   // Add all image attachments to the content
   for (const attachment of imageAttachments) {
     try {
+      console.log(`Processing image ${attachment.id} (${attachment.filename}), content length: ${attachment.content.length}`);
+      
       // Convert base64 to data URL for GPT-4o's vision feature
       const dataUrl = base64ToDataURL(attachment.content, attachment.fileType);
       
       // Log the first 100 chars of the data URL to verify format
-      console.log(`Image data URL (prefix): ${dataUrl.substring(0, Math.min(100, dataUrl.length))}...`);
+      console.log(`Image data URL format: ${dataUrl.substring(0, Math.min(100, dataUrl.length))}...`);
       
+      // Add to content parts
       contentParts.push({
         type: "image_url",
         image_url: { url: dataUrl }
       });
       
-      console.log(`Added image attachment ${attachment.id} (${attachment.filename}) to message`);
+      console.log(`Successfully added image attachment ${attachment.id} (${attachment.filename}) to message`);
     } catch (error) {
-      console.error(`Error processing image attachment ${attachment.id}:`, error);
+      console.error(`Error processing image attachment ${attachment.id} (${attachment.filename}):`, error);
     }
   }
+  
+  console.log(`Total content parts created: ${contentParts.length}`);
+  console.log(`======== END VISION REQUEST ========`);
   
   return contentParts;
 };
@@ -189,11 +202,27 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     if (card.attachments && card.attachments.length > 0) {
       const imageAttachments = card.attachments.filter(att => att.fileType.includes('image'));
       
+      console.log(`======== CARD IMAGE PROCESSING ========`);
+      console.log(`Card ${cardId} has ${card.attachments.length} attachments, ${imageAttachments.length} are images`);
+      
       // If we have image attachments, format the content with text and images
       if (imageAttachments.length > 0) {
+        // Update the system message to explicitly mention vision capabilities 
+        prompt += "\n\nIMPORTANT: You have vision capabilities and MUST analyze all images. Examine images in detail and include your observations in your response. These images are directly visible to you.";
+        
+        // Update the messages array
+        messages[0].content = prompt;
+        
         userContent = createContentWithImages(`Process this card: ${card.title}`, card.attachments);
         console.log(`Prepared card processing message with ${imageAttachments.length} images`);
+        
+        // Log image names for debugging
+        console.log(`Images included: ${imageAttachments.map(img => img.filename).join(', ')}`);
+      } else {
+        console.log(`No image attachments found despite having ${card.attachments.length} attachments`);
+        console.log(`Attachment types: ${card.attachments.map(att => att.fileType).join(', ')}`);
       }
+      console.log(`======== END CARD IMAGE PROCESSING ========`);
     }
     
     // Add the user message with any image attachments
@@ -481,17 +510,27 @@ export async function processChat(cardId: number, userMessage: string, column: C
     if (card.attachments && card.attachments.length > 0) {
       const imageAttachments = card.attachments.filter(att => att.fileType.includes('image'));
       
+      console.log(`======== CHAT IMAGE ANALYSIS ========`);
+      console.log(`Card ${cardId} has ${card.attachments.length} attachments, ${imageAttachments.length} are images`);
+      
       // If we have image attachments, format the content with text and images
       if (imageAttachments.length > 0) {
         // Update the system message to explicitly mention vision capabilities
-        systemContent += "\n\nIMPORTANT: You are GPT-4o with vision capabilities. You CAN analyze and interpret images. Please examine all images carefully and include observations in your response.";
+        systemContent += "\n\nIMPORTANT: You have vision capabilities and CAN analyze images. Examine all images in detail and include your observations in responses. Images are not separate entities - they are part of this conversation and you can see them directly.";
         
         // Update the messages array with the enhanced system content
         messages[0].content = systemContent;
         
         userContent = createContentWithImages(userMessage, card.attachments);
-        console.log(`Prepared user message with ${imageAttachments.length} images`);
+        console.log(`Prepared chat message with ${imageAttachments.length} images for analysis`);
+        
+        // Log image names for debugging
+        console.log(`Images included: ${imageAttachments.map(img => img.filename).join(', ')}`);
+      } else {
+        console.log(`No image attachments found despite having ${card.attachments.length} attachments`);
+        console.log(`Attachment types: ${card.attachments.map(att => att.fileType).join(', ')}`);
       }
+      console.log(`======== END CHAT IMAGE ANALYSIS ========`);
     }
     
     // Add the new user message (potentially with images)
