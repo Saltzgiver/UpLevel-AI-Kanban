@@ -48,9 +48,9 @@ export function FileUpload({ cardId }: FileUploadProps) {
     try {
       const formData = new FormData();
       
-      // Append each file to the FormData with the 'files' name
+      // Append each file to the FormData with the 'file' name
       files.forEach(file => {
-        formData.append('files', file);
+        formData.append('file', file);
       });
       
       // Use fetch instead of apiRequest because we need to send FormData

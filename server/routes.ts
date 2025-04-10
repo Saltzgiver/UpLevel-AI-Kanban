@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ATTACHMENT ROUTES
   // Upload multiple attachments to a card
-  app.post("/api/cards/:cardId/attachments", upload.array('files', 10), async (req, res) => {
+  app.post("/api/cards/:cardId/attachments", upload.array('file', 10), async (req, res) => {
     try {
       const cardId = parseInt(req.params.cardId);
       const files = req.files as Express.Multer.File[];
