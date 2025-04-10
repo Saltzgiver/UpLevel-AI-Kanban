@@ -518,8 +518,25 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         return;
       } catch (error) {
-        console.error("Error generating image:", error);
-        // Continue with regular chat processing if image generation fails
+        console.error("===========================================");
+        console.error("ERROR GENERATING IMAGE");
+        console.error("Prompt:", prompt);
+        console.error("Column API Key present:", !!column.apiKey);
+        console.error("Error details:", error instanceof Error ? error.message : String(error));
+        console.error("Full error:", error);
+        console.error("===========================================");
+        
+        // Add error message to chat for transparency
+        await storage.createChat({
+          cardId,
+          role: "assistant",
+          content: `I attempted to create an image, but encountered an error. ${error instanceof Error ? error.message : "Check if the OpenAI API key is valid and has proper permissions for image generation."}`,
+          gptName: column.gptName || "AI Assistant",
+          gptColor: column.gptColor
+        });
+        
+        // Return to prevent regular chat processing from happening
+        return;
       }
     }
 
