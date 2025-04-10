@@ -16,7 +16,8 @@ import {
   MessageSquare, 
   AlignLeft, 
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  History
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
@@ -30,6 +31,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ProcessingIndicator } from "@/components/ui/processing-indicator";
 
 interface CardModalProps {
@@ -56,6 +59,7 @@ export function CardModal({
 }: CardModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
+  const [includeChatHistory, setIncludeChatHistory] = useState(card.includeChatHistory || false);
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveOptions, setShowMoveOptions] = useState(false);
   const [descriptionChanged, setDescriptionChanged] = useState(false);
@@ -82,6 +86,7 @@ export function CardModal({
     if (isOpen) {
       setTitle(card.title);
       setDescription(card.description || "");
+      setIncludeChatHistory(card.includeChatHistory || false);
     }
   }, [isOpen, card]);
 
@@ -232,6 +237,32 @@ export function CardModal({
     
     onMove(card.id, column.id, destinationColumnId);
     setShowMoveOptions(false);
+  };
+  
+  const handleChatHistoryToggle = async (checked: boolean) => {
+    setIncludeChatHistory(checked);
+    try {
+      await apiRequest("PATCH", `/api/cards/${card.id}`, { includeChatHistory: checked });
+      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      
+      // Update the card reference in state
+      card.includeChatHistory = checked;
+      
+      toast({
+        title: "Settings Updated",
+        description: checked 
+          ? "Chat history will be included in AI context" 
+          : "Chat history will not be included in AI context (last response only)"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update card settings",
+        variant: "destructive",
+      });
+      // Reset to previous value
+      setIncludeChatHistory(!checked);
+    }
   };
 
   return (
@@ -467,7 +498,7 @@ export function CardModal({
         {/* Footer Actions - Fixed at bottom */}
         <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
           {/* Actions on the left */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <div className="relative">
               <Button 
                 variant="ghost" 
@@ -499,6 +530,23 @@ export function CardModal({
                 </div>
               )}
             </div>
+            
+            {/* Chat history toggle - Only displayed if the card is currently in a GPT column */}
+            {column.gptAssigned && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <History className="h-4 w-4 text-gray-500" />
+                  <Label htmlFor="include-chat-history" className="text-xs font-normal text-gray-600">
+                    Include chat history
+                  </Label>
+                  <Switch
+                    id="include-chat-history"
+                    checked={includeChatHistory}
+                    onCheckedChange={handleChatHistoryToggle}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Delete button on the right */}
