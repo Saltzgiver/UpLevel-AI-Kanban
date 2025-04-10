@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { ChatCompletionContentPart, ChatCompletionMessageParam } from "openai/resources";
 import { storage } from "./storage";
 import { Column, Attachment } from "@shared/schema";
 
@@ -17,6 +18,38 @@ const getOpenAIClient = (apiKey?: string) => {
 // Helper function to convert base64 image to data URL for OpenAI vision API
 const base64ToDataURL = (base64: string, mimeType: string): string => {
   return `data:${mimeType};base64,${base64}`;
+};
+
+// Helper function to create OpenAI chat content with images
+const createContentWithImages = (
+  text: string, 
+  attachments: Attachment[]
+): ChatCompletionContentPart[] => {
+  const contentParts: ChatCompletionContentPart[] = [
+    { type: "text", text }
+  ];
+  
+  // Filter for image attachments
+  const imageAttachments = attachments.filter(att => att.fileType.includes('image'));
+  
+  // Add all image attachments to the content
+  for (const attachment of imageAttachments) {
+    try {
+      // Convert base64 to data URL for GPT-4o's vision feature
+      const dataUrl = base64ToDataURL(attachment.content, attachment.fileType);
+      
+      contentParts.push({
+        type: "image_url",
+        image_url: { url: dataUrl }
+      });
+      
+      console.log(`Added image attachment ${attachment.id} (${attachment.filename}) to message`);
+    } catch (error) {
+      console.error(`Error processing image attachment ${attachment.id}:`, error);
+    }
+  }
+  
+  return contentParts;
 };
 
 /**
@@ -131,13 +164,34 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       "For example, to create a CSV file: ```file:data.csv,text/csv,column1,column2\nvalue1,value2```\n" +
       "If you want to generate tags for this card to help with categorization, include a line at the end starting with 'TAGS:' followed by comma-separated tags.";
 
+    // Prepare the messages array
+    const messages: ChatCompletionMessageParam[] = [
+      { role: "system", content: prompt }
+    ];
+    
+    // Prepare user message, potentially with image attachments
+    let userContent: string | ChatCompletionContentPart[] = `Process this card: ${card.title}`;
+    
+    // Check if we have image attachments to include
+    if (card.attachments && card.attachments.length > 0) {
+      const imageAttachments = card.attachments.filter(att => att.fileType.includes('image'));
+      
+      // If we have image attachments, format the content with text and images
+      if (imageAttachments.length > 0) {
+        userContent = createContentWithImages(`Process this card: ${card.title}`, card.attachments);
+        console.log(`Prepared card processing message with ${imageAttachments.length} images`);
+      }
+    }
+    
+    // Add the user message with any image attachments
+    messages.push({ role: "user", content: userContent });
+    
+    console.log(`Sending card to OpenAI with model ${OPENAI_MODEL}, including ${typeof userContent === 'string' ? 0 : userContent.length - 1} images`);
+    
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
       model: OPENAI_MODEL,
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: `Process this card: ${card.title}` }
-      ],
+      messages,
       temperature: 0.7,
       max_tokens: 2000,
     });
@@ -305,7 +359,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
       "For example, if a user says 'create an image of a cat', simply respond with 'I've created an image of a cat for you' " + 
       "or similar natural language. Don't mention DALL-E or API limitations.";
     
-    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content: systemContent
@@ -401,39 +455,17 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     }
 
-    // Prepare to add the user message and potentially any image attachments
-    let userContent: string | { type: string, text?: string, image_url?: { url: string } }[] = userMessage;
+    // Prepare the user message content (with images if available)
+    let userContent: string | ChatCompletionContentPart[] = userMessage;
     
-    // Check for image attachments that we can include with the message
+    // Check if we have image attachments to include
     if (card.attachments && card.attachments.length > 0) {
-      // Get the image attachments
       const imageAttachments = card.attachments.filter(att => att.fileType.includes('image'));
       
-      // If we have image attachments, we'll need to format the content as an array with text and images
+      // If we have image attachments, format the content with text and images
       if (imageAttachments.length > 0) {
-        // Convert to the format expected by OpenAI's API
-        userContent = [
-          { type: "text", text: userMessage }
-        ];
-        
-        // Add all image attachments to the user message
-        for (const attachment of imageAttachments) {
-          try {
-            // Convert base64 to data URL for GPT-4o's vision feature
-            const dataUrl = base64ToDataURL(attachment.content, attachment.fileType);
-            
-            userContent.push({
-              type: "image_url",
-              image_url: {
-                url: dataUrl
-              }
-            });
-            
-            console.log(`Added image attachment ${attachment.id} (${attachment.filename}) to the chat message`);
-          } catch (error) {
-            console.error(`Error processing image attachment ${attachment.id}:`, error);
-          }
-        }
+        userContent = createContentWithImages(userMessage, card.attachments);
+        console.log(`Prepared user message with ${imageAttachments.length} images`);
       }
     }
     
