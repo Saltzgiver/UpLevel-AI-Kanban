@@ -27,12 +27,16 @@ export async function createCSVAttachmentFromText(cardId: number, csvText: strin
     const csvFilename = filename || `data_${Date.now()}.csv`;
     console.log(`CSV-HELPER: Using filename: ${csvFilename}`);
     
-    // Create the attachment
+    // Create the attachment - store CSV as base64-encoded to match how other attachments are stored
+    const base64Content = Buffer.from(cleanContent, 'utf-8').toString('base64');
+    
+    console.log(`CSV-HELPER: Storing CSV as base64-encoded content`);
+    
     const attachment = await storage.createAttachment({
       cardId,
       filename: csvFilename,
       fileType: 'text/csv',
-      content: cleanContent
+      content: base64Content
     });
     
     console.log(`CSV-HELPER: Successfully created CSV attachment with ID: ${attachment.id}`);

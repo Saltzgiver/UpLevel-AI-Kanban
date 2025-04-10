@@ -579,28 +579,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Decode base64 content
-        const fileBuffer = Buffer.from(attachment.content, 'base64');
+        let fileBuffer = Buffer.from(attachment.content, 'base64');
         
         // Set proper headers for direct download
-        // Ensure CSV content uses a standard MIME type for better browser compatibility
+        // Special handling for CSV files
         const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
+        
         if (isCSV) {
-          // Use standardized MIME type for CSV files
-          res.set('Content-Type', 'text/csv');
+          // For CSV files, ensure we use UTF-8 encoding explicitly
+          res.set('Content-Type', 'text/csv; charset=utf-8');
+          
+          // Add BOM (Byte Order Mark) for Excel compatibility
+          // This helps Excel recognize the file as UTF-8
+          const bom = Buffer.from('\uFEFF', 'utf8');
+          fileBuffer = Buffer.concat([bom, fileBuffer]);
+          
+          // These headers help with CSV download issues
+          res.set('X-Content-Type-Options', 'nosniff');
+          res.set('Pragma', 'public');
+          console.log(`Serving CSV with UTF-8 encoding and BOM for Excel compatibility`);
         } else {
+          // For non-CSV files, use original content type
           res.set('Content-Type', attachment.fileType);
         }
         
         // Force download with Content-Disposition header
         res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
         res.set('Content-Length', fileBuffer.length.toString());
-        
-        // Add extra headers for CSV to ensure browser compatibility
-        if (isCSV) {
-          // These headers help with CSV download issues in some browsers
-          res.set('X-Content-Type-Options', 'nosniff');
-          res.set('Pragma', 'public');
-        }
         
         // Different cache settings based on file type
         if (attachment.fileType.startsWith('image/')) {
