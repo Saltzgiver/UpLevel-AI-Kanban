@@ -221,6 +221,9 @@ export function GPTChat({
   const handleSendMessage = async () => {
     if (!message.trim()) return;
     
+    // Check if this is potentially an image generation request
+    const isImageRequest = /image|picture|drawing|visualization|create.*image|generate.*image|draw/i.test(message.trim());
+    
     setIsSending(true);
     // Reset user scroll state when sending a new message
     setUserHasScrolled(false);
@@ -237,6 +240,12 @@ export function GPTChat({
         content: sentMessage,
         timestamp: new Date().toISOString()
       };
+      
+      // If this looks like an image request, add a helpful message about the process
+      if (isImageRequest) {
+        console.log("This message appears to be an image generation request");
+        setIsProcessing(true);
+      }
       
       // Clear the input field immediately for better UX
       setMessage("");
