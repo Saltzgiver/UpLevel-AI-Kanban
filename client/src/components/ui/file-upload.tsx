@@ -77,9 +77,35 @@ export function FileUpload({ cardId }: FileUploadProps) {
       });
     } catch (error) {
       console.error("Error uploading files:", error);
+      
+      // Get a more detailed error message
+      let errorMessage = "Failed to upload files";
+      
+      if (error instanceof Error) {
+        errorMessage = `Upload failed: ${error.message}`;
+        console.log("Error details:", error.stack);
+      }
+      
+      // Try to get more information if it's a response error
+      let response;
+      try {
+        // Try to access the response variable from the outer scope
+        response = error instanceof Error && (error as any).response;
+        
+        if (response && typeof response.json === 'function') {
+          const errorResponse = await response.json();
+          if (errorResponse && errorResponse.message) {
+            errorMessage = `Server error: ${errorResponse.message}`;
+            console.log("Server error details:", errorResponse);
+          }
+        }
+      } catch (jsonError) {
+        // Ignore JSON parsing errors
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to upload files",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

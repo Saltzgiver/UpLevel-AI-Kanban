@@ -10,8 +10,32 @@ import fs from "fs";
 import path from "path";
 import { fromZodError } from "zod-validation-error";
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
+}
+
+// Configure multer for file uploads with error handling
+const multerStorage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ 
+  storage: multerStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB size limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow all file types for now
+    cb(null, true);
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Error handling middleware
