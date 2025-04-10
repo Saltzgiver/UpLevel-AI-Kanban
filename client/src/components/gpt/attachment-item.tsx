@@ -22,13 +22,34 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   // as the Dialog component handles all of this automatically
 
   const handleDownload = () => {
-    // Create a download link for the attachment
-    const link = document.createElement('a');
-    link.href = `data:${attachment.fileType};base64,${attachment.content}`;
-    link.download = attachment.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      // For CSV files, use direct API endpoint for better browser compatibility
+      const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
+      
+      if (isCSV) {
+        console.log("Using server API endpoint for CSV download");
+        // Create a direct link to the attachment endpoint
+        const link = document.createElement('a');
+        link.href = `/api/attachments/${attachment.id}`;
+        link.download = attachment.filename;
+        link.target = "_blank"; // Open in new tab to ensure proper download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // For other files, use data URL approach
+        console.log("Using data URL for file download");
+        const link = document.createElement('a');
+        link.href = `data:${attachment.fileType};base64,${attachment.content}`;
+        link.download = attachment.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error("Error downloading attachment:", error);
+      alert("Error downloading file. Please try again.");
+    }
   };
 
   const handleDelete = async () => {

@@ -582,9 +582,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fileBuffer = Buffer.from(attachment.content, 'base64');
         
         // Set proper headers for direct download
-        res.set('Content-Type', attachment.fileType);
+        // Ensure CSV content uses a standard MIME type for better browser compatibility
+        const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
+        if (isCSV) {
+          // Use standardized MIME type for CSV files
+          res.set('Content-Type', 'text/csv');
+        } else {
+          res.set('Content-Type', attachment.fileType);
+        }
+        
+        // Force download with Content-Disposition header
         res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
         res.set('Content-Length', fileBuffer.length.toString());
+        
+        // Add extra headers for CSV to ensure browser compatibility
+        if (isCSV) {
+          // These headers help with CSV download issues in some browsers
+          res.set('X-Content-Type-Options', 'nosniff');
+          res.set('Pragma', 'public');
+        }
         
         // Different cache settings based on file type
         if (attachment.fileType.startsWith('image/')) {
