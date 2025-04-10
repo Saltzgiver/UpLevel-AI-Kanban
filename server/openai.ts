@@ -729,28 +729,54 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
     return success;
   };
   
+  // Keep track of processed filenames to prevent duplicates
+  const processedFilenames = new Set<string>();
+  
   // Helper function to process file content based on type
   const processFileContent = async (filename: string, fileType: string, content: string) => {
+    // First check if we've already processed this filename
+    const normalizedFilename = filename.trim().toLowerCase();
+    if (processedFilenames.has(normalizedFilename)) {
+      console.log(`Skipping duplicate file: ${normalizedFilename} (already processed)`);
+      return;
+    }
+    
+    // Mark this filename as processed
+    processedFilenames.add(normalizedFilename);
+    
     // Special handling for CSV files
-    if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
-      console.log(`Handling CSV file: ${filename.trim()}`);
-      await createCSVIfUnique(content.trim(), filename.trim());
+    if (fileType.trim().includes('csv') || normalizedFilename.endsWith('.csv')) {
+      console.log(`Handling CSV file: ${normalizedFilename}`);
+      await createCSVIfUnique(content.trim(), normalizedFilename);
     } else {
       // Handle all other file types, including images
-      console.log(`Creating attachment: ${filename.trim()} (${fileType.trim()})`);
+      console.log(`Creating attachment: ${normalizedFilename} (${fileType.trim()})`);
       
       // Special handling for placeholder content from OpenAI
       if (content.trim() === "base64encodedcontent" || content.trim() === "") {
         console.log("Detected placeholder content. Attempting to generate a real image...");
         
         // Extract image description from filename or use a default
-        let imagePrompt = filename.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/[-_]/g, ' ');
+        let imagePrompt = normalizedFilename.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/[-_]/g, ' ');
         
         if (imagePrompt.length < 10) {
           imagePrompt = "A simple illustration of " + imagePrompt;
         }
         
         try {
+          // Check if we've hit rate limits recently
+          const now = Date.now();
+          // Use a module-level variable instead of global
+          const lastImageRequestTime = (globalThis as any).__lastImageRequestTime || 0;
+          const rateLimitDelay = 5000; // 5 seconds between requests
+          
+          if (now - lastImageRequestTime < rateLimitDelay) {
+            throw new Error(`Rate limiting image generation to prevent API errors. Try again in a few seconds.`);
+          }
+          
+          // Update last request time
+          (globalThis as any).__lastImageRequestTime = now;
+          
           // Generate a real image using DALL-E
           const imageUrl = await generateImage(imagePrompt);
           
@@ -769,27 +795,28 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
           // Create the attachment with the real image data
           await storage.createAttachment({
             cardId,
-            filename: filename.trim(),
+            filename: normalizedFilename,
             fileType: fileType.trim(),
             content: base64Image
           });
           
           console.log("Successfully created image attachment with real image data");
         } catch (imageError) {
-          console.error("Failed to generate a real image:", imageError);
-          // Create a dummy attachment so the UI shows something
+          console.error("Failed to generate a real image:", imageError instanceof Error ? imageError.message : String(imageError));
+          
+          // Create a minimal error attachment
           await storage.createAttachment({
             cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: "" // Empty content for error case
+            filename: `error-${normalizedFilename}`,
+            fileType: "text/plain",
+            content: `Error generating image: ${imageError instanceof Error ? imageError.message : String(imageError)}`
           });
         }
       } else {
         // Process normally if content is provided
         await storage.createAttachment({
           cardId,
-          filename: filename.trim(),
+          filename: normalizedFilename,
           fileType: fileType.trim(),
           content: content.trim()
         });
@@ -808,71 +835,73 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
-    // Proceed with standard file attachment patterns
-    // Two patterns:
-    // 1. The code block format: ```file:filename.ext,type,content```
-    // 2. The inline format: file:filename.ext,type,content (no code blocks)
+    // Check if this is an image-only response without any other text
+    // If so, we'll just create a single attachment
+    const isSimpleImageResponse = response.trim().startsWith('file:') && 
+      !response.includes('\n\n') && response.split('\n').length <= 2;
     
-    // First check for code block format
-    const codeBlockFileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
-    let match;
-    
-    console.log(`Checking for file attachments with code block format`);
-    while ((match = codeBlockFileRegex.exec(response)) !== null) {
-      try {
-        const [_, filename, fileType, content] = match;
-        console.log(`Found file in code block format: ${filename}`);
+    if (isSimpleImageResponse) {
+      console.log("Detected simple image-only response, creating just one attachment");
+      
+      // Extract just the first file reference
+      const simpleMatch = response.match(/file:([^,]+),\s*([^,]+),\s*([^\n]+)/);
+      if (simpleMatch) {
+        const [_, filename, fileType, content] = simpleMatch;
+        console.log(`Found single file in simple format: ${filename}`);
         
         await processFileContent(filename, fileType, content);
         attachmentsCreated++;
-      } catch (error) {
-        console.error("Error processing file in code block:", error);
       }
-    }
-    
-    // Then check for the inline format (without code blocks)
-    const inlineFileRegex = /file:([^,]+),\s*([^,]+),\s*([^\n]+)/g;
-    console.log(`Checking for file attachments with inline format`);
-    while ((match = inlineFileRegex.exec(response)) !== null) {
-      try {
-        const [_, filename, fileType, content] = match;
-        console.log(`Found file in inline format: ${filename}`);
-        
-        await processFileContent(filename, fileType, content);
-        attachmentsCreated++;
-      } catch (error) {
-        console.error("Error processing file in inline format:", error);
-      }
-    }
-    
-    // Legacy code for backward compatibility - to be removed after testing
-    console.log(`Checking for file attachments with legacy format`);
-    while ((match = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g.exec(response)) !== null) {
-      try {
-        const [_, filename, fileType, content] = match;
-        
-        // Special handling for CSV files to ensure content is properly formatted
-        if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
-          console.log(`Handling CSV file with standard format: ${filename.trim()}`);
+    } else {
+      // Process normal responses with potentially multiple files
+      // Two patterns:
+      // 1. The code block format: ```file:filename.ext,type,content```
+      // 2. The inline format: file:filename.ext,type,content (no code blocks)
+      
+      // First check for code block format
+      const codeBlockFileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
+      let match;
+      
+      console.log(`Checking for file attachments with code block format`);
+      while ((match = codeBlockFileRegex.exec(response)) !== null) {
+        try {
+          const [_, filename, fileType, content] = match;
+          console.log(`Found file in code block format: ${filename}`);
           
-          // Use our helper for better CSV handling with duplicate detection
-          const success = await createCSVIfUnique(content.trim(), filename.trim());
-          if (success) {
-            attachmentsCreated++;
-          }
-        } else {
-          // Handle all other file types normally
-          console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
+          await processFileContent(filename, fileType, content);
           attachmentsCreated++;
+        } catch (error) {
+          console.error("Error processing file in code block:", error);
         }
-      } catch (error) {
-        console.error("Error creating attachment:", error);
+      }
+      
+      // Then check for the inline format (without code blocks)
+      // But only look for the first match if we're dealing with the same filename repeated multiple times
+      const inlineFileRegex = /file:([^,]+),\s*([^,]+),\s*([^\n]+)/g;
+      console.log(`Checking for file attachments with inline format`);
+      
+      // Track filenames we've seen
+      const seenInlineFilenames = new Set();
+      
+      while ((match = inlineFileRegex.exec(response)) !== null) {
+        try {
+          const [_, filename, fileType, content] = match;
+          const normalizedFilename = filename.trim().toLowerCase();
+          
+          // Skip if we've already processed this filename
+          if (seenInlineFilenames.has(normalizedFilename)) {
+            console.log(`Skipping duplicate inline file: ${normalizedFilename}`);
+            continue;
+          }
+          
+          seenInlineFilenames.add(normalizedFilename);
+          console.log(`Found file in inline format: ${filename}`);
+          
+          await processFileContent(filename, fileType, content);
+          attachmentsCreated++;
+        } catch (error) {
+          console.error("Error processing file in inline format:", error);
+        }
       }
     }
     
@@ -960,8 +989,13 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
         quality: "standard",
       });
       console.log("Successfully used DALL-E 3 model");
-    } catch (dalle3Error) {
-      console.warn("DALL-E 3 failed, trying DALL-E 2 as fallback:", dalle3Error.message);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn("DALL-E 3 failed, trying DALL-E 2 as fallback:", errorMessage);
+      
+      // Add a small delay before trying the fallback
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       response = await openai.images.generate({
         model: "dall-e-2",
         prompt,
