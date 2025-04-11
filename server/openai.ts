@@ -447,8 +447,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
-    // If this appears to be an image request and we have an API key
-    if (isImageRequest && column.apiKey) {
+    // If this appears to be an image request and we have an API key (or can use the environment API key)
+    if (isImageRequest && (column.apiKey || process.env.OPENAI_API_KEY)) {
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -463,8 +463,13 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
         
-        // Generate the image
-        const imageUrl = await generateImage(prompt, column.apiKey);
+        // Generate the image - handle special "from_env" value
+        let apiKeyToUse: string | undefined = undefined;
+        if (column.apiKey) {
+          apiKeyToUse = column.apiKey;
+        }
+        console.log(`Using column API key: ${apiKeyToUse || 'Not set, will use environment variable'}`);
+        const imageUrl = await generateImage(prompt, apiKeyToUse);
         
         if (!imageUrl) {
           throw new Error("Failed to generate image");
@@ -748,7 +753,16 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
-    const openai = getOpenAIClient(apiKey || undefined);
+    // Special handling for "from_env" value to use environment variable
+    if (apiKey === "from_env") {
+      apiKey = undefined; // Will use process.env.OPENAI_API_KEY
+    }
+    
+    const openai = getOpenAIClient(apiKey);
+    
+    // Log useful information for debugging
+    console.log(`Generating image with DALL-E for prompt: "${prompt.substring(0, 50)}..."`);
+    console.log(`Using API key source: ${apiKey ? 'column-specific key' : 'environment variable'}`);
     
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -758,6 +772,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
+    console.log(`Successfully generated image with DALL-E`);
     return response.data[0].url || "";
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
