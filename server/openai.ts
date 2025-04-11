@@ -659,6 +659,111 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
+    // Check for the non-backtick file format (used in the swingset example)
+    const fileWithoutBackticksRegex = /file:([^,]+),\s*([^,]+),\s*([^}\n]+)/g;
+    let fileWithoutBackticksMatch;
+    
+    while ((fileWithoutBackticksMatch = fileWithoutBackticksRegex.exec(response)) !== null) {
+      try {
+        const [_, filename, fileType, content] = fileWithoutBackticksMatch;
+        console.log(`Found file reference without backticks: ${filename.trim()} (${fileType.trim()})`);
+        
+        // Special handling for image files (including SVG)
+        if (fileType.trim().includes('image') || 
+           filename.trim().endsWith('.png') || 
+           filename.trim().endsWith('.jpg') || 
+           filename.trim().endsWith('.jpeg') || 
+           filename.trim().endsWith('.gif') ||
+           filename.trim().endsWith('.svg') ||
+           fileType.trim().includes('svg')) {
+          
+          console.log(`Processing image file without backticks: ${filename.trim()}`);
+          
+          try {
+            // Create the attachment
+            const attachment = await storage.createAttachment({
+              cardId,
+              filename: filename.trim(),
+              fileType: fileType.trim(),
+              content: content.trim()
+            });
+            
+            // Create a new chat message with the proper image reference
+            const card = await storage.getCardById(cardId);
+            if (card) {
+              const column = await storage.getColumnById(card.columnId);
+              if (column) {
+                await storage.createChat({
+                  cardId,
+                  role: "assistant",
+                  content: `✨ Generated an image for you:\n\n![Generated image](attachment:${attachment.id})`,
+                  gptName: column.gptName || "AI Assistant",
+                  gptColor: column.gptColor
+                });
+                console.log(`Created new chat message with proper image reference for attachment ${attachment.id}`);
+              }
+            }
+            
+            attachmentsCreated++;
+          } catch (error) {
+            console.error("Error processing image attachment without backticks:", error);
+          }
+        }
+        else {
+          // Handle all other file types normally
+          console.log(`Creating non-image attachment without backticks: ${filename.trim()} (${fileType.trim()})`);
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content.trim()
+          });
+          attachmentsCreated++;
+        }
+      } catch (error) {
+        console.error("Error creating attachment from non-backtick format:", error);
+      }
+    }
+    
+    // Check for SVG-specific format (with full SVG XML content)
+    const svgRegex = /```(?:svg|image\/svg\+xml)\s*\n?((?:<svg[\s\S]*?<\/svg>))```/gi;
+    let svgMatch;
+    
+    while ((svgMatch = svgRegex.exec(response)) !== null) {
+      try {
+        console.log(`Found SVG content in special format, creating attachment`);
+        const svgContent = svgMatch[1].trim();
+        const filename = `generated_svg_${Date.now()}.svg`;
+        
+        // Create the attachment
+        const attachment = await storage.createAttachment({
+          cardId,
+          filename,
+          fileType: 'image/svg+xml',
+          content: svgContent
+        });
+        
+        // Create a new chat message with the proper image reference
+        const card = await storage.getCardById(cardId);
+        if (card) {
+          const column = await storage.getColumnById(card.columnId);
+          if (column) {
+            await storage.createChat({
+              cardId,
+              role: "assistant",
+              content: `✨ Generated an SVG image for you:\n\n![Generated image](attachment:${attachment.id})`,
+              gptName: column.gptName || "AI Assistant",
+              gptColor: column.gptColor
+            });
+            console.log(`Created new chat message with proper SVG image reference for attachment ${attachment.id}`);
+            attachmentsCreated++;
+          }
+        }
+      } catch (error) {
+        console.error("Error creating SVG attachment:", error);
+      }
+    }
+    
     // Proceed with standard file attachment pattern
     const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
     let match;
@@ -678,12 +783,14 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
             attachmentsCreated++;
           }
         } 
-        // Special handling for image files
+        // Special handling for image files (including SVG)
         else if (fileType.trim().includes('image') || 
                  filename.trim().endsWith('.png') || 
                  filename.trim().endsWith('.jpg') || 
                  filename.trim().endsWith('.jpeg') || 
-                 filename.trim().endsWith('.gif')) {
+                 filename.trim().endsWith('.gif') ||
+                 filename.trim().endsWith('.svg') ||
+                 fileType.trim().includes('svg')) {
           console.log(`Processing image file: ${filename.trim()}`);
           
           try {
