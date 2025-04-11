@@ -704,33 +704,179 @@ export function GPTChat({
                           <pre>DEBUG CONTENT: {JSON.stringify(chat.content)}</pre>
                         </div>
                       </div>
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          p: (props: any) => {
-                            console.log("Rendering paragraph with props:", props);
-                            return <p className="my-0.5 text-xs" {...props} />;
-                          },
-                          ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
-                          ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
-                          li: (props: any) => <li className="my-0 text-xs" {...props} />,
-                          a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
-                          blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
-                          code: (props: any) => 
-                            props.inline 
-                              ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
-                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
-                          pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
-                          strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
-                          em: (props: any) => <em className="italic text-xs" {...props} />,
-                          img: (props: any) => {
-                            console.log("Rendering image with props:", props);
-                            return renderImageInMarkdown(props.src, props.alt);
-                          },
-                        }}
-                      >
-                        {chat.content}
-                      </ReactMarkdown>
+                      {/* Process content to extract file references */}
+                      {(() => {
+                        // Check if content contains file:filename,mimetype,base64_content pattern
+                        // This is a common pattern that AI models use when generating images
+                        const filePattern = /\bfile:([^,\s]+),\s*([^,\s]+),\s*([^\s].+?)(?=\n\n|\n[A-Z]|$)/;
+                        
+                        // Also match simpler patterns without the file: prefix that might appear
+                        const simplePattern = /\b([a-zA-Z0-9_-]+\.(png|jpg|jpeg|gif|webp)),\s*(image\/[a-z]+),\s*([A-Za-z0-9+/=]+)/;
+                        
+                        // Also look for any base64 encoded image data in the content
+                        const base64Pattern = /data:(image\/[a-z]+);base64,([A-Za-z0-9+/=]+)/;
+                        
+                        // And check for bare base64 content with image type prefix
+                        const barePattern = /(image\/[a-z]+);base64,([A-Za-z0-9+/=]+)/;
+                        
+                        // Try patterns in sequence
+                        let match = chat.content.match(filePattern);
+                        let type = "file";
+                        
+                        // If first pattern didn't match, try the simpler one
+                        if (!match) {
+                          const simpleMatch = chat.content.match(simplePattern);
+                          if (simpleMatch) {
+                            // Remap to expected format: [fullMatch, filename, fileType, content]
+                            match = [
+                              simpleMatch[0],   // full match
+                              simpleMatch[1],   // filename
+                              simpleMatch[3],   // filetype (image/png, etc)
+                              simpleMatch[4]    // base64 content
+                            ];
+                            type = "simple";
+                            console.log("Found simple image pattern in message");
+                          }
+                        }
+                        
+                        // Try the data:image pattern
+                        if (!match) {
+                          const dataMatch = chat.content.match(base64Pattern);
+                          if (dataMatch) {
+                            // Remap to expected format: [fullMatch, filename, fileType, content]
+                            match = [
+                              dataMatch[0],                    // full match
+                              `image_${Date.now()}.png`,       // generated filename
+                              dataMatch[1],                    // filetype (image/png, etc)
+                              dataMatch[2]                     // base64 content
+                            ];
+                            type = "data";
+                            console.log("Found data:image pattern in message");
+                          }
+                        }
+                        
+                        // Try the bare base64 pattern
+                        if (!match) {
+                          const bareMatch = chat.content.match(barePattern);
+                          if (bareMatch) {
+                            // Remap to expected format: [fullMatch, filename, fileType, content]
+                            match = [
+                              bareMatch[0],                    // full match
+                              `image_${Date.now()}.png`,       // generated filename
+                              bareMatch[1],                    // filetype (image/png, etc)
+                              bareMatch[2]                     // base64 content
+                            ];
+                            type = "bare";
+                            console.log("Found bare base64 image pattern in message");
+                          }
+                        }
+                        
+                        // Add debugging
+                        if (match) {
+                          console.log(`Found ${type} image format in content, filename: ${match[1]}, type: ${match[2]}`);
+                        }
+                        
+                        if (match) {
+                          console.log("Found inline file format in content");
+                          const [fullMatch, filename, fileType, content] = match;
+                          
+                          // Split content into parts: before the file reference, the file reference, and after
+                          const parts = chat.content.split(fullMatch);
+                          
+                          return (
+                            <>
+                              {/* Render content before the file reference */}
+                              {parts[0] && (
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
+                                    ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
+                                    ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
+                                    li: (props: any) => <li className="my-0 text-xs" {...props} />,
+                                  }}
+                                >
+                                  {parts[0]}
+                                </ReactMarkdown>
+                              )}
+                              
+                              {/* Render the image directly */}
+                              {fileType.includes('image') && (
+                                <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                                  <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                                    <Maximize2 className="h-3 w-3 mr-1" />
+                                    <span>Generated Image</span>
+                                  </div>
+                                  <div 
+                                    className="cursor-pointer" 
+                                    onClick={() => setSelectedImage({ 
+                                      src: `data:${fileType};base64,${content}`, 
+                                      alt: filename 
+                                    })}
+                                  >
+                                    <img 
+                                      src={`data:${fileType};base64,${content}`}
+                                      alt={filename}
+                                      className="max-w-full max-h-72 w-auto mx-auto object-contain rounded-lg"
+                                      onLoad={() => console.log("Inline image loaded successfully")}
+                                      onError={(e) => {
+                                        console.error("Failed to load inline image:", e);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Render content after the file reference */}
+                              {parts[1] && (
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
+                                    ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
+                                    ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
+                                    li: (props: any) => <li className="my-0 text-xs" {...props} />,
+                                  }}
+                                >
+                                  {parts[1]}
+                                </ReactMarkdown>
+                              )}
+                            </>
+                          );
+                        }
+                        
+                        // Default rendering for content without file references
+                        return (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p: (props: any) => {
+                                console.log("Rendering paragraph with props:", props);
+                                return <p className="my-0.5 text-xs" {...props} />;
+                              },
+                              ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
+                              ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
+                              li: (props: any) => <li className="my-0 text-xs" {...props} />,
+                              a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
+                              blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
+                              code: (props: any) => 
+                                props.inline 
+                                  ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
+                                  : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                              pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                              strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
+                              em: (props: any) => <em className="italic text-xs" {...props} />,
+                              img: (props: any) => {
+                                console.log("Rendering image with props:", props);
+                                return renderImageInMarkdown(props.src, props.alt);
+                              },
+                            }}
+                          >
+                            {chat.content}
+                          </ReactMarkdown>
+                        );
+                      })()}
+                      
                     </>
                   ) : (
                     <div>{chat.content}</div>
