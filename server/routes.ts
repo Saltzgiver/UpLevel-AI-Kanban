@@ -185,10 +185,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { gptAssigned, gptName, apiKey, gptInstructions, autoTrigger } = req.body;
       
+      // For GPT-assigned columns, use "from_env" as the default API key if not specified
+      let updatedApiKey = apiKey;
+      if (gptAssigned && !updatedApiKey) {
+        updatedApiKey = "from_env";
+        console.log(`Setting default 'from_env' API key for GPT-assigned column ${id}`);
+      }
+      
       const column = await storage.updateColumn(id, { 
         gptAssigned, 
         gptName, 
-        apiKey, 
+        apiKey: updatedApiKey, 
         gptInstructions, 
         autoTrigger
       });
