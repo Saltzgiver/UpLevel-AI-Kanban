@@ -449,9 +449,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
     
     // If this appears to be an image request and we have an API key
     if (isImageRequest && column.apiKey) {
-      // Update card to show processing state
-      await storage.updateCard(cardId, { processing: true });
-    
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -466,30 +463,11 @@ export async function processChat(cardId: number, userMessage: string, column: C
         
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
         
-        console.log(`====== IMAGE GENERATION REQUEST =======`);
-        console.log(`Card ID: ${cardId}`);
-        console.log(`User message: "${userMessage}"`);
-        console.log(`Extracted prompt: "${prompt}"`);
-        console.log(`Using API key from column ${column.id}`);
-        
         // Generate the image
         const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
-          console.error(`Image generation returned empty URL for prompt: "${prompt}"`);
-          
-          // Add error message to chat
-          await storage.createChat({
-            cardId,
-            role: "assistant",
-            content: `⚠️ Image generation failed: OpenAI returned an empty response.\n\nPlease check your OpenAI API key has proper permissions for DALL-E image generation.`,
-            gptName: column.gptName || "AI Assistant",
-            gptColor: column.gptColor
-          });
-          
-          // Reset processing state
-          await storage.updateCard(cardId, { processing: false });
-          return;
+          throw new Error("Failed to generate image");
         }
         
         // Fetch the image and convert to base64
@@ -501,9 +479,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `dalle_${safePrompt}_${Date.now()}.png`;
         
-        console.log(`Creating image attachment for prompt "${prompt}"`);
-        console.log(`Image data size: ${base64Image.length} bytes`);
-        
         // Create attachment
         const attachment = await storage.createAttachment({
           cardId,
@@ -511,8 +486,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
           fileType: 'image/png',
           content: base64Image
         });
-        
-        console.log(`Successfully created image attachment with ID: ${attachment.id}`);
         
         // Add a message from the assistant with the image
         // Use "Generated image" as the alt text for better compatibility with image renderer
@@ -523,8 +496,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
           gptName: column.gptName || "AI Assistant",
           gptColor: column.gptColor
         });
-        
-        console.log(`Added chat message with image reference to attachment ${attachment.id}`);
         
         return;
       } catch (error) {
@@ -688,58 +659,11 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
-    // New format pattern: file:filename,mimetype,content without code block markers
-    // This is the format used by some models when they're asked to generate images
-    console.log(`Checking for file attachments with inline format (without code blocks)`);
-    const inlineFileRegex = /\bfile:([^,\s]+),\s*([^,\s]+),\s*([^\s].+?)(?=\n\n|\n[A-Z]|$)/g;
-    let inlineMatch;
-    
-    while ((inlineMatch = inlineFileRegex.exec(response)) !== null) {
-      try {
-        const [fullMatch, filename, fileType, content] = inlineMatch;
-        console.log(`Found inline file format: ${filename} (${fileType}), content length: ${content.length}`);
-        
-        // Special handling for images
-        if (fileType.trim().includes('image') || 
-            filename.trim().match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)) {
-          console.log(`Creating image attachment from inline format: ${filename.trim()}`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
-          attachmentsCreated++;
-        }
-        // Special handling for CSV files
-        else if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
-          console.log(`Handling CSV file with inline format: ${filename.trim()}`);
-          const success = await createCSVIfUnique(content.trim(), filename.trim());
-          if (success) {
-            attachmentsCreated++;
-          }
-        } 
-        // Handle all other file types
-        else {
-          console.log(`Creating non-CSV attachment with inline format: ${filename.trim()}`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
-          attachmentsCreated++;
-        }
-      } catch (error) {
-        console.error("Error creating attachment from inline format:", error);
-      }
-    }
-    
-    // Proceed with standard file attachment pattern (with code blocks)
+    // Proceed with standard file attachment pattern
     const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
     let match;
 
-    console.log(`Checking for file attachments with standard format (with code blocks)`);
+    console.log(`Checking for file attachments with standard format`);
     while ((match = fileRegex.exec(response)) !== null) {
       try {
         const [_, filename, fileType, content] = match;
@@ -824,10 +748,6 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
-    // Log the request details for better debugging
-    console.log(`[DALL-E] Generating image with prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
-    console.log(`[DALL-E] Using API key: ${apiKey ? 'Custom key provided' : 'Default environment key'}`);
-    
     const openai = getOpenAIClient(apiKey || undefined);
     
     const response = await openai.images.generate({
@@ -838,40 +758,9 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
-    if (!response.data || response.data.length === 0 || !response.data[0].url) {
-      console.error("[DALL-E] Empty response received from OpenAI");
-      throw new Error("OpenAI returned an empty response for image generation");
-    }
-    
-    console.log(`[DALL-E] Successfully generated image, URL length: ${response.data[0].url.length}`);
-    return response.data[0].url;
-    
-  } catch (error: any) {
-    // Enhanced error handling with more specific messages
-    console.error("[DALL-E] Error generating image:", error);
-    
-    // Check for common DALL-E specific errors
-    const errorMessage = error.message || "Unknown error";
-    
-    if (errorMessage.includes("API key")) {
-      console.error("[DALL-E] API key error:", errorMessage);
-      throw new Error("Invalid API key or missing DALL-E access. Please check that your OpenAI API key has DALL-E image generation permissions enabled in your OpenAI account settings. This typically requires a paid OpenAI account with sufficient credits.");
-    } 
-    else if (errorMessage.includes("billing")) {
-      console.error("[DALL-E] Billing error:", errorMessage);
-      throw new Error("OpenAI billing issue. Please check your account status and payment method.");
-    }
-    else if (errorMessage.includes("content policy")) {
-      console.error("[DALL-E] Content policy violation:", errorMessage);
-      throw new Error("Your image prompt was rejected due to content policy. Please try a different prompt.");
-    }
-    else if (errorMessage.includes("capacity")) {
-      console.error("[DALL-E] Capacity error:", errorMessage);
-      throw new Error("OpenAI is currently experiencing high demand. Please try again later.");
-    }
-    else {
-      console.error("[DALL-E] General error:", errorMessage);
-      throw new Error(`Image generation failed: ${errorMessage}`);
-    }
+    return response.data[0].url || "";
+  } catch (error) {
+    console.error("Error generating image with DALL-E:", error);
+    throw error;
   }
 }

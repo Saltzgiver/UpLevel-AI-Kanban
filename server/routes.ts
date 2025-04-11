@@ -563,16 +563,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const attachment = attachments[0];
-      
-      // Enhanced logging for debugging
-      const isImage = attachment.fileType.includes('image');
       console.log(`Attachment found:`, { 
         id: attachment.id,
         filename: attachment.filename,
         fileType: attachment.fileType,
-        contentLength: attachment.content ? attachment.content.length : 0,
-        isImage: isImage,
-        firstChars: attachment.content ? attachment.content.substring(0, 30) + '...' : 'empty'
+        contentLength: attachment.content ? attachment.content.length : 0
       });
       
       // Serve file contents for direct download (both images and other files like CSV)
@@ -581,20 +576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!attachment.content) {
           console.error(`Empty content for attachment ID: ${id}`);
           return res.status(500).json({ message: "Attachment has no content" });
-        }
-        
-        // Additional validation for images to catch potential corruption
-        if (isImage) {
-          try {
-            // Try to validate that this is valid base64 data
-            const buffer = Buffer.from(attachment.content, 'base64');
-            if (buffer.length < 100) { // Suspiciously small for an image
-              console.error(`Suspicious image content for ID ${id}: only ${buffer.length} bytes decoded`);
-            }
-          } catch (e) {
-            console.error(`Invalid base64 data for image attachment ID: ${id}`, e);
-            // Continue anyway as we'll try to serve what we have
-          }
         }
         
         // Decode base64 content
