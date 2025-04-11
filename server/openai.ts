@@ -9,10 +9,19 @@ const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities bui
 
 // Initialize OpenAI client
 const getOpenAIClient = (apiKey?: string) => {
-  const key = apiKey || process.env.OPENAI_API_KEY;
+  // Special handling for 'from_env' which means to use the environment variable
+  let key = apiKey;
+  if (apiKey === 'from_env') {
+    key = process.env.OPENAI_API_KEY;
+    console.log("Using API key from environment variable");
+  } else {
+    key = apiKey || process.env.OPENAI_API_KEY;
+  }
+  
   if (!key) {
     throw new Error("No OpenAI API key provided");
   }
+  
   console.log("Creating new OpenAI client, using model: " + OPENAI_MODEL);
   return new OpenAI({ apiKey: key });
 };
@@ -447,8 +456,9 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
-    // If this appears to be an image request and we have an API key
-    if (isImageRequest && column.apiKey) {
+    // If this appears to be an image request and we have an API key or are using environment variable
+    const hasApiKeyOrUsingEnv = column.apiKey === 'from_env' || (column.apiKey && column.apiKey.length > 10);
+    if (isImageRequest && hasApiKeyOrUsingEnv) {
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -464,6 +474,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
         
         // Generate the image
+        // Handle the case where column.apiKey could be null
         const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
@@ -901,9 +912,13 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
 /**
  * Generates an image with DALL-E based on prompt
  */
-export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
+export async function generateImage(prompt: string, apiKey?: string | null): Promise<string> {
   try {
-    const openai = getOpenAIClient(apiKey || undefined);
+    // Safety check for null
+    const safeApiKey = apiKey === null ? undefined : apiKey;
+    const openai = getOpenAIClient(safeApiKey);
+    
+    console.log(`Generating image with DALL-E 3 for prompt: ${prompt.substring(0, 50)}...`);
     
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -913,6 +928,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       quality: "standard",
     });
 
+    console.log(`Successfully generated image with DALL-E`);
     return response.data[0].url || "";
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
