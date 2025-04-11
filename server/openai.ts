@@ -457,12 +457,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
     // Special handling for "from_env" value - this is a special value that means "use the environment variable"
     if (isImageRequest) {
       try {
-        // Add user message to chat history
-        await storage.createChat({
-          cardId,
-          role: "user",
-          content: userMessage
-        });
+        // User message already added to chat history in the API endpoint
+        // No need to add it again here
         
         // Generate a clean prompt from the user message
         const promptMatch = userMessage.match(/(?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i) || 
@@ -567,12 +563,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
       content: userContent
     });
     
-    // Save the plain text message to the chat history
-    await storage.createChat({
-      cardId,
-      role: "user",
-      content: userMessage
-    });
+    // User message is already saved to the chat history in the API endpoint
+    // No need to save it again here
 
     console.log(`Sending message to OpenAI with model ${OPENAI_MODEL}, including ${typeof userContent === 'string' ? 0 : userContent.length - 1} images`);
     
