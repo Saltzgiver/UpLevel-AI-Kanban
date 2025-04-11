@@ -502,10 +502,25 @@ export async function processChat(cardId: number, userMessage: string, column: C
           gptColor: column.gptColor
         });
         
+        // Mark the card as not processing anymore since we've completed the image generation
+        await storage.updateCard(cardId, { processing: false });
+        
         return;
       } catch (error) {
         console.error("Error generating image:", error);
-        // Continue with regular chat processing if image generation fails
+        
+        // Add error message to chat
+        await storage.createChat({
+          cardId,
+          role: "assistant",
+          content: `⚠️ Error generating image: ${error instanceof Error ? error.message : "Unknown error"}`,
+          gptName: column.gptName || "AI Assistant",
+          gptColor: column.gptColor
+        });
+        
+        // Mark the card as not processing if we're exiting here
+        await storage.updateCard(cardId, { processing: false });
+        return;
       }
     }
 
