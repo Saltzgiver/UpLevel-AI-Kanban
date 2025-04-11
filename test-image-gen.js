@@ -1,5 +1,5 @@
 // Test script for image generation
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function testImageGeneration() {
   try {
