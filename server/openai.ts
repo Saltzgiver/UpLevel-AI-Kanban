@@ -488,7 +488,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         });
         
         // Add a message from the assistant with the image
-        // Use "Generated image" as the alt text for better compatibility with image renderer
+        // Use "Generated image" as the alt text and proper attachment reference for better compatibility
         await storage.createChat({
           cardId,
           role: "assistant",
@@ -677,7 +677,55 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
           if (success) {
             attachmentsCreated++;
           }
-        } else {
+        } 
+        // Special handling for image files
+        else if (fileType.trim().includes('image') || 
+                 filename.trim().endsWith('.png') || 
+                 filename.trim().endsWith('.jpg') || 
+                 filename.trim().endsWith('.jpeg') || 
+                 filename.trim().endsWith('.gif')) {
+          console.log(`Processing image file: ${filename.trim()}`);
+          
+          try {
+            // Create the attachment
+            const attachment = await storage.createAttachment({
+              cardId,
+              filename: filename.trim(),
+              fileType: fileType.trim(),
+              content: content.trim()
+            });
+            
+            // Update the response to include a proper markdown image reference
+            // This makes it compatible with the frontend image renderer
+            const imageRefRegex = new RegExp("```file:" + filename.trim() + "," + fileType.trim() + ",[^`]+```", "g");
+            const updatedResponse = response.replace(imageRefRegex, `![Generated image](attachment:${attachment.id})`);
+            
+            if (updatedResponse !== response) {
+              // If we made a replacement, create a new chat message with the updated content
+              // First, get the column information to include proper gptName and gptColor
+              const card = await storage.getCardById(cardId);
+              if (card) {
+                const column = await storage.getColumnById(card.columnId);
+                if (column) {
+                  // Create a new chat message with the updated content and proper image reference
+                  await storage.createChat({
+                    cardId,
+                    role: "assistant",
+                    content: `✨ Generated an image for you:\n\n![Generated image](attachment:${attachment.id})`,
+                    gptName: column.gptName || "AI Assistant",
+                    gptColor: column.gptColor
+                  });
+                  console.log(`Created new chat message with proper image reference for attachment ${attachment.id}`);
+                }
+              }
+            }
+            
+            attachmentsCreated++;
+          } catch (error) {
+            console.error("Error processing image attachment:", error);
+          }
+        }
+        else {
           // Handle all other file types normally
           console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
           await storage.createAttachment({
