@@ -610,29 +610,11 @@ export function GPTChat({
                 }`}>
                   {chat.role === 'assistant' 
                     ? (isLastAIMessage 
-                      ? (console.log(`FRONTEND DEBUG - Chat rendering message:`, {
-                          chatId: chat.id,
-                          messageGptName: chat.gptName, 
-                          messageGptColor: chat.gptColor,
-                          propGptName: gptName,
-                          propGptColor: gptColor,
-                          usedName: chat.gptName || gptName,
-                          usedColor: chat.gptColor || gptColor
-                        }), 
-                        <span className="flex items-center">
+                      ? (<span className="flex items-center">
                           <Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(chat.gptColor || gptColor).text}`} /> 
                           {chat.gptName || gptName}
                         </span>)
-                      : (console.log(`FRONTEND DEBUG - Chat rendering non-latest:`, {
-                          chatId: chat.id,
-                          messageGptName: chat.gptName, 
-                          messageGptColor: chat.gptColor,
-                          propGptName: gptName,
-                          propGptColor: gptColor,
-                          usedName: chat.gptName || gptName,
-                          usedColor: chat.gptColor || gptColor
-                        }), 
-                        <span>{chat.gptName || gptName}</span>)) 
+                      : (<span>{chat.gptName || gptName}</span>)) 
                     : 'You'}
                 </div>
                 <div className="text-[10px] text-gray-400 ml-2">
@@ -662,19 +644,11 @@ export function GPTChat({
                   )}
                   {chat.role === 'assistant' ? (
                     <>
-                      {/* Additional debug element to show raw message content */}
-                      <div className="hidden">
-                        <div className="border border-red-300 rounded p-1 mb-2 text-[10px] bg-red-50">
-                          <pre>DEBUG CONTENT: {JSON.stringify(chat.content)}</pre>
-                        </div>
-                      </div>
+                      {/* Debug elements removed to fix mobile rendering issues */}
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          p: (props: any) => {
-                            console.log("Rendering paragraph with props:", props);
-                            return <p className="my-0.5 text-xs" {...props} />;
-                          },
+                          p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
                           ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
                           ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
                           li: (props: any) => <li className="my-0 text-xs" {...props} />,
@@ -687,10 +661,7 @@ export function GPTChat({
                           pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
                           strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                           em: (props: any) => <em className="italic text-xs" {...props} />,
-                          img: (props: any) => {
-                            console.log("Rendering image with props:", props);
-                            return renderImageInMarkdown(props.src, props.alt);
-                          },
+                          img: (props: any) => renderImageInMarkdown(props.src, props.alt),
                         }}
                       >
                         {chat.content}
