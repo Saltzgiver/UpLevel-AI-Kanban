@@ -855,7 +855,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     
     if (errorMessage.includes("API key")) {
       console.error("[DALL-E] API key error:", errorMessage);
-      throw new Error("Invalid API key or missing DALL-E access. Please check your OpenAI API key has DALL-E permissions.");
+      throw new Error("Invalid API key or missing DALL-E access. Please check that your OpenAI API key has DALL-E image generation permissions enabled in your OpenAI account settings. This typically requires a paid OpenAI account with sufficient credits.");
     } 
     else if (errorMessage.includes("billing")) {
       console.error("[DALL-E] Billing error:", errorMessage);

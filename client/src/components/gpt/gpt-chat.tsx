@@ -773,7 +773,17 @@ export function GPTChat({
                         
                         // Add debugging
                         if (match) {
-                          console.log(`Found ${type} image format in content, filename: ${match[1]}, type: ${match[2]}`);
+                          const [fullMatch, filename, fileType, content] = match;
+                          console.log(`Found ${type} image format in content, filename: ${filename}, type: ${fileType}`);
+                          
+                          // Log content details (safely)
+                          console.log("Content details:", {
+                            length: content?.length || 0,
+                            isString: typeof content === 'string',
+                            sample: content?.substring(0, 30) + '...',
+                            hasBase64Chars: /^[A-Za-z0-9+/=]+$/.test(content || ''),
+                            contentType: typeof content
+                          });
                         }
                         
                         if (match) {
@@ -814,15 +824,50 @@ export function GPTChat({
                                       alt: filename 
                                     })}
                                   >
-                                    <img 
-                                      src={`data:${fileType};base64,${content}`}
-                                      alt={filename}
-                                      className="max-w-full max-h-72 w-auto mx-auto object-contain rounded-lg"
-                                      onLoad={() => console.log("Inline image loaded successfully")}
-                                      onError={(e) => {
-                                        console.error("Failed to load inline image:", e);
-                                      }}
-                                    />
+                                    {(() => {
+                                      // Validate base64 content format
+                                      const isValidBase64 = /^[A-Za-z0-9+/=]+$/.test(content.trim());
+                                      
+                                      if (content.length < 10 || !isValidBase64) {
+                                        console.error("Invalid base64 content detected", {
+                                          contentLength: content.length,
+                                          contentStart: content.substring(0, 20) + '...',
+                                          isValidFormat: isValidBase64
+                                        });
+                                        
+                                        return (
+                                          <div className="p-3 bg-red-50 text-red-600 text-xs rounded border border-red-200">
+                                            <strong>Error:</strong> Unable to display image due to invalid data format.<br />
+                                            This usually happens when the API key doesn't have sufficient permissions to create images.
+                                            <details className="mt-2">
+                                              <summary className="cursor-pointer text-gray-700">View technical details</summary>
+                                              <div className="mt-1 p-2 bg-gray-50 rounded text-[10px] font-mono overflow-auto max-h-24">
+                                                Content length: {content.length}<br />
+                                                Format valid: {isValidBase64 ? 'Yes' : 'No'}<br />
+                                                Start: {content.substring(0, 20)}...<br />
+                                                <div className="text-[8px] mt-1 text-gray-500">
+                                                  The API key might not have DALL-E access or might have insufficient credits.
+                                                  Try using a different API key with DALL-E enabled.
+                                                </div>
+                                              </div>
+                                            </details>
+                                          </div>
+                                        );
+                                      }
+                                      
+                                      // Attempt to display with valid content
+                                      return (
+                                        <img 
+                                          src={`data:${fileType};base64,${content.trim()}`}
+                                          alt={filename}
+                                          className="max-w-full max-h-72 w-auto mx-auto object-contain rounded-lg"
+                                          onLoad={() => console.log("Inline image loaded successfully")}
+                                          onError={(e) => {
+                                            console.error("Failed to load inline image:", e);
+                                          }}
+                                        />
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               )}
