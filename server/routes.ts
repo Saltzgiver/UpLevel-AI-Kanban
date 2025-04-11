@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/columns/:id/assign-gpt", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { gptAssigned, gptName, apiKey, gptInstructions, autoTrigger } = req.body;
+      const { gptAssigned, gptName, apiKey, gptInstructions, gptColor, autoTrigger } = req.body;
       
       // For GPT-assigned columns, use "from_env" as the default API key if not specified
       let updatedApiKey = apiKey;
@@ -196,7 +196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gptAssigned, 
         gptName, 
         apiKey: updatedApiKey, 
-        gptInstructions, 
+        gptInstructions,
+        gptColor, 
         autoTrigger
       });
       
