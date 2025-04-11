@@ -696,57 +696,88 @@ export function GPTChat({
                           img: (props: any) => {
                             console.log("Rendering image with props:", props);
                             
-                            // Special handling for attachment references
+                            // Simple implementation from the working document
                             if (props.src && props.src.includes('attachment:')) {
-                              // Extract the attachment ID directly from the source string
-                              const attachmentMatch = props.src.match(/attachment:(\d+)/);
-                              if (attachmentMatch && attachmentMatch[1]) {
-                                const attachmentId = parseInt(attachmentMatch[1]);
-                                if (!isNaN(attachmentId)) {
-                                  console.log("Direct attachment handling:", attachmentId);
-                                  const imageSrc = `/api/attachments/${attachmentId}`;
-                                  return (
-                                    <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-                                      <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-                                        AI Generated
-                                      </div>
-                                      <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-                                        <Maximize2 className="h-3 w-3 mr-1" />
-                                        <span>Click to expand</span>
-                                      </div>
-                                      <div 
-                                        className="cursor-pointer" 
-                                        onClick={() => setSelectedImage({ src: imageSrc, alt: props.alt || 'AI Generated Image' })}
-                                      >
-                                        <img 
-                                          src={imageSrc}
-                                          alt={props.alt || 'AI Generated Image'} 
-                                          className="max-w-full object-cover h-48 w-auto"
-                                          onLoad={() => {
-                                            console.log("Image successfully loaded from direct handler:", attachmentId);
-                                          }}
-                                          onError={(e) => {
-                                            console.error("Direct attachment image failed to load:", attachmentId);
-                                            const target = e.target as HTMLImageElement;
-                                            target.style.display = 'none';
-                                            const parent = target.parentElement;
-                                            if (parent) {
-                                              const errorDiv = document.createElement('div');
-                                              errorDiv.className = 'text-red-500 text-xs p-2';
-                                              errorDiv.textContent = `Failed to load image (ID: ${attachmentId})`;
-                                              parent.appendChild(errorDiv);
-                                            }
-                                          }}
-                                        />
-                                      </div>
+                              // Extract the ID (simple format as described in the working doc)
+                              const id = props.src.substring(props.src.indexOf('attachment:') + 'attachment:'.length);
+                              // Clean up any closing parenthesis
+                              const cleanId = id.replace(/\)$/, '').trim();
+                              
+                              if (!isNaN(parseInt(cleanId))) {
+                                console.log("Extracted attachment ID:", cleanId);
+                                const imageSrc = `/api/attachments/${cleanId}`;
+                                
+                                return (
+                                  <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                                    <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                                      AI Generated
                                     </div>
-                                  );
-                                }
+                                    <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                                      <Maximize2 className="h-3 w-3 mr-1" />
+                                      <span>Click to expand</span>
+                                    </div>
+                                    <div 
+                                      className="cursor-pointer" 
+                                      onClick={() => setSelectedImage({ src: imageSrc, alt: props.alt || 'AI Generated Image' })}
+                                    >
+                                      <img 
+                                        src={imageSrc}
+                                        alt={props.alt || 'AI Generated Image'} 
+                                        className="max-w-full object-cover h-48 w-auto"
+                                      />
+                                    </div>
+                                  </div>
+                                );
                               }
                             }
                             
-                            // Otherwise use the standard renderer
-                            return renderImageInMarkdown(props.src, props.alt);
+                            // If it's a direct URL or another format, render normally
+                            if (props.src && props.src !== '') {
+                              return (
+                                <img 
+                                  src={props.src}
+                                  alt={props.alt} 
+                                  className="max-w-full h-auto rounded"
+                                />
+                              );
+                            }
+                            
+                            // If empty src but "Generated image" alt, try to use the latest attachment
+                            if (props.alt === "Generated image" && (!props.src || props.src === '') && attachments && attachments.length > 0) {
+                              // Get the most recent attachment
+                              const sortedAttachments = [...attachments].sort((a, b) => 
+                                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                              );
+                              
+                              const attachment = sortedAttachments[0];
+                              console.log("Using latest attachment for empty src:", attachment.id);
+                              const imageSrc = `/api/attachments/${attachment.id}`;
+                              
+                              return (
+                                <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                                  <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                                    AI Generated
+                                  </div>
+                                  <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                                    <Maximize2 className="h-3 w-3 mr-1" />
+                                    <span>Click to expand</span>
+                                  </div>
+                                  <div 
+                                    className="cursor-pointer" 
+                                    onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                                  >
+                                    <img 
+                                      src={imageSrc}
+                                      alt={'AI Generated Image'} 
+                                      className="max-w-full object-cover h-48 w-auto"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            // Fallback for empty src
+                            return <div className="text-amber-600 text-xs">Image not available</div>;
                           },
                         }}
                       >
