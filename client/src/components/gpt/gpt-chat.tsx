@@ -695,6 +695,57 @@ export function GPTChat({
                           em: (props: any) => <em className="italic text-xs" {...props} />,
                           img: (props: any) => {
                             console.log("Rendering image with props:", props);
+                            
+                            // Special handling for attachment references
+                            if (props.src && props.src.includes('attachment:')) {
+                              // Extract the attachment ID directly from the source string
+                              const attachmentMatch = props.src.match(/attachment:(\d+)/);
+                              if (attachmentMatch && attachmentMatch[1]) {
+                                const attachmentId = parseInt(attachmentMatch[1]);
+                                if (!isNaN(attachmentId)) {
+                                  console.log("Direct attachment handling:", attachmentId);
+                                  const imageSrc = `/api/attachments/${attachmentId}`;
+                                  return (
+                                    <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                                      <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                                        AI Generated
+                                      </div>
+                                      <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                                        <Maximize2 className="h-3 w-3 mr-1" />
+                                        <span>Click to expand</span>
+                                      </div>
+                                      <div 
+                                        className="cursor-pointer" 
+                                        onClick={() => setSelectedImage({ src: imageSrc, alt: props.alt || 'AI Generated Image' })}
+                                      >
+                                        <img 
+                                          src={imageSrc}
+                                          alt={props.alt || 'AI Generated Image'} 
+                                          className="max-w-full object-cover h-48 w-auto"
+                                          onLoad={() => {
+                                            console.log("Image successfully loaded from direct handler:", attachmentId);
+                                          }}
+                                          onError={(e) => {
+                                            console.error("Direct attachment image failed to load:", attachmentId);
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                            const parent = target.parentElement;
+                                            if (parent) {
+                                              const errorDiv = document.createElement('div');
+                                              errorDiv.className = 'text-red-500 text-xs p-2';
+                                              errorDiv.textContent = `Failed to load image (ID: ${attachmentId})`;
+                                              parent.appendChild(errorDiv);
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              }
+                            }
+                            
+                            // Otherwise use the standard renderer
                             return renderImageInMarkdown(props.src, props.alt);
                           },
                         }}
