@@ -920,8 +920,15 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  */
 export async function generateImage(prompt: string, apiKey?: string | null): Promise<string> {
   try {
+    console.log(`=== GENERATING IMAGE WITH DALL-E 3 ===`);
+    console.log(`Generate image called with apiKey=${apiKey === undefined ? 'undefined' : (apiKey === null ? 'null' : (apiKey === 'from_env' ? 'from_env' : 'custom_key'))}`);
+    console.log(`Environment variable OPENAI_API_KEY exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
+    
     // Safety check for null
     const safeApiKey = apiKey === null ? undefined : apiKey;
+    console.log(`Safe API Key after null check: ${safeApiKey === undefined ? 'undefined' : (safeApiKey === 'from_env' ? 'from_env' : 'custom_key')}`);
+    
+    // Get the OpenAI client (with extensive logging added to getOpenAIClient)
     const openai = getOpenAIClient(safeApiKey);
     
     console.log(`Generating image with DALL-E 3 for prompt: ${prompt.substring(0, 50)}...`);
@@ -935,9 +942,12 @@ export async function generateImage(prompt: string, apiKey?: string | null): Pro
     });
 
     console.log(`Successfully generated image with DALL-E`);
+    console.log(`=== IMAGE GENERATION COMPLETE ===`);
     return response.data[0].url || "";
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
+    console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
+    console.log(`=== IMAGE GENERATION FAILED ===`);
     throw error;
   }
 }

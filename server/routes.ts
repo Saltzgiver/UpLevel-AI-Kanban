@@ -282,16 +282,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.id);
       const { destinationColumnId, position } = req.body;
       
+      console.log(`=== CARD MOVE: Card ${cardId} to column ${destinationColumnId} ===`);
+      
       const card = await storage.moveCard(cardId, parseInt(destinationColumnId), position);
       
       if (!card) {
+        console.log(`ERROR: Card ${cardId} not found during move operation`);
         return res.status(404).json({ message: "Card not found" });
       }
       
       // Check if destination column has GPT assigned and auto-trigger is enabled
       const column = await storage.getColumnById(parseInt(destinationColumnId));
       
+      if (column) {
+        console.log(`Column info: id=${column.id}, name=${column.name}, gptName=${column.gptName || 'none'}, gptAssigned=${column.gptAssigned}, autoTrigger=${column.autoTrigger}, apiKey=${column.apiKey ? (column.apiKey === 'from_env' ? 'from_env' : 'custom_key') : 'none'}`);
+      } else {
+        console.log(`ERROR: Destination column ${destinationColumnId} not found`);
+      }
+      
       if (column && column.gptAssigned && column.autoTrigger) {
+        console.log(`Column has GPT assigned with auto-trigger enabled, starting processing for card ${cardId}`);
+        
         // Mark card as processing
         await storage.updateCard(cardId, { 
           processing: true,
@@ -303,18 +314,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Trigger GPT processing after response is sent
         try {
+          console.log(`Scheduling GPT processing for card ${cardId}`);
+          
           // Use setTimeout to allow the transaction to commit fully before starting processing
           setTimeout(async () => {
             try {
+              console.log(`Starting GPT processing for card ${cardId} with column ${column.id}`);
               await triggerGPTProcessing(cardId, column);
+              console.log(`Successfully completed GPT processing for card ${cardId}`);
             } catch (error) {
-              console.error("Error processing card with GPT:", error);
+              console.error(`Error processing card ${cardId} with GPT:`, error);
+              console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
+              
               // Ensure the card is marked as not processing even if there's an error
               await storage.updateCard(cardId, { processing: false });
             }
           }, 100);
         } catch (error) {
-          console.error("Error scheduling GPT processing:", error);
+          console.error(`Error scheduling GPT processing for card ${cardId}:`, error);
+          console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
+          
           // Ensure the card is marked as not processing if scheduling fails
           await storage.updateCard(cardId, { processing: false });
         }
