@@ -9,20 +9,26 @@ const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities bui
 
 // Initialize OpenAI client
 const getOpenAIClient = (apiKey?: string) => {
+  console.log(`DEBUG - getOpenAIClient called with apiKey = ${apiKey === undefined ? 'undefined' : (apiKey === null ? 'null' : `'${apiKey}'`)}`);
+  console.log(`DEBUG - OPENAI_API_KEY environment variable exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
+  
   // Special handling for 'from_env' which means to use the environment variable
   let key = apiKey;
   if (apiKey === 'from_env') {
     key = process.env.OPENAI_API_KEY;
-    console.log("Using API key from environment variable");
+    console.log("DEBUG - Using API key from environment variable because apiKey was 'from_env'");
   } else {
     key = apiKey || process.env.OPENAI_API_KEY;
+    console.log(`DEBUG - Using ${apiKey ? 'provided API key' : 'environment API key'} because apiKey was ${apiKey ? 'provided' : 'not provided'}`);
   }
   
   if (!key) {
+    console.log("DEBUG - ERROR: No OpenAI API key available after processing");
     throw new Error("No OpenAI API key provided");
   }
   
-  console.log("Creating new OpenAI client, using model: " + OPENAI_MODEL);
+  console.log(`DEBUG - Key length: ${key.length}`);
+  console.log(`DEBUG - Creating new OpenAI client, using model: ${OPENAI_MODEL}`);
   return new OpenAI({ apiKey: key });
 };
 
