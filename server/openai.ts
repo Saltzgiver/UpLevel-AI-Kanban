@@ -9,45 +9,11 @@ const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities bui
 
 // Initialize OpenAI client
 const getOpenAIClient = (apiKey?: string) => {
-  console.log(`DEBUG - getOpenAIClient called with apiKey = ${apiKey === undefined ? 'undefined' : (apiKey === null ? 'null' : `'${apiKey}'`)}`);
-  console.log(`DEBUG - OPENAI_API_KEY environment variable exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
-  
-  let key: string | undefined;
-  
-  // Special handling for 'from_env' which means to use the environment variable
-  if (apiKey === 'from_env') {
-    key = process.env.OPENAI_API_KEY;
-    console.log("DEBUG - Using API key from environment variable because apiKey was 'from_env'");
-    
-    if (!key) {
-      console.log("DEBUG - ERROR: apiKey was 'from_env' but environment variable OPENAI_API_KEY is not set");
-      throw new Error("Environment variable OPENAI_API_KEY is not set. Please set it to use the OpenAI API.");
-    }
-  } else if (apiKey) {
-    // Use the provided API key
-    key = apiKey;
-    console.log("DEBUG - Using explicitly provided API key");
-  } else {
-    // Fallback to environment variable
-    key = process.env.OPENAI_API_KEY;
-    console.log("DEBUG - Falling back to environment variable OPENAI_API_KEY because no key was provided");
-    
-    if (!key) {
-      console.log("DEBUG - ERROR: No API key provided and environment variable OPENAI_API_KEY is not set");
-      throw new Error("No OpenAI API key provided. Please either provide a key or set the OPENAI_API_KEY environment variable.");
-    }
-  }
-  
-  // Final check to make sure we have a key
+  const key = apiKey || process.env.OPENAI_API_KEY;
   if (!key) {
-    console.log("DEBUG - ERROR: No OpenAI API key available after processing");
-    throw new Error("No OpenAI API key could be determined.");
+    throw new Error("No OpenAI API key provided");
   }
-  
-  console.log(`DEBUG - Key length: ${key.length}`);
-  console.log(`DEBUG - Key first/last chars: ${key.substring(0, 3)}...${key.substring(key.length - 3)}`);
-  console.log(`DEBUG - Creating new OpenAI client, using model: ${OPENAI_MODEL}`);
-  
+  console.log("Creating new OpenAI client, using model: " + OPENAI_MODEL);
   return new OpenAI({ apiKey: key });
 };
 
@@ -481,9 +447,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
-    // If this appears to be an image request and we have an API key or are using environment variable
-    const hasApiKeyOrUsingEnv = column.apiKey === 'from_env' || (column.apiKey && column.apiKey.length > 10);
-    if (isImageRequest && hasApiKeyOrUsingEnv) {
+    // If this appears to be an image request and we have an API key
+    if (isImageRequest && column.apiKey) {
       try {
         // Add user message to chat history
         await storage.createChat({
@@ -499,7 +464,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
         const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
         
         // Generate the image
-        // Handle the case where column.apiKey could be null
         const imageUrl = await generateImage(prompt, column.apiKey);
         
         if (!imageUrl) {
@@ -524,7 +488,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         });
         
         // Add a message from the assistant with the image
-        // Use "Generated image" as the alt text and proper attachment reference for better compatibility
+        // Use "Generated image" as the alt text for better compatibility with image renderer
         await storage.createChat({
           cardId,
           role: "assistant",
@@ -695,111 +659,6 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
-    // Check for the non-backtick file format (used in the swingset example)
-    const fileWithoutBackticksRegex = /file:([^,]+),\s*([^,]+),\s*([^}\n]+)/g;
-    let fileWithoutBackticksMatch;
-    
-    while ((fileWithoutBackticksMatch = fileWithoutBackticksRegex.exec(response)) !== null) {
-      try {
-        const [_, filename, fileType, content] = fileWithoutBackticksMatch;
-        console.log(`Found file reference without backticks: ${filename.trim()} (${fileType.trim()})`);
-        
-        // Special handling for image files (including SVG)
-        if (fileType.trim().includes('image') || 
-           filename.trim().endsWith('.png') || 
-           filename.trim().endsWith('.jpg') || 
-           filename.trim().endsWith('.jpeg') || 
-           filename.trim().endsWith('.gif') ||
-           filename.trim().endsWith('.svg') ||
-           fileType.trim().includes('svg')) {
-          
-          console.log(`Processing image file without backticks: ${filename.trim()}`);
-          
-          try {
-            // Create the attachment
-            const attachment = await storage.createAttachment({
-              cardId,
-              filename: filename.trim(),
-              fileType: fileType.trim(),
-              content: content.trim()
-            });
-            
-            // Create a new chat message with the proper image reference
-            const card = await storage.getCardById(cardId);
-            if (card) {
-              const column = await storage.getColumnById(card.columnId);
-              if (column) {
-                await storage.createChat({
-                  cardId,
-                  role: "assistant",
-                  content: `✨ Generated an image for you:\n\n![Generated image](attachment:${attachment.id})`,
-                  gptName: column.gptName || "AI Assistant",
-                  gptColor: column.gptColor
-                });
-                console.log(`Created new chat message with proper image reference for attachment ${attachment.id}`);
-              }
-            }
-            
-            attachmentsCreated++;
-          } catch (error) {
-            console.error("Error processing image attachment without backticks:", error);
-          }
-        }
-        else {
-          // Handle all other file types normally
-          console.log(`Creating non-image attachment without backticks: ${filename.trim()} (${fileType.trim()})`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
-          attachmentsCreated++;
-        }
-      } catch (error) {
-        console.error("Error creating attachment from non-backtick format:", error);
-      }
-    }
-    
-    // Check for SVG-specific format (with full SVG XML content)
-    const svgRegex = /```(?:svg|image\/svg\+xml)\s*\n?((?:<svg[\s\S]*?<\/svg>))```/gi;
-    let svgMatch;
-    
-    while ((svgMatch = svgRegex.exec(response)) !== null) {
-      try {
-        console.log(`Found SVG content in special format, creating attachment`);
-        const svgContent = svgMatch[1].trim();
-        const filename = `generated_svg_${Date.now()}.svg`;
-        
-        // Create the attachment
-        const attachment = await storage.createAttachment({
-          cardId,
-          filename,
-          fileType: 'image/svg+xml',
-          content: svgContent
-        });
-        
-        // Create a new chat message with the proper image reference
-        const card = await storage.getCardById(cardId);
-        if (card) {
-          const column = await storage.getColumnById(card.columnId);
-          if (column) {
-            await storage.createChat({
-              cardId,
-              role: "assistant",
-              content: `✨ Generated an SVG image for you:\n\n![Generated image](attachment:${attachment.id})`,
-              gptName: column.gptName || "AI Assistant",
-              gptColor: column.gptColor
-            });
-            console.log(`Created new chat message with proper SVG image reference for attachment ${attachment.id}`);
-            attachmentsCreated++;
-          }
-        }
-      } catch (error) {
-        console.error("Error creating SVG attachment:", error);
-      }
-    }
-    
     // Proceed with standard file attachment pattern
     const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
     let match;
@@ -818,57 +677,7 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
           if (success) {
             attachmentsCreated++;
           }
-        } 
-        // Special handling for image files (including SVG)
-        else if (fileType.trim().includes('image') || 
-                 filename.trim().endsWith('.png') || 
-                 filename.trim().endsWith('.jpg') || 
-                 filename.trim().endsWith('.jpeg') || 
-                 filename.trim().endsWith('.gif') ||
-                 filename.trim().endsWith('.svg') ||
-                 fileType.trim().includes('svg')) {
-          console.log(`Processing image file: ${filename.trim()}`);
-          
-          try {
-            // Create the attachment
-            const attachment = await storage.createAttachment({
-              cardId,
-              filename: filename.trim(),
-              fileType: fileType.trim(),
-              content: content.trim()
-            });
-            
-            // Update the response to include a proper markdown image reference
-            // This makes it compatible with the frontend image renderer
-            const imageRefRegex = new RegExp("```file:" + filename.trim() + "," + fileType.trim() + ",[^`]+```", "g");
-            const updatedResponse = response.replace(imageRefRegex, `![Generated image](attachment:${attachment.id})`);
-            
-            if (updatedResponse !== response) {
-              // If we made a replacement, create a new chat message with the updated content
-              // First, get the column information to include proper gptName and gptColor
-              const card = await storage.getCardById(cardId);
-              if (card) {
-                const column = await storage.getColumnById(card.columnId);
-                if (column) {
-                  // Create a new chat message with the updated content and proper image reference
-                  await storage.createChat({
-                    cardId,
-                    role: "assistant",
-                    content: `✨ Generated an image for you:\n\n![Generated image](attachment:${attachment.id})`,
-                    gptName: column.gptName || "AI Assistant",
-                    gptColor: column.gptColor
-                  });
-                  console.log(`Created new chat message with proper image reference for attachment ${attachment.id}`);
-                }
-              }
-            }
-            
-            attachmentsCreated++;
-          } catch (error) {
-            console.error("Error processing image attachment:", error);
-          }
-        }
-        else {
+        } else {
           // Handle all other file types normally
           console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
           await storage.createAttachment({
@@ -937,81 +746,21 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
 /**
  * Generates an image with DALL-E based on prompt
  */
-export async function generateImage(prompt: string, apiKey?: string | null): Promise<string> {
+export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
-    console.log(`=== GENERATING IMAGE WITH DALL-E 3 ===`);
-    console.log(`Generate image called with apiKey=${apiKey === undefined ? 'undefined' : (apiKey === null ? 'null' : (apiKey === 'from_env' ? 'from_env' : 'custom_key'))}`);
-    console.log(`Environment variable OPENAI_API_KEY exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
+    const openai = getOpenAIClient(apiKey || undefined);
     
-    // Validate prompt
-    if (!prompt || prompt.trim().length === 0) {
-      console.error("Empty prompt provided for image generation");
-      throw new Error("Cannot generate image with empty prompt");
-    }
-    
-    // Limit prompt length as per OpenAI's requirements
-    let sanitizedPrompt = prompt;
-    const MAX_PROMPT_LENGTH = 1000;
-    if (prompt.length > MAX_PROMPT_LENGTH) {
-      sanitizedPrompt = prompt.substring(0, MAX_PROMPT_LENGTH);
-      console.log(`Prompt truncated from ${prompt.length} to ${MAX_PROMPT_LENGTH} characters`);
-    }
-    
-    // Safety check for null
-    const safeApiKey = apiKey === null ? undefined : apiKey;
-    console.log(`Safe API Key after null check: ${safeApiKey === undefined ? 'undefined' : (safeApiKey === 'from_env' ? 'from_env' : 'custom_key')}`);
-    
-    // Get the OpenAI client (with extensive logging added to getOpenAIClient)
-    console.log(`Creating OpenAI client for image generation...`);
-    const openai = getOpenAIClient(safeApiKey);
-    
-    console.log(`Generating image with DALL-E 3 for prompt: ${sanitizedPrompt.substring(0, 50)}...`);
-    
-    // Extra validation to ensure configuration is valid
-    if (!openai) {
-      console.error("OpenAI client initialization failed");
-      throw new Error("Failed to initialize OpenAI client for image generation");
-    }
-    
-    // Make the API call with appropriate error handling
-    let response;
-    try {
-      response = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: sanitizedPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-      });
-    } catch (apiError: any) {
-      // Handle specific API errors
-      if (apiError.status === 401) {
-        console.error("Authentication error: Invalid API key");
-        throw new Error("Invalid or expired API key for image generation");
-      } else if (apiError.status === 429) {
-        console.error("Rate limit exceeded for OpenAI API");
-        throw new Error("Rate limit exceeded for image generation. Please try again later.");
-      } else {
-        console.error(`OpenAI API error (status ${apiError.status || 'unknown'}):`, apiError);
-        throw new Error(`OpenAI API error: ${apiError.message || 'Unknown error'}`);
-      }
-    }
-    
-    // Validate response
-    if (!response || !response.data || !response.data[0] || !response.data[0].url) {
-      console.error("Invalid response from OpenAI image generation:", response);
-      throw new Error("Invalid response from image generation API");
-    }
-    
-    console.log(`Successfully generated image with DALL-E`);
-    console.log(`Image URL received: ${response.data[0].url.substring(0, 30)}...`);
-    console.log(`=== IMAGE GENERATION COMPLETE ===`);
-    
-    return response.data[0].url;
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    return response.data[0].url || "";
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
-    console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
-    console.log(`=== IMAGE GENERATION FAILED ===`);
     throw error;
   }
 }
