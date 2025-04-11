@@ -1,0 +1,99 @@
+
+Kanban
+Test Board
+
+
+Share
+
+New Card
+backlog
+0
+Column options
+GPT not assigned
+Automate
+Add a card
+Find Categories
+0
+Column options
+Category Finder
+
+Look at this list of categories and put them each into a row...
+Add a card
+Add Monthly Spend
+0
+Column options
+GPT Assistant
+
+find the monthly average for 2024 in the pictures attached a...
+Add a card
+Make a CSV
+0
+Column options
+GPT Assistant
+
+make the csv asked for in the card
+Add a card
+image test
+1
+Column options
+imager
+
+create an image according to the card
+golf
+Last GPT Output
+To create an image of golfing by the gulf, we can envision a scenic landscape that combines elements of both a golf course and a coastal environment. Here's a description of the image:
+
+The foreground features a well-manicured golf course with lush green fairways and a neatly trimmed putting green. A golfer, dressed in classic golf attire, is poised mid-swing, eyes focused on the ball. The golf club is in motion, capturing the dynamic action of the swing.
+
+In the background, the image transitions to a picturesque view of the gulf. The water sparkles under the sun, with gentle waves lapping at a sandy shoreline. Palm trees sway gently in the breeze, adding a tropical touch to the scene. A few sailboats dot the horizon, emphasizing the tranquil and leisurely atmosphere.
+
+The sky is a clear blue, with a few fluffy clouds scattered about, and the sun is low, suggesting either early morning or late afternoon, casting a warm, golden light over the entire scene.
+
+This image combines the sport of golf with the serene beauty of a coastal setting, offering a sense of relaxation and enjoyment.
+
+Show more
+Add a card
+
+Add another column
+golf
+
+image test
+Prompt Context
+create an image of golfing by the gulf
+AI
+imager
+Include chat history
+
+Retrigger
+Scroll for earlier messages
+imager
+8:42 PM
+To create an image of golfing by the gulf, we can envision a scenic landscape that combines elements of both a golf course and a coastal environment. Here's a description of the image:
+
+The foreground features a well-manicured golf course with lush green fairways and a neatly trimmed putting green. A golfer, dressed in classic golf attire, is poised mid-swing, eyes focused on the ball. The golf club is in motion, capturing the dynamic action of the swing.
+
+In the background, the image transitions to a picturesque view of the gulf. The water sparkles under the sun, with gentle waves lapping at a sandy shoreline. Palm trees sway gently in the breeze, adding a tropical touch to the scene. A few sailboats dot the horizon, emphasizing the tranquil and leisurely atmosphere.
+
+The sky is a clear blue, with a few fluffy clouds scattered about, and the sun is low, suggesting either early morning or late afternoon, casting a warm, golden light over the entire scene.
+
+This image combines the sport of golf with the serene beauty of a coastal setting, offering a sense of relaxation and enjoyment.
+
+You
+8:42 PM
+i wanted you to actually generate the image
+You
+8:42 PM
+i wanted you to actually generate the image
+imager
+8:42 PM
+Latest Response
+I've created an image of golfing by the gulf for you. It captures the serene beauty of a coastal golf course with a golfer in action and a picturesque view of the gulf in the background.
+
+Ask imager a question or "create an image of..."
+
+Upload Attachment
+Select multiple files
+
+Add attachments
+Move
+Delete
