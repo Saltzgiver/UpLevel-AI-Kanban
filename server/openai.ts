@@ -12,23 +12,42 @@ const getOpenAIClient = (apiKey?: string) => {
   console.log(`DEBUG - getOpenAIClient called with apiKey = ${apiKey === undefined ? 'undefined' : (apiKey === null ? 'null' : `'${apiKey}'`)}`);
   console.log(`DEBUG - OPENAI_API_KEY environment variable exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
   
+  let key: string | undefined;
+  
   // Special handling for 'from_env' which means to use the environment variable
-  let key = apiKey;
   if (apiKey === 'from_env') {
     key = process.env.OPENAI_API_KEY;
     console.log("DEBUG - Using API key from environment variable because apiKey was 'from_env'");
+    
+    if (!key) {
+      console.log("DEBUG - ERROR: apiKey was 'from_env' but environment variable OPENAI_API_KEY is not set");
+      throw new Error("Environment variable OPENAI_API_KEY is not set. Please set it to use the OpenAI API.");
+    }
+  } else if (apiKey) {
+    // Use the provided API key
+    key = apiKey;
+    console.log("DEBUG - Using explicitly provided API key");
   } else {
-    key = apiKey || process.env.OPENAI_API_KEY;
-    console.log(`DEBUG - Using ${apiKey ? 'provided API key' : 'environment API key'} because apiKey was ${apiKey ? 'provided' : 'not provided'}`);
+    // Fallback to environment variable
+    key = process.env.OPENAI_API_KEY;
+    console.log("DEBUG - Falling back to environment variable OPENAI_API_KEY because no key was provided");
+    
+    if (!key) {
+      console.log("DEBUG - ERROR: No API key provided and environment variable OPENAI_API_KEY is not set");
+      throw new Error("No OpenAI API key provided. Please either provide a key or set the OPENAI_API_KEY environment variable.");
+    }
   }
   
+  // Final check to make sure we have a key
   if (!key) {
     console.log("DEBUG - ERROR: No OpenAI API key available after processing");
-    throw new Error("No OpenAI API key provided");
+    throw new Error("No OpenAI API key could be determined.");
   }
   
   console.log(`DEBUG - Key length: ${key.length}`);
+  console.log(`DEBUG - Key first/last chars: ${key.substring(0, 3)}...${key.substring(key.length - 3)}`);
   console.log(`DEBUG - Creating new OpenAI client, using model: ${OPENAI_MODEL}`);
+  
   return new OpenAI({ apiKey: key });
 };
 
@@ -924,26 +943,71 @@ export async function generateImage(prompt: string, apiKey?: string | null): Pro
     console.log(`Generate image called with apiKey=${apiKey === undefined ? 'undefined' : (apiKey === null ? 'null' : (apiKey === 'from_env' ? 'from_env' : 'custom_key'))}`);
     console.log(`Environment variable OPENAI_API_KEY exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
     
+    // Validate prompt
+    if (!prompt || prompt.trim().length === 0) {
+      console.error("Empty prompt provided for image generation");
+      throw new Error("Cannot generate image with empty prompt");
+    }
+    
+    // Limit prompt length as per OpenAI's requirements
+    let sanitizedPrompt = prompt;
+    const MAX_PROMPT_LENGTH = 1000;
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      sanitizedPrompt = prompt.substring(0, MAX_PROMPT_LENGTH);
+      console.log(`Prompt truncated from ${prompt.length} to ${MAX_PROMPT_LENGTH} characters`);
+    }
+    
     // Safety check for null
     const safeApiKey = apiKey === null ? undefined : apiKey;
     console.log(`Safe API Key after null check: ${safeApiKey === undefined ? 'undefined' : (safeApiKey === 'from_env' ? 'from_env' : 'custom_key')}`);
     
     // Get the OpenAI client (with extensive logging added to getOpenAIClient)
+    console.log(`Creating OpenAI client for image generation...`);
     const openai = getOpenAIClient(safeApiKey);
     
-    console.log(`Generating image with DALL-E 3 for prompt: ${prompt.substring(0, 50)}...`);
+    console.log(`Generating image with DALL-E 3 for prompt: ${sanitizedPrompt.substring(0, 50)}...`);
     
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-    });
-
+    // Extra validation to ensure configuration is valid
+    if (!openai) {
+      console.error("OpenAI client initialization failed");
+      throw new Error("Failed to initialize OpenAI client for image generation");
+    }
+    
+    // Make the API call with appropriate error handling
+    let response;
+    try {
+      response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: sanitizedPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      });
+    } catch (apiError: any) {
+      // Handle specific API errors
+      if (apiError.status === 401) {
+        console.error("Authentication error: Invalid API key");
+        throw new Error("Invalid or expired API key for image generation");
+      } else if (apiError.status === 429) {
+        console.error("Rate limit exceeded for OpenAI API");
+        throw new Error("Rate limit exceeded for image generation. Please try again later.");
+      } else {
+        console.error(`OpenAI API error (status ${apiError.status || 'unknown'}):`, apiError);
+        throw new Error(`OpenAI API error: ${apiError.message || 'Unknown error'}`);
+      }
+    }
+    
+    // Validate response
+    if (!response || !response.data || !response.data[0] || !response.data[0].url) {
+      console.error("Invalid response from OpenAI image generation:", response);
+      throw new Error("Invalid response from image generation API");
+    }
+    
     console.log(`Successfully generated image with DALL-E`);
+    console.log(`Image URL received: ${response.data[0].url.substring(0, 30)}...`);
     console.log(`=== IMAGE GENERATION COMPLETE ===`);
-    return response.data[0].url || "";
+    
+    return response.data[0].url;
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
     console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
