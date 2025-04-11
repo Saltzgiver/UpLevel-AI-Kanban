@@ -208,6 +208,12 @@ export class DatabaseStorage implements IStorage {
     
     const order = (maxOrderResult?.maxOrder ?? -1) + 1;
     
+    // For GPT-assigned columns, use "from_env" as the default API key if not specified
+    let apiKey = column.apiKey || null;
+    if (column.gptAssigned && !apiKey) {
+      apiKey = "from_env";
+    }
+    
     const [newColumn] = await db
       .insert(columns)
       .values({
@@ -218,7 +224,7 @@ export class DatabaseStorage implements IStorage {
         gptName: column.gptName || null,
         gptInstructions: column.gptInstructions || null,
         autoTrigger: column.autoTrigger !== false,
-        apiKey: column.apiKey || null
+        apiKey: apiKey
       })
       .returning();
     

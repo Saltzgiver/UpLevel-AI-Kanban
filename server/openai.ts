@@ -9,10 +9,16 @@ const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities bui
 
 // Initialize OpenAI client
 const getOpenAIClient = (apiKey?: string) => {
-  const key = apiKey || process.env.OPENAI_API_KEY;
+  // Special handling for "from_env" value or undefined apiKey
+  let key = process.env.OPENAI_API_KEY;
+  if (apiKey && apiKey !== "from_env") {
+    key = apiKey;
+  }
+  
   if (!key) {
     throw new Error("No OpenAI API key provided");
   }
+  
   console.log("Creating new OpenAI client, using model: " + OPENAI_MODEL);
   return new OpenAI({ apiKey: key });
 };
@@ -448,7 +454,8 @@ export async function processChat(cardId: number, userMessage: string, column: C
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
     // If this appears to be an image request and we have an API key (or can use the environment API key)
-    if (isImageRequest && (column.apiKey || process.env.OPENAI_API_KEY)) {
+    // Special handling for "from_env" value - this is a special value that means "use the environment variable"
+    if (isImageRequest) {
       try {
         // Add user message to chat history
         await storage.createChat({
