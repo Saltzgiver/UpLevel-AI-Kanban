@@ -663,46 +663,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.cardId);
       const { prompt, apiKey } = req.body;
       
+      console.log(`======== IMAGE GENERATION REQUEST ========`);
+      console.log(`Received image generation request for card ${cardId}`);
+      console.log(`API Key provided by client: ${apiKey ? (apiKey === 'from_env' ? 'from_env' : 'custom_key') : 'none'}`);
+      console.log(`Environment OPENAI_API_KEY exists: ${process.env.OPENAI_API_KEY ? 'YES' : 'NO'}`);
+      
       if (!prompt) {
+        console.log(`ERROR: No prompt provided for image generation`);
         return res.status(400).json({ message: "No prompt provided" });
       }
+      
+      console.log(`Prompt for image: ${prompt.substring(0, 30)}...`);
       
       // Get card to verify it exists
       const card = await storage.getCardById(cardId);
       if (!card) {
+        console.log(`ERROR: Card ${cardId} not found during image generation`);
         return res.status(404).json({ message: "Card not found" });
       }
-
-      // Generate the image
-      const imageUrl = await generateImage(prompt, apiKey || undefined);
+      
+      console.log(`Card found: ${card.id} - ${card.title}`);
+      console.log(`Card is in column ${card.columnId}`);
+      
+      // Get the column to check for API key
+      const column = await storage.getColumnById(card.columnId);
+      console.log(`Column info: ${column ? `id=${column.id}, name=${column.name}, apiKey=${column.apiKey ? (column.apiKey === 'from_env' ? 'from_env' : 'custom_key') : 'none'}` : 'not found'}`);
+      
+      // Determine which API key to use (priority: request body, column setting, environment)
+      let finalApiKey = apiKey;
+      if (!finalApiKey && column && column.apiKey) {
+        finalApiKey = column.apiKey;
+        console.log(`Using column's API key: ${finalApiKey === 'from_env' ? 'from_env' : 'custom_key'}`);
+      } else {
+        console.log(`Using API key from request: ${finalApiKey ? (finalApiKey === 'from_env' ? 'from_env' : 'custom_key') : 'none'}`);
+      }
+      
+      // Generate the image with detailed error handling
+      console.log(`Calling generateImage with API key: ${finalApiKey ? (finalApiKey === 'from_env' ? 'from_env' : 'custom_key') : 'undefined'}`);
+      let imageUrl;
+      try {
+        imageUrl = await generateImage(prompt, finalApiKey || undefined);
+        console.log(`Successfully generated image, URL received: ${imageUrl ? 'yes' : 'no'}`);
+      } catch (genError) {
+        console.error(`Error during image generation:`, genError);
+        console.error(`Error details: ${genError instanceof Error ? genError.message : String(genError)}`);
+        console.log(`======== IMAGE GENERATION FAILED ========`);
+        return res.status(500).json({ 
+          message: "Error generating image", 
+          error: genError instanceof Error ? genError.message : String(genError)
+        });
+      }
       
       if (!imageUrl) {
+        console.log(`ERROR: No image URL returned from generateImage`);
+        console.log(`======== IMAGE GENERATION FAILED ========`);
         return res.status(500).json({ message: "Failed to generate image" });
       }
       
       // Fetch the image and convert to base64
-      const response = await fetch(imageUrl);
-      const imageBuffer = await response.arrayBuffer();
-      const base64Image = Buffer.from(imageBuffer).toString('base64');
+      console.log(`Fetching image from URL: ${imageUrl.substring(0, 30)}...`);
+      let response, imageBuffer, base64Image;
+      try {
+        response = await fetch(imageUrl);
+        
+        if (!response.ok) {
+          console.error(`Error fetching image: HTTP ${response.status} - ${response.statusText}`);
+          console.log(`======== IMAGE GENERATION FAILED ========`);
+          return res.status(500).json({ message: `Error fetching image: HTTP ${response.status}` });
+        }
+        
+        imageBuffer = await response.arrayBuffer();
+        base64Image = Buffer.from(imageBuffer).toString('base64');
+        console.log(`Successfully fetched and encoded image, size: ${imageBuffer.byteLength} bytes`);
+      } catch (fetchError) {
+        console.error(`Error fetching or encoding image:`, fetchError);
+        console.log(`======== IMAGE GENERATION FAILED ========`);
+        return res.status(500).json({ 
+          message: "Error fetching generated image", 
+          error: fetchError instanceof Error ? fetchError.message : String(fetchError)
+        });
+      }
       
       // Create a descriptive filename
       const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `dalle_${safePrompt}_${Date.now()}.png`;
+      console.log(`Creating attachment with filename: ${filename}`);
       
       // Create attachment
-      const attachment = await storage.createAttachment({
-        cardId,
-        filename,
-        fileType: 'image/png',
-        content: base64Image
-      });
+      let attachment;
+      try {
+        attachment = await storage.createAttachment({
+          cardId,
+          filename,
+          fileType: 'image/png',
+          content: base64Image
+        });
+        console.log(`Successfully created attachment ID: ${attachment.id}`);
+      } catch (attachError) {
+        console.error(`Error creating attachment:`, attachError);
+        console.log(`======== IMAGE GENERATION FAILED ========`);
+        return res.status(500).json({ 
+          message: "Error saving generated image", 
+          error: attachError instanceof Error ? attachError.message : String(attachError)
+        });
+      }
       
+      console.log(`======== IMAGE GENERATION COMPLETE ========`);
       return res.status(201).json(attachment);
     } catch (error) {
-      console.error("Error generating image:", error);
+      console.error("Error in image generation process:", error);
+      console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
+      console.log(`======== IMAGE GENERATION FAILED ========`);
       return res.status(500).json({ 
-        message: "Error generating image",
-        details: error instanceof Error ? error.message : "Unknown error"
+        message: "Error generating image", 
+        error: error instanceof Error ? error.message : String(error) 
       });
     }
   });
