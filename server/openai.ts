@@ -688,11 +688,58 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
       }
     }
     
-    // Proceed with standard file attachment pattern
+    // New format pattern: file:filename,mimetype,content without code block markers
+    // This is the format used by some models when they're asked to generate images
+    console.log(`Checking for file attachments with inline format (without code blocks)`);
+    const inlineFileRegex = /\bfile:([^,\s]+),\s*([^,\s]+),\s*([^\s].+?)(?=\n\n|\n[A-Z]|$)/g;
+    let inlineMatch;
+    
+    while ((inlineMatch = inlineFileRegex.exec(response)) !== null) {
+      try {
+        const [fullMatch, filename, fileType, content] = inlineMatch;
+        console.log(`Found inline file format: ${filename} (${fileType}), content length: ${content.length}`);
+        
+        // Special handling for images
+        if (fileType.trim().includes('image') || 
+            filename.trim().match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)) {
+          console.log(`Creating image attachment from inline format: ${filename.trim()}`);
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content.trim()
+          });
+          attachmentsCreated++;
+        }
+        // Special handling for CSV files
+        else if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
+          console.log(`Handling CSV file with inline format: ${filename.trim()}`);
+          const success = await createCSVIfUnique(content.trim(), filename.trim());
+          if (success) {
+            attachmentsCreated++;
+          }
+        } 
+        // Handle all other file types
+        else {
+          console.log(`Creating non-CSV attachment with inline format: ${filename.trim()}`);
+          await storage.createAttachment({
+            cardId,
+            filename: filename.trim(),
+            fileType: fileType.trim(),
+            content: content.trim()
+          });
+          attachmentsCreated++;
+        }
+      } catch (error) {
+        console.error("Error creating attachment from inline format:", error);
+      }
+    }
+    
+    // Proceed with standard file attachment pattern (with code blocks)
     const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
     let match;
 
-    console.log(`Checking for file attachments with standard format`);
+    console.log(`Checking for file attachments with standard format (with code blocks)`);
     while ((match = fileRegex.exec(response)) !== null) {
       try {
         const [_, filename, fileType, content] = match;
