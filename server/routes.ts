@@ -518,17 +518,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.id);
       const { destinationColumnId, position, sourceColumnId } = req.body;
       
+      console.log(`Moving card ${cardId} from column ${sourceColumnId} to ${destinationColumnId}`);
+      
       const card = await storage.moveCard(cardId, parseInt(destinationColumnId), position);
       
       if (!card) {
+        console.log(`Card ${cardId} not found when trying to move it`);
         return res.status(404).json({ message: "Card not found" });
       }
       
       // Get the source column to potentially analyze for prompt suggestions
       const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
+      console.log(`Source column for card ${cardId}: ${sourceColumn ? JSON.stringify({
+        id: sourceColumn.id,
+        name: sourceColumn.name,
+        gptAssigned: sourceColumn.gptAssigned,
+        apiKey: sourceColumn.apiKey ? (sourceColumn.apiKey === "from_env" ? "from_env" : "custom key set") : "no key"
+      }) : "none"}`);
       
       // Check if destination column has GPT assigned and auto-trigger is enabled
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
+      console.log(`Destination column for card ${cardId}: ${destColumn ? JSON.stringify({
+        id: destColumn.id,
+        name: destColumn.name,
+        gptAssigned: destColumn.gptAssigned,
+        autoTrigger: destColumn.autoTrigger,
+        apiKey: destColumn.apiKey ? (destColumn.apiKey === "from_env" ? "from_env" : "custom key set") : "no key"
+      }) : "none"}`);
       
       // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
       if (sourceColumn && sourceColumn.gptAssigned) {
