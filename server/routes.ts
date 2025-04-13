@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/cards/:id/move", async (req, res) => {
     try {
       const cardId = parseInt(req.params.id);
-      const { destinationColumnId, position } = req.body;
+      const { destinationColumnId, position, sourceColumnId } = req.body;
       
       const card = await storage.moveCard(cardId, parseInt(destinationColumnId), position);
       
@@ -296,10 +296,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Card not found" });
       }
       
-      // Check if destination column has GPT assigned and auto-trigger is enabled
-      const column = await storage.getColumnById(parseInt(destinationColumnId));
+      // Get the source column to potentially analyze for prompt suggestions
+      const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
       
-      if (column && column.gptAssigned && column.autoTrigger) {
+      // Check if destination column has GPT assigned and auto-trigger is enabled
+      const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
+      
+      // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
+      if (sourceColumn && sourceColumn.gptAssigned && destColumn && destColumn.gptAssigned) {
+        // Run this analysis asynchronously so it doesn't block the main flow
+        setTimeout(async () => {
+          try {
+            // Get the card details for analysis
+            const cardWithDetails = await storage.getCardById(cardId);
+            if (!cardWithDetails) return;
+            
+            // Get the chats from the card while it was in the source column
+            const chats = await storage.getChatsByCardId(cardId);
+            if (!chats || chats.length === 0) return; // No chats to analyze
+            
+            // Create card context object for analysis
+            const cardContext = {
+              title: cardWithDetails.title,
+              description: cardWithDetails.description,
+              attachments: cardWithDetails.attachments || []
+            };
+            
+            // Get prompt improvement suggestion
+            const promptSuggestion = await getPromptSuggestion(
+              sourceColumn.gptInstructions || "", 
+              cardContext,
+              chats,
+              sourceColumn.apiKey
+            );
+            
+            // Log the suggestion for now (in a future chunk, this would be shown to the user in the UI)
+            if (promptSuggestion) {
+              console.log(`Prompt suggestion for column ${sourceColumn.id}:`, promptSuggestion);
+            }
+          } catch (error) {
+            console.error("Error generating prompt suggestion:", error);
+          }
+        }, 200);
+      }
+      
+      if (destColumn && destColumn.gptAssigned && destColumn.autoTrigger) {
         // Mark card as processing
         await storage.updateCard(cardId, { 
           processing: true,
@@ -314,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Use setTimeout to allow the transaction to commit fully before starting processing
           setTimeout(async () => {
             try {
-              await triggerGPTProcessing(cardId, column);
+              await triggerGPTProcessing(cardId, destColumn);
             } catch (error) {
               console.error("Error processing card with GPT:", error);
               // Ensure the card is marked as not processing even if there's an error

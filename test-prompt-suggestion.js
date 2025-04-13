@@ -39,7 +39,7 @@ async function runTest() {
       content: "This is fantastic! Exactly what I needed. The environmental impact numbers really make it compelling."
     }
   ];
-  // Use the default API key from the environment
+  // Use the API key from the environment
   const apiKey = process.env.OPENAI_API_KEY || null;
   
   console.log('Using OpenAI API key:', apiKey ? 'Found key (starts with: ' + apiKey.substring(0, 3) + '...)' : 'No key found');
