@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Sparkles, AlertCircle, Diff } from "lucide-react";
+import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useModalContext } from "@/contexts/ModalContext";
 
 interface AssignGPTModalProps {
@@ -320,39 +321,81 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
                 )}
               </div>
               
-              {/* Show suggested instructions if in suggestion mode and showingSuggestion is true */}
-              {modalState.isSuggestionMode && suggestion && showingSuggestion && (
-                <div className="relative mb-2">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
-                  <Textarea 
-                    placeholder="Suggested instructions..."
-                    rows={4}
-                    value={suggestion.suggestedInstructions}
-                    readOnly
-                    className="w-full resize-none bg-amber-50 border-amber-200 pl-3"
-                  />
-                  <div className="flex justify-end mt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                      onClick={handleApplySuggestion}
-                    >
-                      Apply Suggestion
-                    </Button>
+              {/* Side-by-Side Prompt Suggestion View */}
+              {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
+                <div className="mb-4">
+                  <div className="mb-2">
+                    <h3 className="text-sm font-medium mb-2">Compare Instructions</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Left side: Current Instructions */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Current Instructions</Label>
+                        <div className="border border-gray-200 rounded-md bg-gray-50 p-3">
+                          <Textarea
+                            placeholder="No current instructions"
+                            rows={6}
+                            value={column.gptInstructions || ""}
+                            readOnly
+                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Right side: Suggested Instructions */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-amber-600">Suggested Instructions</Label>
+                        <div className="border border-amber-200 rounded-md bg-amber-50 p-3">
+                          <Textarea
+                            placeholder="Suggested instructions..."
+                            rows={6}
+                            value={suggestion.suggestedInstructions}
+                            readOnly
+                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-gray-600 hover:bg-gray-100"
+                        onClick={() => setShowingSuggestion(false)}
+                      >
+                        <ThumbsDown className="mr-2 h-4 w-4" />
+                        Reject Suggestion
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                        onClick={handleApplySuggestion}
+                      >
+                        <ThumbsUp className="mr-2 h-4 w-4" />
+                        Use Suggestion
+                      </Button>
+                    </div>
                   </div>
+                  <Separator className="my-4" />
                 </div>
-              )}
+              ) : null}
               
-              {/* Current instructions */}
-              <Textarea 
-                id="instructions" 
-                placeholder="Write detailed instructions for how the AI should process cards in this column..." 
-                rows={4}
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                className={`w-full resize-none ${modalState.isSuggestionMode && suggestion && showingSuggestion ? 'border-gray-300 bg-white' : ''}`}
-              />
+              {/* Current instructions editing textarea */}
+              <div className="space-y-1">
+                {modalState.isSuggestionMode && suggestion && showingSuggestion && (
+                  <Label htmlFor="instructions" className="text-sm font-medium">
+                    Edit Final Instructions <span className="text-red-500">*</span>
+                  </Label>
+                )}
+                <Textarea 
+                  id="instructions" 
+                  placeholder="Write detailed instructions for how the AI should process cards in this column..." 
+                  rows={4}
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  className="w-full resize-none"
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 Example: "Generate a poem based on the card title and description"
               </p>
