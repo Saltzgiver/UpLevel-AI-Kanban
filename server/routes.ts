@@ -232,6 +232,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Prompt Assistant endpoints
   
+  // Retrieve or generate a prompt suggestion for a column and card
+  app.post("/api/columns/:id/prompt-suggestion", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const { cardId } = req.body;
+      
+      if (!cardId) {
+        return res.status(400).json({ message: "Card ID is required" });
+      }
+      
+      console.log(`Retrieving/generating prompt suggestion for column ${columnId} and card ${cardId}`);
+      
+      // First check if there's already a cached suggestion
+      const cachedSuggestion = checkSuggestion(columnId, cardId);
+      
+      if (cachedSuggestion?.hasSuggestion && cachedSuggestion.suggestion) {
+        // Attempt to parse the cached suggestion
+        try {
+          // Since the cached suggestion is stored as a string, we need to check if it's
+          // already in the { rationale, suggestedInstructions } format or just a plain string
+          const suggestion = JSON.parse(cachedSuggestion.suggestion);
+          return res.json({ suggestion });
+        } catch (e) {
+          // If it's not a valid JSON, it's probably just a string (from older implementation)
+          return res.json({ 
+            suggestion: {
+              rationale: "Suggested improvements for column instructions",
+              suggestedInstructions: cachedSuggestion.suggestion
+            } 
+          });
+        }
+      }
+      
+      // If no cached suggestion, we need to fetch the necessary data and generate one
+      // 1. Get column details to get the API key and current instructions
+      const column = await storage.getColumnById(columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // 2. Get card details
+      const card = await storage.getCardById(parseInt(cardId));
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // 3. Get chat history for the card
+      const chats = await storage.getChatsByCardId(parseInt(cardId));
+      
+      // 4. Create card context object
+      const cardContext = {
+        title: card.title,
+        description: card.description,
+        attachments: card.attachments || []
+      };
+      
+      // 5. Call getPromptSuggestion with the required data
+      const suggestion = await getPromptSuggestion(
+        column.gptInstructions || "",
+        cardContext,
+        chats,
+        column.apiKey || undefined
+      );
+      
+      // Return the suggestion (which may be null if no improvement is found)
+      return res.json({ suggestion });
+      
+    } catch (error) {
+      console.error("Error generating prompt suggestion:", error);
+      return res.status(500).json({ 
+        message: "Error generating prompt suggestion",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   // Check if a prompt suggestion is available for a column
   app.get("/api/columns/:id/prompt-suggestion/status", async (req, res) => {
     try {
