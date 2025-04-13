@@ -9,6 +9,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { fromZodError } from "zod-validation-error";
+import { storeSuggestion, checkSuggestion, clearSuggestion } from "./suggestionCache";
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
@@ -303,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
       
       // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
-      if (sourceColumn && sourceColumn.gptAssigned && destColumn && destColumn.gptAssigned) {
+      if (sourceColumn && sourceColumn.gptAssigned) {
         // Run this analysis asynchronously so it doesn't block the main flow
         setTimeout(async () => {
           try {
@@ -313,7 +314,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Get the chats from the card while it was in the source column
             const chats = await storage.getChatsByCardId(cardId);
-            if (!chats || chats.length === 0) return; // No chats to analyze
+            if (!chats || chats.length === 0) {
+              // No chats to analyze, store no suggestion available in cache
+              storeSuggestion(sourceColumn.id, cardId, null);
+              return;
+            }
             
             // Create card context object for analysis
             const cardContext = {
@@ -330,12 +335,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sourceColumn.apiKey || undefined
             );
             
-            // Log the suggestion for now (in a future chunk, this would be shown to the user in the UI)
+            // Store the suggestion in the cache
+            storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
+            
+            console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
             if (promptSuggestion) {
-              console.log(`Prompt suggestion for column ${sourceColumn.id}:`, promptSuggestion);
+              console.log(`Suggestion content: ${promptSuggestion.substring(0, 100)}${promptSuggestion.length > 100 ? '...' : ''}`);
             }
           } catch (error) {
             console.error("Error generating prompt suggestion:", error);
+            // Store no suggestion available in case of error
+            storeSuggestion(sourceColumn.id, cardId, null);
           }
         }, 200);
       }
