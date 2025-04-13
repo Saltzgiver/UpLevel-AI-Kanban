@@ -880,7 +880,7 @@ RATIONALE: No improvements needed because [your reasoning]
 [original instructions]
 `;
 
-  console.log(`\nMeta-Prompt: ${PROMPT_ASSISTANT_META_PROMPT.substring(0, 200)}...[truncated for log]`);
+  console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
   console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
   
   // For testing purposes, we'll skip the actual API call if no API key is provided
@@ -907,7 +907,7 @@ RATIONALE: No improvements needed because [your reasoning]
       model: OPENAI_MODEL, // Use the default model defined globally
       messages: [
         { role: "system", content: "You are an expert AI prompt engineer that helps improve GPT prompts based on user interactions." },
-        { role: "user", content: PROMPT_ASSISTANT_META_PROMPT }
+        { role: "user", content: metaPrompt }
       ],
       temperature: 0.5, // Lower temperature for more focused output
       max_tokens: 1500,
