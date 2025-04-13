@@ -208,18 +208,25 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
   // Additional handlers for suggestion mode
   const handleApplySuggestion = () => {
     if (suggestion && suggestion.suggestedInstructions) {
+      // Update the instructions with the suggestion
       setInstructions(suggestion.suggestedInstructions);
+      
+      // Hide the suggestion UI
       setShowingSuggestion(false);
       
+      // Show a toast notification
       toast({
         title: "Suggestion Applied",
         description: "The suggested instructions have been applied. Review and save to confirm."
       });
+      
+      // Remove suggestion from UI but keep modal open for review/editing
+      setSuggestion(null);
     }
   };
   
   const handleDismissSuggestion = () => {
-    // Just close the modal
+    // Close the modal
     onClose();
     
     // Clear suggestion from server
@@ -230,6 +237,12 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
     } catch (error) {
       console.error("Failed to clear suggestion:", error);
     }
+    
+    // Show toast to confirm
+    toast({
+      title: "Suggestion Rejected",
+      description: "The prompt suggestion has been dismissed."
+    });
   };
 
   return (
@@ -360,7 +373,7 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
                         variant="outline"
                         size="sm"
                         className="text-gray-600 hover:bg-gray-100"
-                        onClick={() => setShowingSuggestion(false)}
+                        onClick={handleDismissSuggestion}
                       >
                         <ThumbsDown className="mr-2 h-4 w-4" />
                         Reject Suggestion
