@@ -2,14 +2,82 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useColumnSettingsModalStore } from "@/stores/modalStore";
+import { useEffect, useState } from "react";
+
+// Interface for tracking polling state
+interface PollingState {
+  columnId: number;
+  cardId: number;
+  sourceColumnName?: string;
+  active: boolean;
+}
 
 export function useBoard(boardId: number) {
   const { toast } = useToast();
+  const [pollingState, setPollingState] = useState<PollingState | null>(null);
+  const columnSettingsModal = useColumnSettingsModalStore();
   
   const boardQuery = useQuery({
     queryKey: [`/api/boards/${boardId}`],
     enabled: !!boardId,
   });
+
+  // Poll for suggestion status if polling is active
+  useEffect(() => {
+    if (!pollingState || !pollingState.active) return;
+    
+    const { columnId, cardId, sourceColumnName } = pollingState;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    console.log(`Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
+    
+    const intervalId = setInterval(async () => {
+      attempts++;
+      console.log(`Polling attempt ${attempts} for suggestion availability`);
+      
+      try {
+        // Check if a suggestion is available
+        const response = await apiRequest(
+          "GET", 
+          `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
+        );
+        
+        if (response?.hasSuggestion) {
+          // Stop polling and show toast
+          clearInterval(intervalId);
+          setPollingState(prev => prev ? { ...prev, active: false } : null);
+          
+          toast({
+            title: "Prompt Assistant",
+            description: `Suggestion available for column "${sourceColumnName || 'Column'}"`,
+            action: (
+              <ToastAction 
+                altText="Review suggestion" 
+                onClick={() => columnSettingsModal.openInSuggestionMode(columnId, cardId)}
+              >
+                Review
+              </ToastAction>
+            ),
+          });
+        } else if (attempts >= maxAttempts) {
+          // Max attempts reached, stop polling
+          console.log("No suggestion available after maximum attempts");
+          clearInterval(intervalId);
+          setPollingState(prev => prev ? { ...prev, active: false } : null);
+        }
+      } catch (error) {
+        console.error("Error checking suggestion availability:", error);
+        clearInterval(intervalId);
+        setPollingState(prev => prev ? { ...prev, active: false } : null);
+      }
+    }, 2000);
+    
+    // Clean up interval on unmount or when polling state changes
+    return () => clearInterval(intervalId);
+  }, [pollingState, toast, columnSettingsModal]);
 
   const createColumn = useMutation({
     mutationFn: async (data: { name: string }) => {
@@ -152,8 +220,23 @@ export function useBoard(boardId: number) {
         position: data.position || 0,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/boards/${boardId}`] });
+      
+      // Check if the source column was GPT-enabled by finding it in the board data
+      const columns = boardQuery.data?.columns || [];
+      const sourceColumn = columns.find((col: any) => col.id === data.sourceColumnId);
+      
+      if (sourceColumn?.gptAssigned) {
+        // Start polling for suggestion availability
+        console.log(`Starting to poll for suggestion availability for column ${data.sourceColumnId}, card ${data.cardId}`);
+        setPollingState({
+          columnId: data.sourceColumnId,
+          cardId: data.cardId,
+          sourceColumnName: sourceColumn.name,
+          active: true
+        });
+      }
     },
     onError: () => {
       toast({

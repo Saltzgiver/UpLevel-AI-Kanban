@@ -14,7 +14,7 @@ interface ColumnSettingsModalState {
 }
 
 // Create the store with initial state and actions
-export const useColumnSettingsModalStore = create<ColumnSettingsModalState>((set) => ({
+export const useColumnSettingsModalStore = create<ColumnSettingsModalState>((set: any) => ({
   isOpen: false,
   columnId: null,
   isSuggestionMode: false,
