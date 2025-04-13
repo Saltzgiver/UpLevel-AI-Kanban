@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { useColumnSettingsModalStore } from "@/stores/modalStore";
+import { useModalContext } from "@/contexts/ModalContext";
 import { useEffect, useState } from "react";
 
 // Interface for tracking polling state
@@ -17,7 +17,7 @@ interface PollingState {
 export function useBoard(boardId: number) {
   const { toast } = useToast();
   const [pollingState, setPollingState] = useState<PollingState | null>(null);
-  const columnSettingsModal = useColumnSettingsModalStore();
+  const { openInSuggestionMode } = useModalContext();
   
   const boardQuery = useQuery({
     queryKey: [`/api/boards/${boardId}`],
@@ -56,7 +56,7 @@ export function useBoard(boardId: number) {
             action: (
               <ToastAction 
                 altText="Review suggestion" 
-                onClick={() => columnSettingsModal.openInSuggestionMode(columnId, cardId)}
+                onClick={() => openInSuggestionMode(columnId, cardId)}
               >
                 Review
               </ToastAction>
@@ -77,7 +77,7 @@ export function useBoard(boardId: number) {
     
     // Clean up interval on unmount or when polling state changes
     return () => clearInterval(intervalId);
-  }, [pollingState, toast, columnSettingsModal]);
+  }, [pollingState, toast, openInSuggestionMode]);
 
   const createColumn = useMutation({
     mutationFn: async (data: { name: string }) => {

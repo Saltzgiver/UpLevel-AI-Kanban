@@ -8,6 +8,7 @@ import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useModalContext } from "@/contexts/ModalContext";
 
 interface ColumnHeaderProps {
   column: Column & { cards?: any[] };
@@ -27,6 +28,7 @@ export function ColumnHeader({
   const [isGPTModalOpen, setIsGPTModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { openModal } = useModalContext();
 
   useEffect(() => {
     if (isEditingTitle && inputRef.current) {
@@ -117,7 +119,7 @@ export function ColumnHeader({
               <span>Rename</span>
             </DropdownMenuItem>
             
-            <DropdownMenuItem onClick={() => setIsGPTModalOpen(true)}>
+            <DropdownMenuItem onClick={() => openModal(column.id)}>
               <svg
                 className="mr-2 h-4 w-4"
                 fill="none"
