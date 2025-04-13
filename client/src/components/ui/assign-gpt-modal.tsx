@@ -117,14 +117,30 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       const fetchSuggestion = async () => {
         try {
           setIsSubmitting(true);
+          // Use the correct endpoint format - GET with query parameter instead of path parameter
           const data = await apiRequest(
             "GET", 
-            `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
+            `/api/columns/${column.id}/prompt-suggestion`
           );
           
-          if (data && data.suggestion) {
-            setSuggestion(data.suggestion);
-            setShowingSuggestion(true);
+          console.log("Received data from prompt suggestion API:", data);
+          
+          // Process suggestion based on different response formats
+          if (data) {
+            if (data.suggestion) {
+              // Format from cache
+              setSuggestion(data.suggestion);
+              setShowingSuggestion(true);
+            } else if (data.suggestedInstructions) {
+              // Format from direct API response
+              setSuggestion({
+                suggestedInstructions: data.suggestedInstructions,
+                rationale: data.rationale || "Based on analysis of past card interactions"
+              });
+              setShowingSuggestion(true);
+            } else {
+              console.warn("Received suggestion data but in unexpected format:", data);
+            }
           }
         } catch (error) {
           console.error("Failed to fetch suggestion:", error);
