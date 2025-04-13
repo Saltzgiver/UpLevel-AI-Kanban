@@ -117,13 +117,13 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       const fetchSuggestion = async () => {
         try {
           setIsSubmitting(true);
-          const response = await apiRequest(
+          const data = await apiRequest(
             "GET", 
             `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
           );
           
-          if (response && response.suggestion) {
-            setSuggestion(response.suggestion);
+          if (data && data.suggestion) {
+            setSuggestion(data.suggestion);
             setShowingSuggestion(true);
           }
         } catch (error) {
@@ -222,6 +222,14 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       
       // Remove suggestion from UI but keep modal open for review/editing
       setSuggestion(null);
+      
+      // Also clear suggestion from server (similar to dismissal but don't close modal)
+      if (modalState.columnId) {
+        apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion`, {})
+          .catch(error => {
+            console.error("Failed to clear suggestion:", error);
+          });
+      }
     }
   };
   
@@ -230,12 +238,11 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
     onClose();
     
     // Clear suggestion from server
-    try {
-      if (modalState.columnId) {
-        apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion`, {});
-      }
-    } catch (error) {
-      console.error("Failed to clear suggestion:", error);
+    if (modalState.columnId) {
+      apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion`, {})
+        .catch(error => {
+          console.error("Failed to clear suggestion:", error);
+        });
     }
     
     // Show toast to confirm
