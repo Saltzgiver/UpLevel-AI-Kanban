@@ -794,6 +794,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TEMPORARY TEST ROUTE FOR PROMPT ASSISTANT (CHUNK 1)
+  app.post("/api/test-prompt-suggestion", async (req, res) => {
+    try {
+      console.log("==========================================");
+      console.log("Testing Prompt Assistant suggestion function");
+      console.log("------------------------------------------");
+      
+      // Add direct logging to console
+      console.log("Request body:", JSON.stringify(req.body).substring(0, 200) + "...");
+      
+      // Extract request data
+      const { 
+        sourceColumnInstructions, 
+        cardTitle,
+        cardDescription,
+        chats,
+        apiKey 
+      } = req.body;
+      
+      // Basic validation
+      if (!sourceColumnInstructions || !cardTitle || !Array.isArray(chats)) {
+        console.log("Validation failed - Missing required fields");
+        console.log("==========================================");
+        return res.status(400).json({ 
+          message: "Missing required fields", 
+          required: ["sourceColumnInstructions", "cardTitle", "chats (array)"] 
+        });
+      }
+      
+      console.log(`Inputs validated. Calling getPromptSuggestion with: 
+        - Source Instructions: ${sourceColumnInstructions?.substring(0, 50)}...
+        - Card Title: ${cardTitle}
+        - Chat Count: ${chats?.length || 0}
+        - Has API Key: ${!!apiKey}`);
+      
+      // Call the getPromptSuggestion function with request data
+      const suggestion = await getPromptSuggestion(
+        sourceColumnInstructions,
+        {
+          title: cardTitle,
+          description: cardDescription || null,
+          attachments: req.body.attachments || []
+        },
+        chats,
+        apiKey
+      );
+      
+      console.log("Function returned successfully. Suggestion:", suggestion);
+      console.log("==========================================");
+      
+      // Return the result with explicit Content-Type header
+      res.setHeader('Content-Type', 'application/json');
+      return res.json({
+        tested: true,
+        result: suggestion,
+        inputReceived: {
+          sourceColumnInstructions,
+          cardTitle,
+          cardDescription,
+          chatCount: chats?.length || 0,
+          hasApiKey: !!apiKey
+        }
+      });
+    } catch (error) {
+      console.error("Error testing prompt suggestion:", error);
+      console.log("==========================================");
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(500).json({
+        message: "Error testing prompt suggestion",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
