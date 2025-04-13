@@ -5,10 +5,15 @@
  * This allows the frontend to check if a suggestion is available and retrieve it later.
  */
 
+type PromptSuggestion = {
+  rationale: string;
+  suggestedInstructions: string;
+};
+
 interface SuggestionData {
   cardId: number;
   hasSuggestion: boolean;
-  suggestion: string | null;
+  suggestion: string | PromptSuggestion | null;
   timestamp: number;
 }
 
@@ -21,7 +26,11 @@ const suggestionCache = new Map<number, SuggestionData>();
 /**
  * Store a suggestion in the cache
  */
-export function storeSuggestion(columnId: number, cardId: number, suggestion: string | null): void {
+export function storeSuggestion(
+  columnId: number, 
+  cardId: number, 
+  suggestion: string | PromptSuggestion | null
+): void {
   suggestionCache.set(columnId, {
     cardId,
     hasSuggestion: !!suggestion,
@@ -35,7 +44,7 @@ export function storeSuggestion(columnId: number, cardId: number, suggestion: st
 /**
  * Check if a suggestion is available for a column and card
  */
-export function checkSuggestion(columnId: number, cardId?: number): { hasSuggestion: boolean, suggestion?: string | null } | undefined {
+export function checkSuggestion(columnId: number, cardId?: number): { hasSuggestion: boolean, suggestion?: string | PromptSuggestion | null } | undefined {
   const data = suggestionCache.get(columnId);
   
   // No data found

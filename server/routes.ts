@@ -543,7 +543,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
             if (promptSuggestion) {
-              console.log(`Suggestion content: ${promptSuggestion.substring(0, 100)}${promptSuggestion.length > 100 ? '...' : ''}`);
+              // Log a preview of the suggestion content
+              const suggestedInstructions = promptSuggestion.suggestedInstructions;
+              console.log(`Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
             }
           } catch (error) {
             console.error("Error generating prompt suggestion:", error);
