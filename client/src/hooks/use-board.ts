@@ -148,6 +148,7 @@ export function useBoard(boardId: number) {
     }) => {
       return apiRequest("PATCH", `/api/cards/${data.cardId}/move`, {
         destinationColumnId: data.destinationColumnId,
+        sourceColumnId: data.sourceColumnId, // Add source column ID for prompt improvement analysis
         position: data.position || 0,
       });
     },

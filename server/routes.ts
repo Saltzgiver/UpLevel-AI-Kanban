@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sourceColumn.gptInstructions || "", 
               cardContext,
               chats,
-              sourceColumn.apiKey
+              sourceColumn.apiKey || undefined
             );
             
             // Log the suggestion for now (in a future chunk, this would be shown to the user in the UI)

@@ -222,6 +222,7 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
         // Make the actual API request but don't await it immediately to maintain smooth UI
         const apiPromise = apiRequest("PATCH", `/api/cards/${cardId}/move`, {
           destinationColumnId: destColId,
+          sourceColumnId: sourceColId,  // Add source column ID for prompt improvement analysis
           position: destination.index,
         });
         
@@ -425,6 +426,7 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
       // Make the actual API request but don't await it immediately to maintain smooth UI
       const apiPromise = apiRequest("PATCH", `/api/cards/${cardId}/move`, {
         destinationColumnId,
+        sourceColumnId,  // Add source column ID for prompt improvement analysis
         position: 0, // Place at the top of the destination column
       });
       
