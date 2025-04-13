@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { DndProvider } from "@/components/board/board";
 import TestUploadPage from "@/pages/test-upload";
+import { ModalProvider } from "@/contexts/ModalContext";
 
 function Router() {
   return (
@@ -20,10 +21,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <DndProvider>
-        <Router />
-        <Toaster />
-      </DndProvider>
+      <ModalProvider>
+        <DndProvider>
+          <Router />
+          <Toaster />
+        </DndProvider>
+      </ModalProvider>
     </QueryClientProvider>
   );
 }

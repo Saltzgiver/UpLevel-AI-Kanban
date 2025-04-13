@@ -9,7 +9,8 @@ import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Sparkles } from "lucide-react";
+import { Check, X, Sparkles, AlertCircle, Diff } from "lucide-react";
+import { useModalContext } from "@/contexts/ModalContext";
 
 interface AssignGPTModalProps {
   column: Column;
@@ -82,8 +83,11 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
   const [gptColor, setGptColor] = useState<string>(column.gptColor || "");
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [suggestion, setSuggestion] = useState<{ rationale: string; suggestedInstructions: string } | null>(null);
+  const [showingSuggestion, setShowingSuggestion] = useState<boolean>(false);
   const { toast } = useToast();
   const modalRef = useRef<HTMLDivElement>(null);
+  const { modalState } = useModalContext();
   
   // Get the next color automatically when the modal opens for a new GPT configuration
   useEffect(() => {
@@ -99,14 +103,47 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
     }
   }, [isOpen, column.gptAssigned, column.gptColor]);
   
-  // Reset form state when modal opens
+  // Reset form state when modal opens and fetch suggestion if in suggestion mode
   useEffect(() => {
-    if (isOpen) {
-      setGptName(column.gptName || "GPT Assistant");
-      setInstructions(column.gptInstructions || "");
-      setAutoTrigger(column.autoTrigger !== false);
+    if (!isOpen) return;
+    
+    setGptName(column.gptName || "GPT Assistant");
+    setInstructions(column.gptInstructions || "");
+    setAutoTrigger(column.autoTrigger !== false);
+    
+    // Check if we're in suggestion mode and fetch suggestion
+    if (modalState.isSuggestionMode && modalState.columnId === column.id && modalState.cardId) {
+      const fetchSuggestion = async () => {
+        try {
+          setIsSubmitting(true);
+          const response = await apiRequest(
+            "GET", 
+            `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
+          );
+          
+          if (response && response.suggestion) {
+            setSuggestion(response.suggestion);
+            setShowingSuggestion(true);
+          }
+        } catch (error) {
+          console.error("Failed to fetch suggestion:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load suggestion",
+            variant: "destructive"
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+      
+      fetchSuggestion();
+    } else {
+      // Reset suggestion state when not in suggestion mode
+      setSuggestion(null);
+      setShowingSuggestion(false);
     }
-  }, [isOpen, column]);
+  }, [isOpen, column, modalState, toast]);
 
   const handleSubmit = async () => {
     if (!instructions.trim()) {
@@ -167,6 +204,33 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
 
   if (!isOpen) return null;
 
+  // Additional handlers for suggestion mode
+  const handleApplySuggestion = () => {
+    if (suggestion && suggestion.suggestedInstructions) {
+      setInstructions(suggestion.suggestedInstructions);
+      setShowingSuggestion(false);
+      
+      toast({
+        title: "Suggestion Applied",
+        description: "The suggested instructions have been applied. Review and save to confirm."
+      });
+    }
+  };
+  
+  const handleDismissSuggestion = () => {
+    // Just close the modal
+    onClose();
+    
+    // Clear suggestion from server
+    try {
+      if (modalState.columnId) {
+        apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion`, {});
+      }
+    } catch (error) {
+      console.error("Failed to clear suggestion:", error);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
       <div 
@@ -177,8 +241,14 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
           <div className="flex-1 flex items-center">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-medium">Configure AI Assistant</h2>
+              {modalState.isSuggestionMode ? (
+                <AlertCircle className="h-5 w-5 text-orange-500" />
+              ) : (
+                <Sparkles className="h-5 w-5 text-primary" />
+              )}
+              <h2 className="text-xl font-medium">
+                {modalState.isSuggestionMode ? "Review Prompt Suggestion" : "Configure AI Assistant"}
+              </h2>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
@@ -187,11 +257,34 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
         </div>
         
         {/* Column name display */}
-        <div className="px-6 pt-4 pb-2 flex">
+        <div className="px-6 pt-4 pb-2 flex items-center">
           <Badge variant="outline" className="text-sm py-1 bg-gray-50">
             {column.name}
           </Badge>
+          
+          {modalState.isSuggestionMode && (
+            <Badge variant="outline" className="text-sm ml-2 py-1 bg-amber-50 text-amber-700 border-amber-200">
+              Suggestion Available
+            </Badge>
+          )}
         </div>
+        
+        {/* Suggestion explanation if in suggestion mode */}
+        {modalState.isSuggestionMode && suggestion && (
+          <div className="px-6 py-3 bg-amber-50 border-y border-amber-100">
+            <div className="flex items-start mb-2">
+              <Diff className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-amber-700">
+                The system has analyzed past interactions with this column and suggests improvements to the prompt.
+              </p>
+            </div>
+            
+            <div className="bg-white border border-amber-200 rounded-md p-3 mb-3">
+              <h3 className="text-sm font-medium text-amber-800 mb-2">Suggestion Rationale:</h3>
+              <p className="text-sm text-gray-700">{suggestion.rationale}</p>
+            </div>
+          </div>
+        )}
         
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-2">
@@ -213,14 +306,52 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
             
             {/* Instructions */}
             <div className="space-y-2">
-              <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
+                
+                {modalState.isSuggestionMode && suggestion && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs py-0.5 px-2 bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100"
+                    onClick={() => setShowingSuggestion(!showingSuggestion)}
+                  >
+                    {showingSuggestion ? "Hide Suggestion" : "Show Suggestion"}
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Show suggested instructions if in suggestion mode and showingSuggestion is true */}
+              {modalState.isSuggestionMode && suggestion && showingSuggestion && (
+                <div className="relative mb-2">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
+                  <Textarea 
+                    placeholder="Suggested instructions..."
+                    rows={4}
+                    value={suggestion.suggestedInstructions}
+                    readOnly
+                    className="w-full resize-none bg-amber-50 border-amber-200 pl-3"
+                  />
+                  <div className="flex justify-end mt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={handleApplySuggestion}
+                    >
+                      Apply Suggestion
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Current instructions */}
               <Textarea 
                 id="instructions" 
                 placeholder="Write detailed instructions for how the AI should process cards in this column..." 
                 rows={4}
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                className="w-full resize-none"
+                className={`w-full resize-none ${modalState.isSuggestionMode && suggestion && showingSuggestion ? 'border-gray-300 bg-white' : ''}`}
               />
               <p className="text-xs text-muted-foreground">
                 Example: "Generate a poem based on the card title and description"
@@ -267,18 +398,51 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
         </div>
         
         {/* Footer with actions */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting} size="sm">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700 text-white"
-            size="sm"
-          >
-            {isSubmitting ? "Saving..." : "Save Configuration"}
-          </Button>
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-between">
+          <div>
+            {modalState.isSuggestionMode && suggestion && showingSuggestion && (
+              <Button 
+                variant="outline"
+                onClick={handleApplySuggestion}
+                disabled={isSubmitting}
+                className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                size="sm"
+              >
+                Apply Suggestion
+              </Button>
+            )}
+          </div>
+          
+          <div className="flex space-x-2">
+            {modalState.isSuggestionMode ? (
+              <Button 
+                variant="outline" 
+                onClick={handleDismissSuggestion} 
+                disabled={isSubmitting} 
+                size="sm"
+              >
+                Dismiss
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={isSubmitting} 
+                size="sm"
+              >
+                Cancel
+              </Button>
+            )}
+            
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSubmitting}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+            >
+              {isSubmitting ? "Saving..." : "Save Configuration"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
