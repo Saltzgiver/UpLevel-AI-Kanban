@@ -32,21 +32,25 @@ export function useBoard(boardId: number) {
     let attempts = 0;
     const maxAttempts = 10;
     
-    console.log(`Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
+    console.log(`🔍 POLLING: Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
     
     const intervalId = setInterval(async () => {
       attempts++;
-      console.log(`Polling attempt ${attempts} for suggestion availability`);
+      console.log(`🔍 POLLING: Attempt ${attempts} for suggestion availability (column ${columnId}, card ${cardId})`);
       
       try {
         // Check if a suggestion is available
+        console.log(`🔍 POLLING: Sending status check request to /api/columns/${columnId}/prompt-suggestion/status/${cardId}`);
         const response = await apiRequest(
           "GET", 
           `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
         );
         
+        console.log(`🔍 POLLING: Got response:`, response);
+        
         if (response?.hasSuggestion) {
           // Stop polling and show toast
+          console.log(`🔍 POLLING: Suggestion available! Stopping poll and showing toast`);
           clearInterval(intervalId);
           setPollingState(prev => prev ? { ...prev, active: false } : null);
           
@@ -227,15 +231,26 @@ export function useBoard(boardId: number) {
       const columns = boardQuery.data?.columns || [];
       const sourceColumn = columns.find((col: any) => col.id === data.sourceColumnId);
       
+      console.log(`🔍 MOVE CARD: Column data for source column ${data.sourceColumnId}:`, 
+        sourceColumn ? {
+          id: sourceColumn.id,
+          name: sourceColumn.name,
+          gptAssigned: sourceColumn.gptAssigned,
+          gptName: sourceColumn.gptName
+        } : 'not found'
+      );
+      
       if (sourceColumn?.gptAssigned) {
         // Start polling for suggestion availability
-        console.log(`Starting to poll for suggestion availability for column ${data.sourceColumnId}, card ${data.cardId}`);
+        console.log(`🔍 MOVE CARD: Starting polling for suggestion - column ${data.sourceColumnId}, card ${data.cardId}`);
         setPollingState({
           columnId: data.sourceColumnId,
           cardId: data.cardId,
           sourceColumnName: sourceColumn.name,
           active: true
         });
+      } else {
+        console.log(`🔍 MOVE CARD: Not starting polling - source column ${data.sourceColumnId} is not GPT-enabled`);
       }
     },
     onError: () => {

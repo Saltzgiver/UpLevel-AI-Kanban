@@ -328,9 +328,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      console.log(`Checking suggestion status for column ${columnId} and card ${cardId}`);
+      console.log(`📋 PROMPT ASSISTANT: Checking suggestion status for column ${columnId} and card ${cardId}`);
       
       const status = checkSuggestion(columnId, cardId);
+      
+      console.log(`📋 PROMPT ASSISTANT: Responding with status: ${status ? `has suggestion: ${status.hasSuggestion}` : 'no cache entry'}`);
       
       return res.json({
         hasSuggestion: status?.hasSuggestion || false
