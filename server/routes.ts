@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { triggerGPTProcessing, processChat, generateImage } from "./openai";
+import { triggerGPTProcessing, processChat, generateImage, getPromptSuggestion } from "./openai";
 import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";

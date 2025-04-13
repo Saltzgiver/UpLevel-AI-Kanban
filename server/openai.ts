@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { ChatCompletionContentPart, ChatCompletionMessageParam } from "openai/resources";
 import { storage } from "./storage";
-import { Column, Attachment } from "@shared/schema";
+import { Column, Attachment, Chat } from "@shared/schema";
 import { extractCSVContent, createCSVAttachmentFromText } from './csv-helper';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -792,4 +792,95 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     console.error("Error generating image with DALL-E:", error);
     throw error;
   }
+}
+
+/**
+ * Analyzes a card's interaction history to suggest improvements for a column's prompt
+ * This function is triggered when a card is moved from one column to another
+ * 
+ * @param sourceColumnInstructions - The current instructions from the source column
+ * @param cardContext - Object containing card details (title, description, etc)
+ * @param chats - Array of chat messages associated with the card while in the source column
+ * @param apiKey - Optional OpenAI API key to use for the analysis
+ * @returns Promise resolving to a suggested prompt improvement or null if no suggestion
+ */
+export async function getPromptSuggestion(
+  sourceColumnInstructions: string,
+  cardContext: { 
+    title: string; 
+    description: string | null; 
+    attachments?: { filename: string; fileType: string }[] 
+  },
+  chats: Chat[],
+  apiKey?: string
+): Promise<string | null> {
+  // Log inputs for testing/verification
+  console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
+  console.log(`Source Column Instructions: ${sourceColumnInstructions}`);
+  console.log(`Card Title: ${cardContext.title}`);
+  console.log(`Card Description: ${cardContext.description || "No description"}`);
+  
+  if (cardContext.attachments && cardContext.attachments.length > 0) {
+    console.log(`Attachments: ${cardContext.attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}`);
+  } else {
+    console.log(`Attachments: None`);
+  }
+  
+  console.log(`Chat History: ${chats.length} messages`);
+  chats.forEach((chat, index) => {
+    console.log(`Chat #${index + 1} - ${chat.role}: ${chat.content.substring(0, 100)}${chat.content.length > 100 ? '...' : ''}`);
+  });
+  
+  // Format meta-prompt that will guide the AI model
+  const metaPrompt = `
+# Prompt Improvement Assistant
+
+## Context
+You are a specialized AI designed to analyze card interactions and suggest improvements to column prompts in a Kanban board application.
+
+## Your Task
+Analyze the following information to identify potential improvements for the column's prompt instructions:
+
+1. Current column prompt instructions
+2. A card that was processed using these instructions
+3. The conversation history between the user and AI for this card
+
+## Current Column Prompt Instructions
+\`\`\`
+${sourceColumnInstructions || "No specific instructions provided"}
+\`\`\`
+
+## Card Details
+- Title: ${cardContext.title}
+- Description: ${cardContext.description || "No description provided"}
+${cardContext.attachments && cardContext.attachments.length > 0 
+  ? `- Attachments: ${cardContext.attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}` 
+  : '- No attachments'}
+
+## Conversation History
+${chats.map(chat => `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}`).join('\n\n')}
+
+## Analysis Guidelines
+1. Identify patterns in the conversation that suggest the initial prompt could be improved
+2. Look for clarification questions the user had to ask that could have been addressed in the initial prompt
+3. Consider information that had to be extracted or explained that could be systematically incorporated
+4. Focus on reusable patterns, not one-off requests or special cases
+5. Consider if the conversation revealed misunderstandings about what the AI should do
+
+## Response Format
+Respond in JSON format with the following structure:
+{
+  "hasImprovement": true/false, // Whether you've identified potential improvements
+  "suggestion": "Your suggested new prompt instructions", // Only if hasImprovement is true
+  "reasoning": "Explanation of why this suggestion improves the prompt" // Your analysis
+}
+
+If no meaningful improvements can be made, set hasImprovement to false and provide your reasoning.
+`;
+
+  console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
+  console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
+  
+  // For Chunk 1, just return null as specified - the actual AI request will be implemented later
+  return null;
 }
