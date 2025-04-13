@@ -229,6 +229,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error reordering cards" });
     }
   });
+  
+  // Prompt Assistant endpoints
+  
+  // Check if a prompt suggestion is available for a column
+  app.get("/api/columns/:id/prompt-suggestion/status", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      console.log(`Checking suggestion status for column ${columnId}`);
+      
+      const status = checkSuggestion(columnId);
+      
+      return res.json({
+        hasSuggestion: status?.hasSuggestion || false
+      });
+    } catch (error) {
+      console.error("Error checking suggestion status:", error);
+      return res.status(500).json({ message: "Error checking suggestion status" });
+    }
+  });
+  
+  // Check if a prompt suggestion is available for a specific card in a column
+  app.get("/api/columns/:id/prompt-suggestion/status/:cardId", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const cardId = parseInt(req.params.cardId);
+      console.log(`Checking suggestion status for column ${columnId} and card ${cardId}`);
+      
+      const status = checkSuggestion(columnId, cardId);
+      
+      return res.json({
+        hasSuggestion: status?.hasSuggestion || false
+      });
+    } catch (error) {
+      console.error("Error checking suggestion status for card:", error);
+      return res.status(500).json({ message: "Error checking suggestion status for card" });
+    }
+  });
+  
+  // Get the actual suggestion content for a column
+  app.get("/api/columns/:id/prompt-suggestion", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      console.log(`Retrieving suggestion for column ${columnId}`);
+      
+      const status = checkSuggestion(columnId);
+      
+      if (!status || !status.hasSuggestion) {
+        return res.status(404).json({ message: "No suggestion available for this column" });
+      }
+      
+      // Get current column data to include with the response
+      const column = await storage.getColumnById(columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      return res.json({
+        currentInstructions: column.gptInstructions || "",
+        suggestedInstructions: status.suggestion || "",
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error("Error retrieving suggestion:", error);
+      return res.status(500).json({ message: "Error retrieving suggestion" });
+    }
+  });
+  
+  // Accept a suggestion and update the column's instructions
+  app.post("/api/columns/:id/prompt-suggestion/accept", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      console.log(`Accepting suggestion for column ${columnId}`);
+      
+      // Get the suggestion
+      const status = checkSuggestion(columnId);
+      
+      if (!status || !status.hasSuggestion) {
+        return res.status(404).json({ message: "No suggestion available for this column" });
+      }
+      
+      // Optional - allow overriding the suggestion with edited text
+      const { instructions } = req.body;
+      const updatedInstructions = instructions || status.suggestion;
+      
+      if (!updatedInstructions) {
+        return res.status(400).json({ message: "No instructions provided and no suggestion available" });
+      }
+      
+      // Update the column with the new instructions
+      const column = await storage.updateColumn(columnId, { 
+        gptInstructions: updatedInstructions 
+      });
+      
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Clear the suggestion from cache as it's been accepted
+      clearSuggestion(columnId);
+      
+      return res.json({
+        message: "Suggestion accepted and column updated",
+        column
+      });
+    } catch (error) {
+      console.error("Error accepting suggestion:", error);
+      return res.status(500).json({ message: "Error accepting suggestion" });
+    }
+  });
+  
+  // Reject a suggestion
+  app.post("/api/columns/:id/prompt-suggestion/reject", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      console.log(`Rejecting suggestion for column ${columnId}`);
+      
+      // Clear the suggestion from cache
+      clearSuggestion(columnId);
+      
+      return res.json({
+        message: "Suggestion rejected and cleared"
+      });
+    } catch (error) {
+      console.error("Error rejecting suggestion:", error);
+      return res.status(500).json({ message: "Error rejecting suggestion" });
+    }
+  });
 
   // CARD ROUTES
   app.post("/api/cards", async (req, res) => {
