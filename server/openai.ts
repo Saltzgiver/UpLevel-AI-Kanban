@@ -900,7 +900,8 @@ RATIONALE: No improvements needed because [your reasoning]
   
   try {
     // Initialize OpenAI client with the provided API key
-    const openai = new OpenAI({ apiKey });
+    // Use getOpenAIClient to handle "from_env" properly
+    const openai = getOpenAIClient(apiKey);
     
     // Call the OpenAI API with our meta-prompt using the newer model
     const response = await openai.chat.completions.create({

@@ -554,12 +554,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               attachments: cardWithDetails.attachments || []
             };
             
+            // Determine the API key to use
+            // If sourceColumn.apiKey is "from_env" or not specified, we'll use the environment variable
+            // Otherwise, use the column's specific API key
+            let apiKeyToUse = undefined;
+            if (sourceColumn.apiKey && sourceColumn.apiKey !== "from_env") {
+              apiKeyToUse = sourceColumn.apiKey;
+            } else {
+              // This will use the OPENAI_API_KEY environment variable
+              apiKeyToUse = process.env.OPENAI_API_KEY;
+            }
+
+            // Log the API key usage mode without exposing the actual key
+            console.log(`Using API key for prompt suggestion: ${sourceColumn.apiKey === "from_env" ? "from environment variable" : (sourceColumn.apiKey ? "from column settings" : "from environment variable")}`);
+            
             // Get prompt improvement suggestion
             const promptSuggestion = await getPromptSuggestion(
               sourceColumn.gptInstructions || "", 
               cardContext,
               chats,
-              sourceColumn.apiKey || undefined
+              apiKeyToUse
             );
             
             // Store the suggestion in the cache
