@@ -248,20 +248,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cachedSuggestion = checkSuggestion(columnId, cardId);
       
       if (cachedSuggestion?.hasSuggestion && cachedSuggestion.suggestion) {
-        // Attempt to parse the cached suggestion
-        try {
-          // Since the cached suggestion is stored as a string, we need to check if it's
-          // already in the { rationale, suggestedInstructions } format or just a plain string
-          const suggestion = JSON.parse(cachedSuggestion.suggestion);
-          return res.json({ suggestion });
-        } catch (e) {
-          // If it's not a valid JSON, it's probably just a string (from older implementation)
+        // Handle the cached suggestion based on its type
+        if (typeof cachedSuggestion.suggestion === 'string') {
+          // If it's a string from an older implementation, convert to the new format
           return res.json({ 
             suggestion: {
               rationale: "Suggested improvements for column instructions",
-              suggestedInstructions: cachedSuggestion.suggestion
+              suggestedInstructions: cachedSuggestion.suggestion as string
             } 
           });
+        } else {
+          // If it's already in the structured format, return it directly
+          return res.json({ suggestion: cachedSuggestion.suggestion });
         }
       }
       
@@ -361,11 +359,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Column not found" });
       }
       
-      return res.json({
-        currentInstructions: column.gptInstructions || "",
-        suggestedInstructions: status.suggestion || "",
-        timestamp: Date.now()
-      });
+      // Format response based on suggestion type
+      if (typeof status.suggestion === 'string') {
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: status.suggestion || "",
+          timestamp: Date.now()
+        });
+      } else if (status.suggestion && typeof status.suggestion === 'object') {
+        // Handle structured suggestion format
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: status.suggestion.suggestedInstructions,
+          rationale: status.suggestion.rationale,
+          timestamp: Date.now()
+        });
+      } else {
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: "",
+          timestamp: Date.now()
+        });
+      }
     } catch (error) {
       console.error("Error retrieving suggestion:", error);
       return res.status(500).json({ message: "Error retrieving suggestion" });
@@ -387,7 +402,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Optional - allow overriding the suggestion with edited text
       const { instructions } = req.body;
-      const updatedInstructions = instructions || status.suggestion;
+      let updatedInstructions = instructions;
+      
+      // If no explicit instructions provided, use the suggestion
+      if (!updatedInstructions) {
+        if (typeof status.suggestion === 'string') {
+          updatedInstructions = status.suggestion;
+        } else if (status.suggestion && typeof status.suggestion === 'object') {
+          updatedInstructions = status.suggestion.suggestedInstructions;
+        }
+      }
       
       if (!updatedInstructions) {
         return res.status(400).json({ message: "No instructions provided and no suggestion available" });
