@@ -42,6 +42,8 @@ async function runTest() {
   // Use the default API key from the environment
   const apiKey = process.env.OPENAI_API_KEY || null;
   
+  console.log('Using OpenAI API key:', apiKey ? 'Found key (starts with: ' + apiKey.substring(0, 3) + '...)' : 'No key found');
+  
   try {
     // Call the function
     const result = await getPromptSuggestion(
