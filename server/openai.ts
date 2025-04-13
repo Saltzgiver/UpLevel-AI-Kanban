@@ -802,7 +802,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
  * @param cardContext - Object containing card details (title, description, etc)
  * @param chats - Array of chat messages associated with the card while in the source column
  * @param apiKey - Optional OpenAI API key to use for the analysis
- * @returns Promise resolving to a suggested prompt improvement or null if no suggestion
+ * @returns Promise resolving to an object with rationale and suggestedInstructions, or null if no suggestion
  */
 export async function getPromptSuggestion(
   sourceColumnInstructions: string,
@@ -813,7 +813,7 @@ export async function getPromptSuggestion(
   },
   chats: Chat[],
   apiKey?: string
-): Promise<string | null> {
+): Promise<{ rationale: string; suggestedInstructions: string } | null> {
   // Log inputs for testing/verification
   console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
   console.log(`Source Column Instructions: ${sourceColumnInstructions}`);
@@ -868,17 +868,19 @@ ${chats.map(chat => `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.conten
 5. Consider if the conversation revealed misunderstandings about what the AI should do
 
 ## Response Format
-Respond in JSON format with the following structure:
-{
-  "hasImprovement": true/false, // Whether you've identified potential improvements
-  "suggestion": "Your suggested new prompt instructions", // Only if hasImprovement is true
-  "reasoning": "Explanation of why this suggestion improves the prompt" // Your analysis
-}
+First provide a detailed rationale for your suggestion on a single line starting with "RATIONALE: ".
+Then, on a new line, provide your suggested prompt instructions.
 
-If no meaningful improvements can be made, set hasImprovement to false and provide your reasoning.
+Example:
+RATIONALE: The original prompt lacked specific instructions about including environmental impact metrics, which the user had to request separately.
+Create compelling marketing copy that emphasizes environmental impact metrics and sustainability benefits. Include specific numbers about waste reduction and carbon footprint when possible.
+
+If no meaningful improvements can be made, simply respond with:
+RATIONALE: No improvements needed because [your reasoning]
+[original instructions]
 `;
 
-  console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
+  console.log(`\nMeta-Prompt: ${PROMPT_ASSISTANT_META_PROMPT.substring(0, 200)}...[truncated for log]`);
   console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
   
   // For testing purposes, we'll skip the actual API call if no API key is provided
@@ -890,22 +892,25 @@ If no meaningful improvements can be made, set hasImprovement to false and provi
   // For testing purposes, if the API key is "test-api-key", return a test suggestion
   if (apiKey === "test-api-key") {
     console.log("Test API key detected, returning mock suggestion for testing");
-    return "Create compelling marketing copy for eco-friendly products that emphasizes environmental impact statistics, sustainability benefits, and long-term value. Include specific numbers about plastic waste reduction.";
+    return {
+      rationale: "The original prompt lacked specific instructions about including environmental impact metrics.",
+      suggestedInstructions: "Create compelling marketing copy for eco-friendly products that emphasizes environmental impact statistics, sustainability benefits, and long-term value. Include specific numbers about plastic waste reduction."
+    };
   }
   
   try {
     // Initialize OpenAI client with the provided API key
     const openai = new OpenAI({ apiKey });
     
-    // Call the OpenAI API with our meta-prompt
+    // Call the OpenAI API with our meta-prompt using the newer model
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo", // Use a powerful model for this analysis task
+      model: OPENAI_MODEL, // Use the default model defined globally
       messages: [
         { role: "system", content: "You are an expert AI prompt engineer that helps improve GPT prompts based on user interactions." },
-        { role: "user", content: metaPrompt }
+        { role: "user", content: PROMPT_ASSISTANT_META_PROMPT }
       ],
-      temperature: 0.7,
-      max_tokens: 1000,
+      temperature: 0.5, // Lower temperature for more focused output
+      max_tokens: 1500,
     });
     
     // Parse the response content
@@ -915,28 +920,49 @@ If no meaningful improvements can be made, set hasImprovement to false and provi
       return null;
     }
     
-    // Try to extract JSON from the content
+    // Log the raw suggestion for debugging
+    console.log("Raw Suggestion from AI:", content);
+    
+    // Parse the response according to our format
+    // Expected format is:
+    // RATIONALE: [rationale text]
+    // [suggested instructions]
+    
     try {
-      // Look for JSON in the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.log("No JSON found in response:", content);
+      // Extract the rationale (first line starting with RATIONALE:)
+      const rationaleMatch = content.match(/^RATIONALE:\s*(.+)$/m);
+      if (!rationaleMatch) {
+        console.log("Could not find rationale in the response");
         return null;
       }
       
-      const parsedResponse = JSON.parse(jsonMatch[0]);
+      const rationale = rationaleMatch[1].trim();
       
-      // Check if there's an improvement suggestion
-      if (parsedResponse.hasImprovement && parsedResponse.suggestion) {
-        console.log("Prompt improvement suggestion:", parsedResponse.suggestion);
-        console.log("Reasoning:", parsedResponse.reasoning);
-        return parsedResponse.suggestion;
-      } else {
-        console.log("No improvement needed per analysis:", parsedResponse.reasoning);
+      // Check if this is a "no improvements needed" response
+      if (rationale.toLowerCase().includes("no improvements needed") || 
+          rationale.toLowerCase().includes("no improvement needed")) {
+        console.log("AI determined no improvements are needed:", rationale);
         return null;
       }
-    } catch (jsonError) {
-      console.error("Error parsing JSON from API response:", jsonError);
+      
+      // Extract the suggested instructions (everything after the RATIONALE line)
+      const instructionsText = content
+        .substring(content.indexOf(rationaleMatch[0]) + rationaleMatch[0].length)
+        .trim();
+      
+      if (!instructionsText) {
+        console.log("Could not find suggested instructions in the response");
+        return null;
+      }
+      
+      // Return the structured response
+      return {
+        rationale,
+        suggestedInstructions: instructionsText
+      };
+      
+    } catch (parseError) {
+      console.error("Error parsing AI response:", parseError);
       console.log("Raw response:", content);
       return null;
     }
