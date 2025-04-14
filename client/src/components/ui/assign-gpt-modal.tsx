@@ -17,6 +17,8 @@ interface AssignGPTModalProps {
   column: Column;
   isOpen: boolean;
   onClose: () => void;
+  isSuggestionMode?: boolean;
+  cardId?: number | null;
 }
 
 // Define color palette
@@ -78,7 +80,7 @@ const getNextColorInRotation = async (): Promise<string> => {
   }
 };
 
-export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps) {
+export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, cardId }: AssignGPTModalProps) {
   const [gptName, setGptName] = useState<string>(column.gptName || "GPT Assistant");
   const [instructions, setInstructions] = useState<string>(column.gptInstructions || "");
   const [gptColor, setGptColor] = useState<string>(column.gptColor || "");

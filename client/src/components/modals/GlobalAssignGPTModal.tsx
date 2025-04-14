@@ -35,6 +35,8 @@ export function GlobalAssignGPTModal() {
       column={columnWithCards}
       isOpen={isOpen}
       onClose={closeModal}
+      isSuggestionMode={isSuggestionMode}
+      cardId={cardId}
     />
   );
 }
