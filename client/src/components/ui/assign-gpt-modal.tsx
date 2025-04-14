@@ -127,20 +127,46 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
           
           // Process suggestion based on different response formats
           if (data) {
-            // Check for the suggestion property (format from cache)
-            if ('suggestion' in data && data.suggestion) {
-              setSuggestion(data.suggestion);
-              setShowingSuggestion(true);
-            } 
-            // Check for suggestedInstructions (format from direct API response)
-            else if ('suggestedInstructions' in data && data.suggestedInstructions) {
-              setSuggestion({
-                suggestedInstructions: data.suggestedInstructions,
-                rationale: data.rationale || "Based on analysis of past card interactions"
-              });
-              setShowingSuggestion(true);
+            console.log("Processing suggestion data:", data);
+            
+            // Check for the hasSuggestion property first
+            if (data.hasSuggestion === true) {
+              // Handle properly formatted suggestion with both fields
+              if (data.suggestedInstructions && data.rationale) {
+                setSuggestion({
+                  suggestedInstructions: data.suggestedInstructions,
+                  rationale: data.rationale
+                });
+                setShowingSuggestion(true);
+                console.log("Processed structured suggestion with both fields");
+              }
+              // Handle suggestion with only suggestedInstructions
+              else if (data.suggestedInstructions) {
+                setSuggestion({
+                  suggestedInstructions: data.suggestedInstructions,
+                  rationale: "Based on analysis of past card interactions"
+                });
+                setShowingSuggestion(true);
+                console.log("Processed suggestion with only suggestedInstructions");
+              }
+              // Handle legacy format with suggestion property
+              else if ('suggestion' in data && data.suggestion) {
+                // Handle both string and object formats
+                if (typeof data.suggestion === 'string') {
+                  setSuggestion({
+                    suggestedInstructions: data.suggestion,
+                    rationale: "Based on analysis of past card interactions"
+                  });
+                } else if (typeof data.suggestion === 'object' && data.suggestion !== null) {
+                  setSuggestion(data.suggestion);
+                }
+                setShowingSuggestion(true);
+                console.log("Processed legacy suggestion format");
+              } else {
+                console.warn("Received hasSuggestion=true but no valid suggestion content:", data);
+              }
             } else {
-              console.warn("Received suggestion data but in unexpected format:", data);
+              console.warn("Received suggestion data but hasSuggestion is not true:", data);
             }
           }
         } catch (error) {

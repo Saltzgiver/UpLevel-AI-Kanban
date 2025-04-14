@@ -368,5 +368,6 @@ export function useBoard(boardId: number) {
     moveCard,
     assignGPTToColumn,
     triggerGPTProcessing,
+    checkSuggestion, // Adding manual check function for debugging
   };
 }

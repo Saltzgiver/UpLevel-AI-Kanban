@@ -384,45 +384,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      console.log(`Retrieving suggestion for column ${columnId}`);
+      console.log(`[SUGGESTION_RETRIEVAL] Retrieving suggestion for column ${columnId}`);
       
       const status = checkSuggestion(columnId);
+      console.log(`[SUGGESTION_RETRIEVAL] Cache status for column ${columnId}:`, 
+        status ? JSON.stringify(status, null, 2) : 'No cache entry found');
       
       if (!status || !status.hasSuggestion) {
-        return res.status(404).json({ message: "No suggestion available for this column" });
+        console.log(`[SUGGESTION_RETRIEVAL] No suggestion found in cache for column ${columnId}`);
+        return res.status(404).json({ 
+          message: "No suggestion available for this column",
+          hasSuggestion: false
+        });
       }
       
       // Get current column data to include with the response
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        return res.status(404).json({ message: "Column not found" });
+        console.log(`[SUGGESTION_RETRIEVAL] Column ${columnId} not found in database`);
+        return res.status(404).json({ 
+          message: "Column not found",
+          hasSuggestion: false
+        });
+      }
+      
+      // Enhanced debugging for suggestion content
+      if (status.suggestion) {
+        if (typeof status.suggestion === 'string') {
+          console.log(`[SUGGESTION_RETRIEVAL] Found string suggestion for column ${columnId}. Length: ${status.suggestion.length}`);
+        } else if (typeof status.suggestion === 'object') {
+          console.log(`[SUGGESTION_RETRIEVAL] Found object suggestion for column ${columnId}. suggestedInstructions length: ${status.suggestion.suggestedInstructions?.length || 0}, has rationale: ${!!status.suggestion.rationale}`);
+        } else {
+          console.log(`[SUGGESTION_RETRIEVAL] Found suggestion for column ${columnId} but in unexpected format:`, typeof status.suggestion);
+        }
+      } else {
+        console.log(`[SUGGESTION_RETRIEVAL] status.hasSuggestion is true but status.suggestion is empty for column ${columnId}`);
       }
       
       // Format response based on suggestion type
+      // Define the response type with all possible fields
+      type SuggestionResponse = {
+        hasSuggestion: boolean;
+        currentInstructions: string;
+        timestamp: number;
+        suggestedInstructions?: string;
+        rationale?: string;
+      };
+      
+      // Create base response
+      let responseData: SuggestionResponse = {
+        hasSuggestion: true,
+        currentInstructions: column.gptInstructions || "",
+        timestamp: Date.now()
+      };
+      
       if (typeof status.suggestion === 'string') {
-        return res.json({
-          currentInstructions: column.gptInstructions || "",
-          suggestedInstructions: status.suggestion || "",
-          timestamp: Date.now()
-        });
+        responseData.suggestedInstructions = status.suggestion;
+        responseData.rationale = "Based on analysis of past card interactions";
       } else if (status.suggestion && typeof status.suggestion === 'object') {
         // Handle structured suggestion format
-        return res.json({
-          currentInstructions: column.gptInstructions || "",
-          suggestedInstructions: status.suggestion.suggestedInstructions,
-          rationale: status.suggestion.rationale,
-          timestamp: Date.now()
-        });
+        responseData.suggestedInstructions = status.suggestion.suggestedInstructions || "";
+        responseData.rationale = status.suggestion.rationale || "Based on analysis of past card interactions";
       } else {
-        return res.json({
-          currentInstructions: column.gptInstructions || "",
-          suggestedInstructions: "",
-          timestamp: Date.now()
-        });
+        // No valid suggestion format, but we still reported hasSuggestion true
+        responseData.suggestedInstructions = "";
+        responseData.rationale = "Could not parse suggestion format";
       }
+      
+      console.log(`[SUGGESTION_RETRIEVAL] Returning suggestion response to client:`, responseData);
+      return res.json(responseData);
     } catch (error) {
-      console.error("Error retrieving suggestion:", error);
-      return res.status(500).json({ message: "Error retrieving suggestion" });
+      console.error("[SUGGESTION_RETRIEVAL] Error retrieving suggestion:", error);
+      return res.status(500).json({ 
+        message: "Error retrieving suggestion",
+        hasSuggestion: false
+      });
     }
   });
   
