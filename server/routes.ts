@@ -547,7 +547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
       if (sourceColumn && sourceColumn.gptAssigned) {
-        console.log(`[PROMPT ASSISTANT] Card ${cardId} moved from column ${sourceColumn.id} (${sourceColumn.title}) - Analyzing for suggestions`);
+        console.log(`[PROMPT ASSISTANT] Card ${cardId} moved from column ${sourceColumn.id} (${sourceColumn.name}) - Analyzing for suggestions`);
         
         // Run this analysis asynchronously so it doesn't block the main flow
         setTimeout(async () => {

@@ -1,43 +1,46 @@
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useModalContext } from '@/contexts/ModalContext';
 import { ToastAction } from '@/components/ui/toast';
+import { useModalContext } from '@/contexts/ModalContext';
 
 /**
- * This component listens for custom events from the fetch interceptor
- * and shows toast notifications when suggestions are available.
- * It connects the network-level interceptor with the React components.
+ * SuggestionListener Component
+ * 
+ * This component listens for custom events triggered by the network interceptor
+ * when a card is moved between columns and a suggestion is available.
+ * It handles displaying toast notifications and opening the suggestion modal.
  */
 export function SuggestionListener() {
   const { toast } = useToast();
   const { openInSuggestionMode } = useModalContext();
 
   useEffect(() => {
-    // Event handler function
-    const handleSuggestionEvent = (event: CustomEvent) => {
+    // Handler for the custom event
+    const handleSuggestionEvent = (event: CustomEvent<{ columnId: number; cardId: number; columnName: string }>) => {
       const { columnId, cardId, columnName } = event.detail;
       
-      console.log(`[Prompt Assistant] Showing toast for suggestion in column ${columnName || columnId} from card ${cardId}`);
+      console.log(`[Prompt Assistant] Received suggestion event for column ${columnId}, card ${cardId}, name ${columnName}`);
       
-      // Show toast notification
+      // Show a toast notification with an action button
       toast({
         title: "Prompt Assistant",
-        description: `Suggestion available for column "${columnName || 'Column'}"`,
+        description: `We have suggestions to improve the "${columnName}" column's instructions based on recent card activity.`,
         action: (
           <ToastAction 
-            altText="Review suggestion" 
+            altText="View suggestion" 
             onClick={() => openInSuggestionMode(columnId, cardId)}
           >
-            Review
+            View
           </ToastAction>
         ),
+        duration: 10000, // 10 seconds
       });
     };
 
-    // Register the event listener
+    // Add event listener
     window.addEventListener('promptAssistantSuggestion', handleSuggestionEvent as EventListener);
-    
-    // Cleanup
+
+    // Clean up
     return () => {
       window.removeEventListener('promptAssistantSuggestion', handleSuggestionEvent as EventListener);
     };
@@ -46,5 +49,3 @@ export function SuggestionListener() {
   // This component doesn't render anything
   return null;
 }
-
-export default SuggestionListener;
