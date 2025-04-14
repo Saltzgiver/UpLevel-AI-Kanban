@@ -125,16 +125,11 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     if (modalState.isSuggestionMode && modalState.columnId === column.id && modalState.cardId) {
       console.log(`[AssignGPTModal] In suggestion mode for column ${column.id}, card ${modalState.cardId}`);
       
-      // Start with a default/fallback suggestion to help mitigate race conditions
-      const defaultSuggestion = {
-        rationale: "Fallback mode: This is a default suggestion before fetching real data.",
-        suggestedInstructions: column.gptInstructions || ""
-      };
-      
-      // Always ensure showing suggestion is true in suggestion mode
-      setSuggestion(defaultSuggestion);
+      // We'll set the suggestion only after we confirm it exists
       setShowingSuggestion(true);
-      console.log(`[AssignGPTModal] Initial showingSuggestion set to true with fallback data`);
+      // Initially set suggestion to null until we fetch the actual suggestion
+      setSuggestion(null);
+      console.log(`[AssignGPTModal] Initial state set, waiting for suggestion data`);
       
       const fetchSuggestion = async () => {
         try {
@@ -154,14 +149,17 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
           if (!checkData.hasSuggestion) {
             console.log(`[AssignGPTModal] No suggestion available in check response`);
             
-            // Use the fallback data we've already set (column's current instructions)
+            // No suggestion available - keep suggestion as null
             toast({
-              title: "Using Default",
-              description: "Using current column instructions as the base for comparison",
+              title: "No Suggestion Available",
+              description: "There are no suggestions available for this column",
               variant: "default"
             });
             
+            // Close modal or stay in normal edit mode
             setIsSubmitting(false);
+            setSuggestion(null);
+            setShowingSuggestion(false);
             return;
           }
           
@@ -189,18 +187,28 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
             setShowingSuggestion(true);
             console.log(`[AssignGPTModal] showingSuggestion confirmed to be true with real data`);
           } else {
-            console.log(`[AssignGPTModal] Partial suggestion data found in response - using fallback`);
-            // We already have fallback data set, so just notify the user
+            console.log(`[AssignGPTModal] Invalid suggestion data found in response`);
+            // No valid suggestion data found, don't display anything
+            setSuggestion(null);
+            setShowingSuggestion(false);
             toast({
-              title: "Using Default",
-              description: "Using current column instructions as the base for comparison",
+              title: "No Valid Suggestion",
+              description: "No valid suggestion data found for this column",
               variant: "default"
             });
           }
         } catch (error) {
           console.error("Failed to fetch suggestion:", error);
-          // Don't show an error toast since we already have fallback data set
-          console.log(`[AssignGPTModal] Using fallback data due to fetch error`);
+          // Reset suggestion state on error
+          setSuggestion(null);
+          setShowingSuggestion(false);
+          
+          // Notify user about the error
+          toast({
+            title: "Error Fetching Suggestion",
+            description: "Could not retrieve suggestion data",
+            variant: "destructive"
+          });
         } finally {
           setIsSubmitting(false);
         }
@@ -360,7 +368,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
             {column.name}
           </Badge>
           
-          {modalState.isSuggestionMode && (
+          {modalState.isSuggestionMode && suggestion && (
             <Badge variant="outline" className="text-sm ml-2 py-1 bg-amber-50 text-amber-700 border-amber-200">
               Suggestion Available
             </Badge>
