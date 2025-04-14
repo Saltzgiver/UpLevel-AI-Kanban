@@ -817,6 +817,13 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
 // Import the test implementation
 import { getTestPromptSuggestion, PromptSuggestion } from "./test-prompt-assistant";
 
+/**
+ * Generates intelligent prompt improvement suggestions based on card interactions
+ * 
+ * This function analyzes the context of a card, its chat history, and the original column instructions
+ * to suggest potential improvements to the AI prompt. It detects patterns in user interactions
+ * and identifies areas where the instructions could be more specific or helpful.
+ */
 export async function getPromptSuggestion(
   sourceColumnInstructions: string,
   cardContext: { 
@@ -827,31 +834,130 @@ export async function getPromptSuggestion(
   chats: Chat[],
   apiKey?: string
 ): Promise<{ rationale: string; suggestedInstructions: string } | null> {
-  // DEVELOPMENT MODE: Use test implementation to avoid OpenAI API dependency
-  return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
-  // Log inputs for testing/verification
-  console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
-  console.log(`Source Column Instructions: ${sourceColumnInstructions}`);
-  console.log(`Card Title: ${cardContext.title}`);
-  console.log(`Card Description: ${cardContext.description || "No description"}`);
-  
-  if (cardContext.attachments && cardContext.attachments.length > 0) {
-    console.log(`Attachments: ${cardContext.attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}`);
-  } else {
-    console.log(`Attachments: None`);
-  }
-  
-  console.log(`Chat History: ${chats.length} messages`);
-  chats.forEach((chat, index) => {
-    console.log(`Chat #${index + 1} - ${chat.role}: ${chat.content.substring(0, 100)}${chat.content.length > 100 ? '...' : ''}`);
-  });
-  
-  // Format meta-prompt that will guide the AI model
-  const metaPrompt = `
+  try {
+    // Log inputs for analysis
+    console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
+    console.log(`Source Column Instructions: ${sourceColumnInstructions}`);
+    console.log(`Card Title: ${cardContext.title}`);
+    console.log(`Card Description: ${cardContext.description || "No description"}`);
+    
+    const attachments = cardContext.attachments || [];
+    if (attachments.length > 0) {
+      console.log(`Attachments: ${attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}`);
+    } else {
+      console.log(`Attachments: None`);
+    }
+    
+    console.log(`Chat History: ${chats.length} messages`);
+    chats.forEach((chat, index) => {
+      console.log(`Chat #${index + 1} - ${chat.role}: ${chat.content.substring(0, 100)}${chat.content.length > 100 ? '...' : ''}`);
+    });
+    
+    // Determine column type based on context for targeted analysis
+    let columnType = "unknown";
+    const columnNameLower = cardContext.title.toLowerCase();
+    
+    // Analyze column name and instructions to determine its purpose
+    if (sourceColumnInstructions.toLowerCase().includes("image") || 
+        columnNameLower.includes("image") || 
+        columnNameLower.includes("imager") || 
+        columnNameLower.includes("dall") ||
+        columnNameLower.includes("visual")) {
+      columnType = "image-generation";
+    } else if (sourceColumnInstructions.toLowerCase().includes("spreadsheet") || 
+               columnNameLower.includes("spreadsheet") || 
+               columnNameLower.includes("csv") ||
+               columnNameLower.includes("sheet") ||
+               columnNameLower.includes("data") ||
+               columnNameLower.includes("table")) {
+      columnType = "spreadsheet-generation";
+    } else if (sourceColumnInstructions.toLowerCase().includes("draft") || 
+               columnNameLower.includes("draft") || 
+               columnNameLower.includes("write") ||
+               columnNameLower.includes("content") ||
+               columnNameLower.includes("text")) {
+      columnType = "text-drafting";
+    } else if (sourceColumnInstructions.toLowerCase().includes("refine") || 
+               columnNameLower.includes("refine") || 
+               columnNameLower.includes("edit") ||
+               columnNameLower.includes("improve") ||
+               columnNameLower.includes("review")) {
+      columnType = "content-refinement";
+    }
+    
+    console.log(`Detected column type: ${columnType}`);
+    
+    // Include specific guidance based on column type
+    let columnSpecificGuidance = "";
+    
+    switch (columnType) {
+      case "image-generation":
+        columnSpecificGuidance = `
+Additional Guidelines for Image Generation:
+- Consider if users frequently needed to specify style, composition, or lighting details
+- Look for patterns in requested revisions to images (colors, angles, subjects)
+- Identify if format specifications (resolution, aspect ratio) were missing
+- Check if the prompt needs more guidance on maintaining visual consistency across multiple images`;
+        break;
+        
+      case "spreadsheet-generation":
+        columnSpecificGuidance = `
+Additional Guidelines for Data/Spreadsheet Generation:
+- Identify if format specifications (CSV structure, headers) were missing or confusing
+- Look for patterns in data organization requests (sorting, grouping)
+- Consider if column types or data validation rules should be specified
+- Check if the prompt needs clearer guidance on data formatting and computation rules`;
+        break;
+        
+      case "text-drafting":
+        columnSpecificGuidance = `
+Additional Guidelines for Text Content Creation:
+- Check if tone and voice guidance was missing or needed clarification
+- Look for patterns in formatting requests (headings, bullet points, paragraphing)
+- Identify if length guidelines were missing or insufficient
+- Consider if the prompt should include specific structural elements (intro, conclusion, etc.)`;
+        break;
+        
+      case "content-refinement":
+        columnSpecificGuidance = `
+Additional Guidelines for Content Refinement:
+- Look for patterns in what aspects needed refinement (clarity, brevity, technical accuracy)
+- Check if the prompt needs clearer guidance on maintaining original meaning
+- Identify if style guide adherence instructions were missing
+- Consider if the level of editing (light, moderate, substantive) should be specified`;
+        break;
+    }
+    
+    // Success pattern identification guidance
+    let successPatternGuidance = "";
+    
+    // Check for successful interactions in chat history
+    if (chats.length > 0) {
+      // Check for positive feedback from users
+      const positiveResponses = chats.filter(chat => 
+        chat.role === 'user' && 
+        (chat.content.toLowerCase().includes("thank") || 
+         chat.content.toLowerCase().includes("good job") ||
+         chat.content.toLowerCase().includes("exactly") ||
+         chat.content.toLowerCase().includes("perfect") ||
+         chat.content.toLowerCase().includes("great"))
+      );
+      
+      if (positiveResponses.length > 0) {
+        console.log(`Detected ${positiveResponses.length} positive user responses - analyzing success patterns`);
+        successPatternGuidance = `
+## Success Patterns
+I've identified ${positiveResponses.length} instances where the user expressed satisfaction. 
+Pay special attention to what made these interactions successful and incorporate these elements into your suggestion.`;
+      }
+    }
+    
+    // Format meta-prompt that will guide the AI model
+    const metaPrompt = `
 # Prompt Improvement Assistant
 
 ## Context
-You are a specialized AI designed to analyze card interactions and suggest improvements to column prompts in a Kanban board application.
+You are a specialized AI designed to analyze card interactions and suggest improvements to column prompts in a Kanban board application. Your goal is to make AI interactions more efficient by improving the initial instructions.
 
 ## Your Task
 Analyze the following information to identify potential improvements for the column's prompt instructions:
@@ -868,8 +974,8 @@ ${sourceColumnInstructions || "No specific instructions provided"}
 ## Card Details
 - Title: ${cardContext.title}
 - Description: ${cardContext.description || "No description provided"}
-${cardContext.attachments && cardContext.attachments.length > 0 
-  ? `- Attachments: ${cardContext.attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}` 
+${attachments.length > 0 
+  ? `- Attachments: ${attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}` 
   : '- No attachments'}
 
 ## Conversation History
@@ -881,6 +987,9 @@ ${chats.map(chat => `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.conten
 3. Consider information that had to be extracted or explained that could be systematically incorporated
 4. Focus on reusable patterns, not one-off requests or special cases
 5. Consider if the conversation revealed misunderstandings about what the AI should do
+6. Analyze the effectiveness of the responses and how they could be improved with better initial instructions
+${columnSpecificGuidance}
+${successPatternGuidance}
 
 ## Response Format
 First provide a detailed rationale for your suggestion on a single line starting with "RATIONALE: ".
@@ -895,93 +1004,109 @@ RATIONALE: No improvements needed because [your reasoning]
 [original instructions]
 `;
 
-  console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
-  console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
-  
-  // IMPORTANT: This is a temporary fix to ensure suggestions are always generated
-  // In real production, we'd use the user's OpenAI API key
-  // For now, we'll use a test key to generate suggestions for all moves
-  
-  console.log("[Prompt Assistant Debug] Original API key:", apiKey);
-  
-  // Always return a test suggestion to prove the feature works
-  // This ensures suggestions always appear without needing a real OpenAI API key
-  console.log("[Prompt Assistant Debug] Using test suggestion to demonstrate functionality");
-  return {
-    rationale: "The original prompt could be enhanced with more specific guidelines for formatting and structure.",
-    suggestedInstructions: sourceColumnInstructions + "\n\nAlso, please organize your response with clear headings and bullet points for better readability."
-  };
-  
-  try {
-    // Initialize OpenAI client with the provided API key
-    const openai = new OpenAI({ apiKey });
+    console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
+    console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
     
-    // Call the OpenAI API with our meta-prompt using the newer model
-    const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL, // Use the default model defined globally
-      messages: [
-        { role: "system", content: "You are an expert AI prompt engineer that helps improve GPT prompts based on user interactions." },
-        { role: "user", content: metaPrompt }
-      ],
-      temperature: 0.5, // Lower temperature for more focused output
-      max_tokens: 1500,
-    });
+    // Handle API key management
+    let finalApiKey = apiKey;
     
-    // Parse the response content
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      console.log("No content returned from OpenAI API");
-      return null;
+    if (!finalApiKey || finalApiKey === "from_env") {
+      // Use environment variable as fallback
+      finalApiKey = process.env.OPENAI_API_KEY;
+      console.log("[Prompt Assistant] Using API key from environment");
     }
     
-    // Log the raw suggestion for debugging
-    console.log("Raw Suggestion from AI:", content);
-    
-    // Parse the response according to our format
-    // Expected format is:
-    // RATIONALE: [rationale text]
-    // [suggested instructions]
+    if (!finalApiKey) {
+      console.error("[Prompt Assistant] No OpenAI API key available");
+      // Fall back to test implementation if no API key is available
+      console.log("[Prompt Assistant] Falling back to test implementation");
+      return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
+    }
     
     try {
-      // Extract the rationale (first line starting with RATIONALE:)
-      const rationaleMatch = content.match(/^RATIONALE:\s*(.+)$/m);
-      if (!rationaleMatch) {
-        console.log("Could not find rationale in the response");
+      // Initialize OpenAI client with the provided API key
+      const openai = new OpenAI({ apiKey: finalApiKey });
+      
+      console.log(`[Prompt Assistant] Calling OpenAI API with model: ${OPENAI_MODEL}`);
+      
+      // Call the OpenAI API with our meta-prompt
+      const response = await openai.chat.completions.create({
+        model: OPENAI_MODEL, // Use the global model constant
+        messages: [
+          { role: "system", content: "You are an expert AI prompt engineer that helps improve GPT prompts based on user interactions and conversation patterns." },
+          { role: "user", content: metaPrompt }
+        ],
+        temperature: 0.4, // Lower temperature for more focused, consistent output
+        max_tokens: 1500,
+      });
+      
+      // Parse the response content
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        console.log("[Prompt Assistant] No content returned from OpenAI API");
         return null;
       }
       
-      const rationale = rationaleMatch[1].trim();
+      // Log the raw suggestion for debugging (limited length for logs)
+      console.log(`[Prompt Assistant] Raw Suggestion from AI: ${content.substring(0, 200)}...`);
       
-      // Check if this is a "no improvements needed" response
-      if (rationale.toLowerCase().includes("no improvements needed") || 
-          rationale.toLowerCase().includes("no improvement needed")) {
-        console.log("AI determined no improvements are needed:", rationale);
+      // Parse the response according to our expected format
+      try {
+        // Extract the rationale (first line starting with RATIONALE:)
+        const rationaleMatch = content.match(/^RATIONALE:\s*(.+)$/m);
+        if (!rationaleMatch || !rationaleMatch[1]) {
+          console.log("[Prompt Assistant] Could not find rationale in the response");
+          return null;
+        }
+        
+        const rationale = rationaleMatch[1].trim();
+        
+        // Check if this is a "no improvements needed" response
+        if (rationale.toLowerCase().includes("no improvements needed") || 
+            rationale.toLowerCase().includes("no improvement needed")) {
+          console.log("[Prompt Assistant] AI determined no improvements are needed:", rationale);
+          return null;
+        }
+        
+        // Extract the suggested instructions (everything after the RATIONALE line)
+        const matchIndex = content.indexOf(rationaleMatch[0]);
+        if (matchIndex === -1) {
+          console.log("[Prompt Assistant] Could not locate rationale in content");
+          return null;
+        }
+        
+        const instructionsText = content
+          .substring(matchIndex + rationaleMatch[0].length)
+          .trim();
+        
+        if (!instructionsText) {
+          console.log("[Prompt Assistant] Could not find suggested instructions in the response");
+          return null;
+        }
+        
+        console.log("[Prompt Assistant] Successfully generated suggestion with rationale length:", rationale.length);
+        console.log("[Prompt Assistant] Instructions length:", instructionsText.length);
+        
+        // Return the structured response
+        return {
+          rationale,
+          suggestedInstructions: instructionsText
+        };
+        
+      } catch (parseError) {
+        console.error("[Prompt Assistant] Error parsing AI response:", parseError);
+        console.log("[Prompt Assistant] Raw response:", content);
         return null;
       }
+    } catch (apiError) {
+      console.error("[Prompt Assistant] Error calling OpenAI API:", apiError);
       
-      // Extract the suggested instructions (everything after the RATIONALE line)
-      const instructionsText = content
-        .substring(content.indexOf(rationaleMatch[0]) + rationaleMatch[0].length)
-        .trim();
-      
-      if (!instructionsText) {
-        console.log("Could not find suggested instructions in the response");
-        return null;
-      }
-      
-      // Return the structured response
-      return {
-        rationale,
-        suggestedInstructions: instructionsText
-      };
-      
-    } catch (parseError) {
-      console.error("Error parsing AI response:", parseError);
-      console.log("Raw response:", content);
-      return null;
+      // If there's an API error, fall back to test implementation
+      console.log("[Prompt Assistant] API error occurred, falling back to test implementation");
+      return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
     }
   } catch (error) {
-    console.error("Error calling OpenAI API:", error);
-    return null;
+    console.error("[Prompt Assistant] Unexpected error in getPromptSuggestion:", error);
+    return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
   }
 }
