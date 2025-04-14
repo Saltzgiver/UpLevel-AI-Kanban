@@ -328,18 +328,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      console.log(`📋 PROMPT ASSISTANT: Checking suggestion status for column ${columnId} and card ${cardId}`);
+      console.log(`[PROMPT_ASSISTANT_STATUS] Checking suggestion status for column ${columnId} and card ${cardId}`);
       
+      // Check column existence first
+      const column = await storage.getColumnById(columnId);
+      if (!column) {
+        console.log(`[PROMPT_ASSISTANT_STATUS] Column ${columnId} not found`);
+        return res.status(404).json({ 
+          message: "Column not found",
+          hasSuggestion: false
+        });
+      }
+      
+      // Check suggestion in cache
       const status = checkSuggestion(columnId, cardId);
       
-      console.log(`📋 PROMPT ASSISTANT: Responding with status: ${status ? `has suggestion: ${status.hasSuggestion}` : 'no cache entry'}`);
+      console.log(`[PROMPT_ASSISTANT_STATUS] Cache status for column ${columnId}: ${status ? 
+        `has suggestion: ${status.hasSuggestion}, content length: ${status.suggestion ? 
+          (typeof status.suggestion === 'string' ? 
+            status.suggestion.length : 
+            JSON.stringify(status.suggestion).length) 
+          : 0}` 
+        : 'no cache entry'}`);
       
       return res.json({
-        hasSuggestion: status?.hasSuggestion || false
+        hasSuggestion: status?.hasSuggestion || false,
+        columnId,
+        cardId,
+        timestamp: Date.now()
       });
     } catch (error) {
-      console.error("Error checking suggestion status for card:", error);
-      return res.status(500).json({ message: "Error checking suggestion status for card" });
+      console.error("[PROMPT_ASSISTANT_STATUS] Error checking suggestion status for card:", error);
+      return res.status(500).json({ 
+        message: "Error checking suggestion status for card",
+        hasSuggestion: false
+      });
     }
   });
   
