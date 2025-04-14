@@ -1,8 +1,9 @@
-import { Sparkles, Edit } from "lucide-react";
+import { Sparkles, Edit, ChevronDown, ChevronUp, ListChecks, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AssignGPTModal } from "@/components/ui/assign-gpt-modal";
 import { Column } from "@shared/schema";
+import { parseInstructions } from "../ui/assign-gpt-modal";
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -61,12 +62,15 @@ interface GPTBannerProps {
 
 export function GPTBanner({ column }: GPTBannerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (column.gptAssigned) {
     const colorStyle = getColorStyle(column.gptColor);
+    const { dos, donts } = parseInstructions(column.gptInstructions || "");
     
     return (
-      <div className={`bg-gradient-to-r ${colorStyle.bgGradient} ${colorStyle.borderColor} rounded-lg mb-3 p-3 text-sm shadow-sm`}>
+      <div className={`bg-gradient-to-r ${colorStyle.bgGradient} ${colorStyle.borderColor} rounded-lg mb-3 p-3 text-sm shadow-sm transition-all duration-200`}>
+        {/* Header with toggle expand button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Sparkles className={`h-5 w-5 mr-2 ${colorStyle.iconColor}`} />
@@ -74,21 +78,81 @@ export function GPTBanner({ column }: GPTBannerProps) {
               {column.gptName || "GPT Assistant"}
             </span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-foreground p-1 rounded"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground p-1 rounded"
+              onClick={() => setIsExpanded(!isExpanded)}
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground p-1 rounded"
+              onClick={() => setIsModalOpen(true)}
+              title="Edit settings"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         
-        <div className="mt-1 pl-7 text-xs text-gray-600">
-          {column.gptInstructions && column.gptInstructions.length > 60 
-            ? column.gptInstructions.substring(0, 60) + "..."
-            : column.gptInstructions || "Write a paragraph about this"}
-        </div>
+        {/* Collapsed view shows just the summary */}
+        {!isExpanded && (
+          <div className="mt-1 pl-7 text-xs text-gray-600">
+            {column.gptInstructions && column.gptInstructions.length > 60 
+              ? column.gptInstructions.substring(0, 60) + "..."
+              : column.gptInstructions || "Write a paragraph about this"}
+          </div>
+        )}
+        
+        {/* Expanded view shows the full Do's and Don'ts */}
+        {isExpanded && (
+          <div className="mt-2 pt-2 border-t border-muted/20">
+            {/* Do's section */}
+            {dos.length > 0 && (
+              <div className="mb-2">
+                <div className="flex items-center mb-1">
+                  <ListChecks className={`h-3.5 w-3.5 mr-1.5 ${colorStyle.iconColor}`} />
+                  <span className={`text-xs font-semibold ${colorStyle.textColor}`}>DO'S:</span>
+                </div>
+                <div className="space-y-1 pl-5">
+                  {dos.map((item) => (
+                    <div key={item.id} className="flex items-start text-xs">
+                      <span className={`mr-1 ${colorStyle.textColor}`}>•</span>
+                      <span className="text-gray-700">{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Don'ts section */}
+            {donts.length > 0 && (
+              <div>
+                <div className="flex items-center mb-1">
+                  <XCircle className={`h-3.5 w-3.5 mr-1.5 ${colorStyle.iconColor}`} />
+                  <span className={`text-xs font-semibold ${colorStyle.textColor}`}>DON'TS:</span>
+                </div>
+                <div className="space-y-1 pl-5">
+                  {donts.map((item) => (
+                    <div key={item.id} className="flex items-start text-xs">
+                      <span className={`mr-1 ${colorStyle.textColor}`}>•</span>
+                      <span className="text-gray-700">{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         
         <AssignGPTModal
           column={column}

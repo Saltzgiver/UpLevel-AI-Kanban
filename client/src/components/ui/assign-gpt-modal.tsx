@@ -81,13 +81,13 @@ const getNextColorInRotation = async (): Promise<string> => {
 };
 
 // Simple interface for bullet point items
-interface BulletPoint {
+export interface BulletPoint {
   id: string;
   text: string;
 }
 
 // Parse instructions text to extract do's and don'ts
-const parseInstructions = (text: string): { dos: BulletPoint[]; donts: BulletPoint[] } => {
+export const parseInstructions = (text: string): { dos: BulletPoint[]; donts: BulletPoint[] } => {
   const result = { 
     dos: [] as BulletPoint[], 
     donts: [] as BulletPoint[] 
@@ -141,7 +141,7 @@ const parseInstructions = (text: string): { dos: BulletPoint[]; donts: BulletPoi
 };
 
 // Convert do's and don'ts back to a formatted string
-const formatInstructions = (dos: BulletPoint[], donts: BulletPoint[]): string => {
+export const formatInstructions = (dos: BulletPoint[], donts: BulletPoint[]): string => {
   let result = '';
   
   if (dos.length > 0) {
