@@ -117,10 +117,17 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       const fetchSuggestion = async () => {
         try {
           setIsSubmitting(true);
-          const data = await apiRequest(
+          const response = await apiRequest(
             "GET", 
             `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
           );
+          
+          // Type assertion for the response
+          interface SuggestionResponse {
+            suggestion?: { rationale: string; suggestedInstructions: string }
+          }
+          
+          const data = response as SuggestionResponse;
           
           if (data && data.suggestion) {
             setSuggestion(data.suggestion);

@@ -600,6 +600,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error rejecting card-specific suggestion" });
     }
   });
+  
+  // Create a test suggestion (for testing only)
+  app.post("/api/columns/:id/prompt-suggestion/create-test/:cardId", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const cardId = parseInt(req.params.cardId);
+      const { suggestion } = req.body;
+      
+      // Verify the column exists
+      const column = await storage.getColumnById(columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      console.log(`[PROMPT ASSISTANT] Creating test suggestion for column ${columnId}, card ${cardId}`);
+      console.log(`[PROMPT ASSISTANT] Suggestion:`, suggestion);
+      
+      // Store the suggestion in the cache
+      storeSuggestion(columnId, cardId, suggestion);
+      
+      return res.json({
+        message: "Test suggestion created",
+        columnId,
+        cardId,
+        suggestion
+      });
+    } catch (error) {
+      console.error("[PROMPT ASSISTANT] Error creating test suggestion:", error);
+      return res.status(500).json({ message: "Error creating test suggestion" });
+    }
+  });
 
   // CARD ROUTES
   app.post("/api/cards", async (req, res) => {

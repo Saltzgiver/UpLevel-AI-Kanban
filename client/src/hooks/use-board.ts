@@ -43,7 +43,7 @@ export function useBoard(boardId: number) {
         const response = await apiRequest(
           "GET", 
           `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
-        );
+        ) as { hasSuggestion: boolean };
         
         if (response?.hasSuggestion) {
           // Stop polling and show toast
