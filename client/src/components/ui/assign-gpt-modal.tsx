@@ -10,7 +10,7 @@ import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown, Plus, ListChecks, XCircle } from "lucide-react";
 import { useModalContext } from "@/contexts/ModalContext";
 
 interface AssignGPTModalProps {
