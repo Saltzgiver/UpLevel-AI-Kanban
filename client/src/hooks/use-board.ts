@@ -43,14 +43,12 @@ export function useBoard(boardId: number) {
       
       try {
         // Check if a suggestion is available
-        const response = await apiRequest(
-          "GET", 
-          `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
-        );
+        const response = await fetch(statusUrl);
+        const responseData = await response.json();
         
-        console.log(`[POLLING_ATTEMPT] Received status response: ${JSON.stringify(response)}`);
+        console.log(`[POLLING_ATTEMPT] Received status response:`, responseData);
         
-        if (response?.hasSuggestion) {
+        if (responseData.hasSuggestion) {
           // Stop polling and show toast
           console.log(`[POLLING_SUCCESS] Suggestion found! Calling toast notification.`);
           clearInterval(intervalId);
@@ -68,7 +66,7 @@ export function useBoard(boardId: number) {
               </ToastAction>
             ),
           });
-        } else if (response?.hasSuggestion === false) {
+        } else if (responseData.hasSuggestion === false) {
           console.log(`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.`);
           
           if (attempts >= maxAttempts) {

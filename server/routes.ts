@@ -310,15 +310,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion/status", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      console.log(`Checking suggestion status for column ${columnId}`);
+      console.log(`[PROMPT_SUGGESTION_GENERAL] Checking suggestion status for column ${columnId}`);
+      
+      // Check column existence first
+      const column = await storage.getColumnById(columnId);
+      if (!column) {
+        console.log(`[PROMPT_SUGGESTION_GENERAL] Column ${columnId} not found`);
+        return res.status(404).json({ 
+          message: "Column not found",
+          hasSuggestion: false
+        });
+      }
       
       const status = checkSuggestion(columnId);
+      console.log(`[PROMPT_SUGGESTION_GENERAL] Status response for column ${columnId}: ${JSON.stringify(status || { hasSuggestion: false })}`);
       
       return res.json({
-        hasSuggestion: status?.hasSuggestion || false
+        hasSuggestion: status?.hasSuggestion || false,
+        columnId,
+        timestamp: Date.now()
       });
     } catch (error) {
-      console.error("Error checking suggestion status:", error);
+      console.error("[PROMPT_SUGGESTION_GENERAL] Error checking suggestion status:", error);
       return res.status(500).json({ message: "Error checking suggestion status" });
     }
   });

@@ -127,12 +127,13 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
           
           // Process suggestion based on different response formats
           if (data) {
-            if (data.suggestion) {
-              // Format from cache
+            // Check for the suggestion property (format from cache)
+            if ('suggestion' in data && data.suggestion) {
               setSuggestion(data.suggestion);
               setShowingSuggestion(true);
-            } else if (data.suggestedInstructions) {
-              // Format from direct API response
+            } 
+            // Check for suggestedInstructions (format from direct API response)
+            else if ('suggestedInstructions' in data && data.suggestedInstructions) {
               setSuggestion({
                 suggestedInstructions: data.suggestedInstructions,
                 rationale: data.rationale || "Based on analysis of past card interactions"
