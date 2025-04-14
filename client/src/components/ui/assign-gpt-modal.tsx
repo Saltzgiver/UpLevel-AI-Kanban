@@ -116,9 +116,11 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     
     // Check if we're in suggestion mode and fetch suggestion
     if (modalState.isSuggestionMode && modalState.columnId === column.id && modalState.cardId) {
+      console.log(`[AssignGPTModal] In suggestion mode for column ${column.id}, card ${modalState.cardId}`);
       const fetchSuggestion = async () => {
         try {
           setIsSubmitting(true);
+          console.log(`[AssignGPTModal] Fetching suggestion for column ${column.id}, card ${modalState.cardId}`);
           const response = await apiRequest(
             "GET", 
             `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
@@ -130,10 +132,15 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
           }
           
           const data = response as SuggestionResponse;
+          console.log(`[AssignGPTModal] Suggestion response:`, data);
           
           if (data && data.suggestion) {
+            console.log(`[AssignGPTModal] Setting suggestion:`, data.suggestion);
             setSuggestion(data.suggestion);
             setShowingSuggestion(true);
+            console.log(`[AssignGPTModal] showingSuggestion set to true`);
+          } else {
+            console.log(`[AssignGPTModal] No suggestion data found in response`);
           }
         } catch (error) {
           console.error("Failed to fetch suggestion:", error);
@@ -359,6 +366,12 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               </div>
               
               {/* Side-by-Side Prompt Suggestion View */}
+              {console.log('[AssignGPTModal] Rendering condition:', {
+                modalStateIsSuggestionMode: modalState.isSuggestionMode,
+                suggestion: suggestion,
+                showingSuggestion: showingSuggestion,
+                shouldShow: modalState.isSuggestionMode && suggestion && showingSuggestion
+              })}
               {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
                 <div className="mb-4">
                   <div className="mb-2">

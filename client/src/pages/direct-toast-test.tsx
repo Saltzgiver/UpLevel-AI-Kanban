@@ -160,6 +160,53 @@ export default function DirectToastTestPage() {
             </Button>
             <p className="text-xs text-muted-foreground">Shows a toast with "View" button without creating a suggestion first</p>
           </div>
+          
+          <div>
+            <Button 
+              onClick={async () => {
+                const columnId = 9; // "image test" column
+                const cardId = 47; // "Image Generation Test" card
+                
+                try {
+                  console.log(`Checking suggestion for column ${columnId}, card ${cardId}`);
+                  const checkResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/check/${cardId}`);
+                  const checkResult = await checkResponse.json();
+                  console.log('Suggestion check result:', checkResult);
+                  
+                  if (checkResult.hasSuggestion) {
+                    console.log('Suggestion exists, fetching content...');
+                    const getResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/${cardId}`);
+                    const getResult = await getResponse.json();
+                    console.log('Suggestion content:', getResult);
+                    
+                    toast({
+                      title: "Debug Info",
+                      description: "Suggestion info logged to console",
+                    });
+                  } else {
+                    console.log('No suggestion available');
+                    toast({
+                      title: "Debug Info",
+                      description: "No suggestion available",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (error) {
+                  console.error('Error checking suggestion:', error);
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to check suggestion',
+                    variant: 'destructive',
+                  });
+                }
+              }} 
+              variant="secondary" 
+              className="w-full mb-2"
+            >
+              Debug: Check Suggestion Directly
+            </Button>
+            <p className="text-xs text-muted-foreground">Checks if suggestion exists and logs content to console</p>
+          </div>
         </CardContent>
         <CardFooter>
           <p className="text-xs text-muted-foreground">
