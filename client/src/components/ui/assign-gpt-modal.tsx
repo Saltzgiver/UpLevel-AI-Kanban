@@ -87,7 +87,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [suggestion, setSuggestion] = useState<{ rationale: string; suggestedInstructions: string } | null>(null);
-  const [showingSuggestion, setShowingSuggestion] = useState<boolean>(false);
+  const [showingSuggestion, setShowingSuggestion] = useState<boolean>(!!isSuggestionMode);
   const { toast } = useToast();
   const modalRef = useRef<HTMLDivElement>(null);
   const { modalState } = useModalContext();
@@ -366,12 +366,8 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               </div>
               
               {/* Side-by-Side Prompt Suggestion View */}
-              {console.log('[AssignGPTModal] Rendering condition:', {
-                modalStateIsSuggestionMode: modalState.isSuggestionMode,
-                suggestion: suggestion,
-                showingSuggestion: showingSuggestion,
-                shouldShow: modalState.isSuggestionMode && suggestion && showingSuggestion
-              })}
+              {/* Debugging output for rendering conditions */}
+              {/* {modalState.isSuggestionMode && <div>{JSON.stringify({suggestion: !!suggestion, showing: showingSuggestion})}</div>} */}
               {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
                 <div className="mb-4">
                   <div className="mb-2">
