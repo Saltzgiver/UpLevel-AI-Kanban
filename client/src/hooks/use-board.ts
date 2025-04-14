@@ -203,30 +203,73 @@ export function useBoard(boardId: number) {
           // Double-verify the suggestion exists by fetching the actual content
           try {
             const contentUrl = `/api/columns/${columnId}/prompt-suggestion`;
-            console.log(`[POLLING_VERIFICATION] 🔍 Verifying suggestion content from ${contentUrl}`);
-            const contentResponse = await fetch(contentUrl);
+            const timestampedContentUrl = `${contentUrl}?t=${Date.now()}`; // Add cache-busting parameter
+            console.log(`[POLLING_VERIFICATION] 🔍 Verifying suggestion content from ${timestampedContentUrl}`);
+            
+            // Use the same headers as in the status check to ensure consistency
+            const contentResponse = await fetch(timestampedContentUrl, {
+              headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              }
+            });
             
             if (contentResponse.ok) {
+              const contentType = contentResponse.headers.get('content-type');
+              
+              // Verify content type to avoid parsing non-JSON responses
+              if (!contentType || !contentType.includes('application/json')) {
+                console.error(`[POLLING_CONTENT_ERROR] ❌ Expected JSON content, but got ${contentType}`);
+                throw new Error(`Expected JSON content, but got ${contentType}`);
+              }
+              
               const contentData = await contentResponse.json();
-              console.log(`[POLLING_VERIFICATION] ✓ Suggestion content verified, content available`);
+              
+              // Extra verification to ensure the content has the expected structure
+              if (!contentData || !contentData.suggestedInstructions) {
+                console.error(`[POLLING_CONTENT_ERROR] ❌ Missing expected content data:`, contentData);
+                throw new Error(`Missing expected content fields in response`);
+              }
+              
+              console.log(`[POLLING_VERIFICATION] ✅ Suggestion content verified, instruction length: ${contentData.suggestedInstructions.length} chars`);
               
               // Show toast notification - with extra logging
-              console.log(`[TOAST_TRIGGER] 🔔 Triggering toast notification for suggestion`);
+              console.log(`[TOAST_TRIGGER] 🔔 Triggering toast notification for suggestion from ${sourceColumnName || 'unknown'}`);
               const toastId = showSuggestionToast(columnId, cardId, sourceColumnName);
-              console.log(`[TOAST_TRIGGER] ✓ Toast triggered with ID: ${toastId}`);
+              console.log(`[TOAST_TRIGGER] ✅ Toast triggered with ID: ${toastId}`);
               
-              // Stop polling after suggestion is found
-              console.log(`[POLLING_STOP] ✓ Suggestion confirmed, stopping polling`);
+              // Stop polling after suggestion is found and toast is shown
+              console.log(`[POLLING_STOP] ✅ Suggestion confirmed and notification shown, stopping polling`);
               clearInterval(intervalId);
               setPollingState(prev => prev ? { ...prev, active: false } : null);
+              
+              // Return early to prevent further processing
+              return;
             } else {
-              console.error(`[POLLING_VERIFICATION] ❌ Suggestion content verification failed: ${contentResponse.status}`);
+              // Get error message for better logging
+              let errorMessage = "Unknown error";
+              try {
+                const errorData = await contentResponse.text();
+                errorMessage = errorData || `Status code: ${contentResponse.status}`;
+              } catch (e) {
+                errorMessage = `Status code: ${contentResponse.status}`;
+              }
+              
+              console.error(`[POLLING_VERIFICATION] ❌ Suggestion content verification failed: ${errorMessage}`);
+              
+              // Special handling for 404 (no suggestion available)
+              if (contentResponse.status === 404) {
+                console.log(`[POLLING_VERIFICATION] ℹ️ Suggestion was found in status check but not available when fetching content. Will continue polling.`);
+              }
+              
               // Continue polling - this may be a temporary issue
-              console.log(`[POLLING_CONTINUE] ⚠️ Continuing polling despite content verification failure`);
+              console.log(`[POLLING_CONTINUE] ⏳ Continuing polling despite content verification failure`);
             }
           } catch (contentError) {
             console.error(`[POLLING_VERIFICATION] ❌ Error verifying suggestion content:`, contentError);
             // Continue polling - this could be a network issue
+            console.log(`[POLLING_CONTINUE] ⏳ Continuing polling after error during content verification`);
           }
         } else if (data && data.hasSuggestion === false) { // Explicit check for false
           console.log(`[POLLING_NO_SUGGESTION] ℹ️ Backend confirmed NO SUGGESTION available.`);
@@ -403,31 +446,36 @@ export function useBoard(boardId: number) {
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/boards/${boardId}`] });
       
-      console.log(`[MOVE_CARD_SUCCESS] Card ID: ${data.cardId}, Source Column ID: ${data.sourceColumnId}, Destination Column ID: ${data.destinationColumnId}`);
-      console.log(`[MOVE_CARD_SUCCESS] Attempting to find source column data...`);
+      console.log(`[MOVE_CARD_SUCCESS] ✅ Card ${data.cardId} moved from column ${data.sourceColumnId} to ${data.destinationColumnId}`);
+      
+      // Only start polling if we have both a source column ID and a card ID
+      if (!data.sourceColumnId || !data.cardId) {
+        console.log(`[POLLING_SKIP] ⚠️ Missing required data for polling. sourceColumnId: ${data.sourceColumnId}, cardId: ${data.cardId}`);
+        return;
+      }
       
       // Check if the source column was GPT-enabled by finding it in the board data
       const columns = boardQuery.data?.columns || [];
       const sourceColumn = columns.find((col: any) => col.id === data.sourceColumnId);
       
-      console.log(`[MOVE_CARD_SUCCESS] Found source column data:`, sourceColumn ? {
+      console.log(`[MOVE_CARD_SUCCESS] 🔍 Source column:`, sourceColumn ? {
         id: sourceColumn.id,
         name: sourceColumn.name,
         gptAssigned: sourceColumn.gptAssigned,
         gptName: sourceColumn.gptName
       } : 'Not Found');
       
+      // Only initiate polling if the source column is GPT-enabled
       if (sourceColumn?.gptAssigned) {
-        // Start polling for suggestion availability
-        console.log(`[POLLING_INIT] Source column ${data.sourceColumnId} is GPT-enabled. Initializing polling state for card ${data.cardId}.`);
-        setPollingState({
-          columnId: data.sourceColumnId,
-          cardId: data.cardId,
-          sourceColumnName: sourceColumn.name,
-          active: true
-        });
+        console.log(`[POLLING_INIT] 🚀 Starting polling for suggestions - column ${data.sourceColumnId} (${sourceColumn.name}) is GPT-enabled`);
+        
+        // Add a small delay before starting polling to allow backend processing to begin
+        setTimeout(() => {
+          // Start polling for suggestion availability 
+          startPollingForSuggestion(data.sourceColumnId, data.cardId, sourceColumn.name);
+        }, 500);
       } else {
-        console.log(`[POLLING_INIT] Source column ${data.sourceColumnId} is NOT GPT-enabled or not found. Skipping polling.`);
+        console.log(`[POLLING_SKIP] ℹ️ Source column ${data.sourceColumnId} is not GPT-enabled or not found. Skipping polling.`);
       }
     },
     onError: () => {
