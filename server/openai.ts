@@ -814,6 +814,9 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
  * @param apiKey - Optional OpenAI API key to use for the analysis
  * @returns Promise resolving to an object with rationale and suggestedInstructions, or null if no suggestion
  */
+// Import the test implementation
+import { getTestPromptSuggestion, PromptSuggestion } from "./test-prompt-assistant";
+
 export async function getPromptSuggestion(
   sourceColumnInstructions: string,
   cardContext: { 
@@ -824,6 +827,8 @@ export async function getPromptSuggestion(
   chats: Chat[],
   apiKey?: string
 ): Promise<{ rationale: string; suggestedInstructions: string } | null> {
+  // DEVELOPMENT MODE: Use test implementation to avoid OpenAI API dependency
+  return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
   // Log inputs for testing/verification
   console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
   console.log(`Source Column Instructions: ${sourceColumnInstructions}`);
