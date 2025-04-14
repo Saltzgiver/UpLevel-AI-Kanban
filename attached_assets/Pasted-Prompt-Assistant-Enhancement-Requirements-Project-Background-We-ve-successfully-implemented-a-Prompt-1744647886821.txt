@@ -1,0 +1,58 @@
+Prompt Assistant Enhancement Requirements
+Project Background
+We've successfully implemented a Prompt Assistant feature for our AI-powered Kanban board application. The feature currently includes:
+
+A system that monitors card movements between columns
+A suggestion cache mechanism that stores potential prompt improvements
+Toast notifications with functional "View" buttons
+A modal interface that shows existing vs. suggested prompts
+Error handling and recovery mechanisms
+The current implementation uses default/test suggestions rather than AI-generated improvements. We need to enhance the system to generate real, intelligent suggestions based on actual card interactions.
+
+Current Architecture
+Card Movement Tracking: When cards move from GPT-enabled columns, we analyze if the prompt could be improved
+Suggestion Storage: Using suggestionCache.ts to temporarily store suggestions with a composite key (columnId + cardId)
+User Interface: Toast notifications appear when suggestions are available, with a modal showing side-by-side comparison
+Flow: Card moves → Backend generates suggestions → Toast appears → Modal displays comparisons → User accepts/rejects
+Implementation Focus
+Enhance the getPromptSuggestion function in server/openai.ts to generate real, intelligent prompt improvement suggestions instead of the current test values. This function should analyze:
+
+The original column's instructions
+Card content and interactions
+Chat history with AI assistant on that card
+Any attachments or generated content
+Success patterns across different cards in the same column
+Current Function Signature
+export async function getPromptSuggestion(
+  originalInstructions: string, 
+  cardContext: { title: string; description: string; attachments?: Attachment[] },
+  chats: Chat[],
+  apiKey?: string
+): Promise<PromptSuggestion | null> {
+  // Current implementation returns test values or null
+  // Need to implement real AI-based analysis
+}
+Required Enhancements
+Intelligent Analysis: Analyze the interaction history to identify patterns of success or areas for improvement
+Pattern Recognition: Look for common edits users make after AI responses
+Content Analysis: Evaluate card content, attachments, and how they relate to the instructions
+Contextual Understanding: Consider the column's purpose (based on name and existing instructions)
+Specific Suggestions: Generate targeted, actionable improvements with clear rationales
+Integration Points
+The implementation should call the OpenAI API properly configured with our API key
+Use rate limiting and error handling for API calls
+Ensure suggestions are meaningful and not repetitive
+Handle different column types intelligently (image generation, text drafting, spreadsheet generation)
+Example Data
+Column names like "imager" suggest image-related tasks
+Column "refinement" focuses on improving existing content
+Original instructions might be as simple as "Create an image based on the card content"
+Suggestions should add specificity, e.g., "Create an image based on card content, focusing on maintaining consistent style, composition details, and ensuring key elements are prominently featured"
+Output Format
+The function should return a structured object:
+
+{
+  rationale: "Detailed explanation of why the improvement is suggested, based on observed patterns",
+  suggestedInstructions: "The complete improved instructions"
+}
+This function is crucial for making the Prompt Assistant genuinely useful by providing AI-driven insights rather than static test suggestions.
