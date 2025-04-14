@@ -65,11 +65,24 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
       setNewBoardName("");
       setIsCreateDialogOpen(false);
       
-      // Select the newly created board
-      const newBoard = response as Board;
-      if (newBoard && newBoard.id) {
-        onSelectBoard(newBoard.id);
-      }
+      // Select the newly created board after refetch
+      // Rather than using the response directly, we'll refetch to get the full board data
+      // and avoid type issues
+      setTimeout(() => {
+        const fetchBoards = async () => {
+          try {
+            const boards = await apiRequest("GET", "/api/boards", {}) as any[];
+            // Find the board with the matching name we just created
+            const newBoard = boards.find(b => b.name === newBoardName);
+            if (newBoard && newBoard.id) {
+              onSelectBoard(newBoard.id);
+            }
+          } catch (error) {
+            console.error("Failed to fetch boards after creation:", error);
+          }
+        };
+        fetchBoards();
+      }, 500);
     } catch (error) {
       toast({
         title: "Error",
@@ -159,7 +172,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
             </CardHeader>
             <CardContent className="pb-2">
               <p className="text-sm text-muted-foreground">
-                {board.columns?.length || 0} columns
+                {(board as any).columns?.length || 0} columns
               </p>
             </CardContent>
             <CardFooter>
