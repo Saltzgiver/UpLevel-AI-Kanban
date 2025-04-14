@@ -12,6 +12,7 @@ import PromptAnalyzerSettings from "@/pages/prompt-analyzer-settings";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
+import { PageLayout } from "@/components/layout/page-layout";
 
 function Router() {
   return (
@@ -31,7 +32,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ModalProvider>
         <DndProvider>
-          <Router />
+          <PageLayout>
+            <Router />
+          </PageLayout>
           {/* Add SuggestionListener to handle events from fetch interceptor */}
           <SuggestionListener />
           {/* Global modal for handling GPT assignment from anywhere, including suggestions */}
