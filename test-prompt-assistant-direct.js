@@ -21,11 +21,11 @@ async function testPromptAssistantFlow() {
   console.log("--------------------------------------\n");
   
   // Test parameters
-  const columnId = 1;  // Use a real column ID from your database
-  const cardId = 123;  // Use a test card ID
+  const columnId = 9;  // GPT-enabled column with gptName = 'imager', gptColor = 'Aqua'
+  const cardId = 47;   // Card "Image Generation Test" in the imager column
   
-  // Use the current hostname instead of hardcoding localhost
-  const baseUrl = 'https://' + process.env.REPL_SLUG + '.' + process.env.REPL_OWNER + '.repl.co';
+  // Use localhost for testing when running directly from the Replit environment
+  const baseUrl = 'http://localhost:3000';
   console.log(`Using base URL: ${baseUrl}`);
   
   // First, insert a test suggestion into the server using HTTP API
