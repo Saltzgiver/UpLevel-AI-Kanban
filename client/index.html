@@ -3,6 +3,125 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>
+      // Prompt Assistant: Network-level fetch interceptor for card move operations
+      (function() {
+        // Store the original fetch method
+        const originalFetch = window.fetch;
+        
+        // Create a global function to check suggestions and show toast
+        window.checkSuggestionAndShowToast = async function(sourceColumnId, cardId, sourceColumnName) {
+          try {
+            console.log(`[Prompt Assistant] Checking for suggestion for column ${sourceColumnId}, card ${cardId}`);
+            
+            // Maximum attempts to check for suggestion
+            const maxAttempts = 5;
+            
+            // Function to check suggestion status
+            const checkSuggestion = async (attempt) => {
+              console.log(`[Prompt Assistant] Checking for suggestion (attempt ${attempt}/${maxAttempts})`);
+              
+              try {
+                // Check if a suggestion is available using the API
+                const response = await originalFetch(`/api/columns/${sourceColumnId}/prompt-suggestion/status/${cardId}`);
+                const data = await response.json();
+                
+                console.log(`[Prompt Assistant] Suggestion check result:`, data);
+                
+                if (data && data.hasSuggestion) {
+                  // We need to wait for React to be fully initialized before we can access the toast function
+                  // This event will be picked up by a listener in a React component
+                  const event = new CustomEvent('promptAssistantSuggestion', { 
+                    detail: { 
+                      columnId: sourceColumnId, 
+                      cardId: cardId,
+                      columnName: sourceColumnName || 'Column' 
+                    } 
+                  });
+                  window.dispatchEvent(event);
+                  return true;
+                }
+                return false;
+              } catch (error) {
+                console.error('[Prompt Assistant] Error checking for suggestion:', error);
+                return false;
+              }
+            };
+            
+            // Start checking with a delay to allow backend processing to complete
+            setTimeout(async () => {
+              let suggestionFound = false;
+              
+              // Try multiple times with delays between attempts
+              for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                suggestionFound = await checkSuggestion(attempt);
+                if (suggestionFound) break;
+                
+                // Wait between attempts (increasing delay)
+                if (attempt < maxAttempts) {
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
+            }, 2000); // Initial delay to let the backend process
+            
+          } catch (error) {
+            console.error('[Prompt Assistant] Error in checkSuggestionAndShowToast:', error);
+          }
+        };
+        
+        // Intercept fetch calls
+        window.fetch = async function(...args) {
+          const url = args[0];
+          const options = args[1] || {};
+          
+          // Return the original fetch for most requests
+          const response = await originalFetch.apply(this, args);
+          
+          try {
+            // Check if this is a card move request
+            if (typeof url === 'string' && 
+                url.includes('/api/cards/') && 
+                url.includes('/move') && 
+                response.ok) {
+              
+              console.log('[Prompt Assistant] Detected successful card move operation');
+              
+              // Extract card ID from URL
+              const cardIdMatch = url.match(/\/api\/cards\/(\d+)\/move/);
+              const cardId = cardIdMatch ? parseInt(cardIdMatch[1]) : null;
+              
+              if (cardId) {
+                // Parse request body to get source column ID
+                if (options.body && typeof options.body === 'string') {
+                  try {
+                    const requestData = JSON.parse(options.body);
+                    
+                    if (requestData.sourceColumnId) {
+                      const sourceColumnId = requestData.sourceColumnId;
+                      const sourceColumnName = requestData.sourceColumnName || null;
+                      
+                      console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId}${sourceColumnName ? ` (${sourceColumnName})` : ''}`);
+                      
+                      // Call the global function to check for suggestions
+                      window.checkSuggestionAndShowToast(sourceColumnId, cardId, sourceColumnName);
+                    }
+                  } catch (error) {
+                    console.error('[Prompt Assistant] Error parsing request data:', error);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error('[Prompt Assistant] Error in fetch interceptor:', error);
+          }
+          
+          // Always return the original response
+          return response;
+        };
+        
+        console.log('[Prompt Assistant] Network interceptor initialized');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
