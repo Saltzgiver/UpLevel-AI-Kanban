@@ -119,13 +119,36 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       prompt += `Previous GPT Output: ${card.gptOutput}\n\n`;
     }
 
-    // Include existing chats for context if enabled for this card
-    if (card.includeChatHistory && card.chats && card.chats.length > 0) {
-      prompt += "Previous conversations:\n";
-      for (const chat of card.chats) {
-        prompt += `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}\n`;
+    // Include existing chats for context if enabled for this card or from the same column
+    if (card.chats && card.chats.length > 0) {
+      // If includeChatHistory is enabled, include all chats
+      // Otherwise, only include chats from the current column
+      const chatsToInclude = card.includeChatHistory 
+        ? card.chats 
+        : card.chats.filter(chat => {
+            // For assistant messages, check if they match the current column's GPT
+            if (chat.role === 'assistant') {
+              // If gptName matches column.gptName, it's from this column
+              return chat.gptName === column.gptName;
+            }
+            // Always include user messages - we'll rely on chronological order
+            return true;
+          });
+      
+      if (chatsToInclude.length > 0) {
+        // Sort chats by timestamp to ensure proper conversation flow
+        const orderedChats = chatsToInclude.sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        
+        prompt += "Previous conversations:\n";
+        for (const chat of orderedChats) {
+          prompt += `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}\n`;
+        }
+        prompt += "\n";
+        
+        console.log(`Included ${orderedChats.length} chat messages for context in card processing`);
       }
-      prompt += "\n";
     }
     
     // Include attachments if any
@@ -421,9 +444,29 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     ];
 
-    // Add chat history if enabled for this card
-    if (card.includeChatHistory && card.chats && card.chats.length > 0) {
-      for (const chat of card.chats) {
+    // Always include chat history within the same column for continuous conversation context
+    // Filter chats to only include those from the current column to maintain proper context
+    if (card.chats && card.chats.length > 0) {
+      console.log(`Including ${card.chats.length} chat messages for conversation context in column`);
+      
+      // Get chats that happened in the current column by looking at gptName matching
+      // We'll also need to ensure they're in chronological order
+      const currentColumnChats = card.chats
+        .filter(chat => {
+          // For assistant messages, check if they match the current column's GPT
+          if (chat.role === 'assistant') {
+            // If gptName matches column.gptName, it's from this column
+            return chat.gptName === column.gptName;
+          }
+          // Always include user messages - we'll rely on chronological order to match them up
+          return true;
+        })
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      console.log(`Found ${currentColumnChats.length} chats that match the current column context`);
+      
+      // Add these filtered chats to the messages array
+      for (const chat of currentColumnChats) {
         messages.push({
           role: chat.role as "user" | "assistant",
           content: chat.content
