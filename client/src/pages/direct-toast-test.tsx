@@ -90,9 +90,28 @@ export default function DirectToastTestPage() {
       const result = await createResponse.json();
       console.log('Suggestion created:', result);
       
-      // Verify the suggestion was created
+      // Verify the suggestion was created with improved error handling
       try {
         const checkResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/check/${cardId}`);
+        
+        // Check if response is OK before trying to parse JSON
+        if (!checkResponse.ok) {
+          throw new Error(`Server responded with ${checkResponse.status}: ${checkResponse.statusText}`);
+        }
+
+        // Get response content type
+        const contentType = checkResponse.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Error: Expected JSON response but received:', contentType);
+          
+          // Try to get the text content for debugging
+          const textContent = await checkResponse.text();
+          console.error('Response content (not JSON):', textContent.substring(0, 500) + '...');
+          
+          throw new Error('Invalid response format: expected JSON');
+        }
+        
+        // Now safe to parse JSON
         const checkResult = await checkResponse.json();
         console.log('Suggestion check after creation:', checkResult);
         
@@ -205,12 +224,87 @@ export default function DirectToastTestPage() {
                 try {
                   console.log(`Checking suggestion for column ${columnId}, card ${cardId}`);
                   const checkResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/check/${cardId}`);
+                  
+                  // Check response status and content type before parsing
+                  if (!checkResponse.ok) {
+                    const errorText = await checkResponse.text();
+                    console.error(`Error ${checkResponse.status}: ${checkResponse.statusText}`, errorText.substring(0, 200));
+                    throw new Error(`Server responded with status ${checkResponse.status}`);
+                  }
+                  
+                  // Verify content type
+                  const contentType = checkResponse.headers.get('content-type');
+                  if (!contentType || !contentType.includes('application/json')) {
+                    const errorText = await checkResponse.text();
+                    console.error('Response is not JSON:', contentType);
+                    console.error('Response content (truncated):', errorText.substring(0, 500));
+                    
+                    // Try to create a test suggestion first and then retry
+                    console.log('Creating a test suggestion before checking again...');
+                    const createTestResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        suggestion: {
+                          rationale: 'This is a test suggestion created due to a fetch error.',
+                          suggestedInstructions: 'Create an image based on the card content with attention to style (photorealistic, cartoon, etc.) and composition details.',
+                        },
+                      }),
+                    });
+                    
+                    if (!createTestResponse.ok) {
+                      throw new Error('Failed to create test suggestion as fallback');
+                    }
+                    
+                    const createResult = await createTestResponse.json();
+                    console.log('Test suggestion created:', createResult);
+                    
+                    // Now try checking again
+                    const retryResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/check/${cardId}`);
+                    if (!retryResponse.ok) {
+                      throw new Error('Retry also failed');
+                    }
+                    
+                    const retryContentType = retryResponse.headers.get('content-type');
+                    if (!retryContentType || !retryContentType.includes('application/json')) {
+                      throw new Error('Retry response is still not JSON');
+                    }
+                    
+                    const retryResult = await retryResponse.json();
+                    console.log('Retry suggestion check result:', retryResult);
+                    
+                    toast({
+                      title: "Recovery Attempt",
+                      description: "Created a test suggestion after error, check console for details",
+                      variant: "default",
+                      duration: 5000,
+                    });
+                    
+                    return; // Exit early
+                  }
+                  
+                  // Parse JSON response safely
                   const checkResult = await checkResponse.json();
                   console.log('Suggestion check result:', checkResult);
                   
                   if (checkResult.hasSuggestion) {
                     console.log('Suggestion exists, fetching content...');
+                    // Use fetch with error handling instead of apiRequest for better debugging
                     const getResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/${cardId}`);
+                    
+                    // Check content type again
+                    if (!getResponse.ok) {
+                      throw new Error(`Failed to fetch suggestion content: ${getResponse.status}`);
+                    }
+                    
+                    const contentType = getResponse.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                      const errorText = await getResponse.text();
+                      console.error('Content response is not JSON:', contentType);
+                      console.error('Content (truncated):', errorText.substring(0, 500));
+                      throw new Error('Content response is not JSON');
+                    }
+                    
                     const getResult = await getResponse.json();
                     console.log('Suggestion content:', getResult);
                     
@@ -219,18 +313,33 @@ export default function DirectToastTestPage() {
                       description: "Suggestion info logged to console",
                     });
                   } else {
-                    console.log('No suggestion available');
+                    console.log('No suggestion available, creating a test one...');
+                    // Create a test suggestion when none exists
+                    const createTestResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        suggestion: {
+                          rationale: 'This is a test suggestion created because none was found.',
+                          suggestedInstructions: 'Create an image based on the card content with attention to style (photorealistic, cartoon, etc.) and composition details.',
+                        },
+                      }),
+                    });
+                    
+                    const createResult = await createTestResponse.json();
+                    console.log('Test suggestion created:', createResult);
+                    
                     toast({
                       title: "Debug Info",
-                      description: "No suggestion available",
-                      variant: "destructive",
+                      description: "Created a test suggestion since none was available",
+                      variant: "default",
                     });
                   }
                 } catch (error) {
                   console.error('Error checking suggestion:', error);
                   toast({
                     title: 'Error',
-                    description: 'Failed to check suggestion',
+                    description: 'Failed to check suggestion: ' + (error instanceof Error ? error.message : 'Unknown error'),
                     variant: 'destructive',
                   });
                 }

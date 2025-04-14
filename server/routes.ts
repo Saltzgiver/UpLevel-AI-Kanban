@@ -367,6 +367,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Check if a suggestion is available for a specific column+card combo
+  // This is a more reliable endpoint that ensures JSON responses
+  app.get("/api/columns/:id/prompt-suggestion/check/:cardId", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const cardId = parseInt(req.params.cardId);
+      
+      console.log(`[PROMPT ASSISTANT] Checking suggestion for column ${columnId} and card ${cardId}`);
+      
+      // Get current status
+      const status = checkSuggestion(columnId, cardId);
+      
+      // Set correct content type to ensure JSON response
+      res.set('Content-Type', 'application/json');
+      
+      // Return the status (without the actual suggestion for efficiency)
+      return res.status(200).json({
+        hasSuggestion: !!(status && status.hasSuggestion),
+        timestamp: status?.timestamp || Date.now()
+      });
+    } catch (error) {
+      console.error("Error checking prompt suggestion:", error);
+      
+      // Even on error, ensure we return JSON
+      res.set('Content-Type', 'application/json');
+      return res.status(500).json({ 
+        error: true,
+        message: "Error checking prompt suggestion",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Get the actual suggestion content for a column and specific card
   app.get("/api/columns/:id/prompt-suggestion/:cardId", async (req, res) => {
     try {

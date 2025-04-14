@@ -125,14 +125,47 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     if (modalState.isSuggestionMode && modalState.columnId === column.id && modalState.cardId) {
       console.log(`[AssignGPTModal] In suggestion mode for column ${column.id}, card ${modalState.cardId}`);
       
+      // Start with a default/fallback suggestion to help mitigate race conditions
+      const defaultSuggestion = {
+        rationale: "Fallback mode: This is a default suggestion before fetching real data.",
+        suggestedInstructions: column.gptInstructions || ""
+      };
+      
       // Always ensure showing suggestion is true in suggestion mode
+      setSuggestion(defaultSuggestion);
       setShowingSuggestion(true);
-      console.log(`[AssignGPTModal] Initial showingSuggestion set to true`);
+      console.log(`[AssignGPTModal] Initial showingSuggestion set to true with fallback data`);
       
       const fetchSuggestion = async () => {
         try {
           setIsSubmitting(true);
           console.log(`[AssignGPTModal] Fetching suggestion for column ${column.id}, card ${modalState.cardId}`);
+          
+          // First, verify if suggestion exists 
+          const checkResponse = await fetch(`/api/columns/${column.id}/prompt-suggestion/check/${modalState.cardId}`);
+          
+          if (!checkResponse.ok) {
+            throw new Error(`Failed to check suggestion status: ${checkResponse.status} ${checkResponse.statusText}`);
+          }
+          
+          const checkData = await checkResponse.json();
+          console.log(`[AssignGPTModal] Suggestion check:`, checkData);
+          
+          if (!checkData.hasSuggestion) {
+            console.log(`[AssignGPTModal] No suggestion available in check response`);
+            
+            // Use the fallback data we've already set (column's current instructions)
+            toast({
+              title: "Using Default",
+              description: "Using current column instructions as the base for comparison",
+              variant: "default"
+            });
+            
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // If we got here, a suggestion exists - now fetch it
           const response = await apiRequest(
             "GET", 
             `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
@@ -152,22 +185,20 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
             
             // Ensure state is set to showing
             setShowingSuggestion(true);
-            console.log(`[AssignGPTModal] showingSuggestion confirmed to be true`);
+            console.log(`[AssignGPTModal] showingSuggestion confirmed to be true with real data`);
           } else {
-            console.log(`[AssignGPTModal] No suggestion data found in response`);
+            console.log(`[AssignGPTModal] Partial suggestion data found in response - using fallback`);
+            // We already have fallback data set, so just notify the user
             toast({
-              title: "Error",
-              description: "No suggestion data available",
-              variant: "destructive"
+              title: "Using Default",
+              description: "Using current column instructions as the base for comparison",
+              variant: "default"
             });
           }
         } catch (error) {
           console.error("Failed to fetch suggestion:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load suggestion",
-            variant: "destructive"
-          });
+          // Don't show an error toast since we already have fallback data set
+          console.log(`[AssignGPTModal] Using fallback data due to fetch error`);
         } finally {
           setIsSubmitting(false);
         }
