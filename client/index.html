@@ -4,20 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <script>
-    // DIRECT TEST SCRIPT FOR GUARANTEED SUGGESTION TOASTS
+    // ULTRA DIRECT TEST SCRIPT FOR GUARANTEED SUGGESTION TOASTS
+    // VERSION 2: INTERCEPT FETCH CALLS
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('[DIRECT TEST] Adding card move detector');
+      console.log('[ULTRA DIRECT TEST] Adding network interceptor for card moves');
       
       // Function to create and show a suggestion toast
-      function showSuggestionToast(cardId, columnName) {
+      function showSuggestionToast(cardId, columnId) {
+        console.log(`[ULTRA DIRECT TEST] Creating guaranteed suggestion toast for card ${cardId}, column ${columnId}`);
+        
         // Create toast container if it doesn't exist
-        let toastContainer = document.querySelector('.test-toast-container');
+        let toastContainer = document.querySelector('.ultra-test-toast-container');
         if (!toastContainer) {
           toastContainer = document.createElement('div');
-          toastContainer.className = 'test-toast-container';
+          toastContainer.className = 'ultra-test-toast-container';
           toastContainer.style.cssText = `
             position: fixed;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
             z-index: 9999;
             display: flex;
@@ -29,29 +32,33 @@
         
         // Create toast element
         const toast = document.createElement('div');
-        toast.className = 'test-toast';
+        toast.className = 'ultra-test-toast';
         toast.style.cssText = `
-          background-color: #4f46e5;
+          background-color: #6366f1;
           color: white;
           padding: 16px;
           border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
           display: flex;
           justify-content: space-between;
           align-items: center;
+          min-width: 280px;
           max-width: 400px;
-          animation: slideIn 0.3s ease-out;
+          animation: ultraSlideIn 0.4s ease-out;
+          border-left: 4px solid #818cf8;
         `;
         
         // Add toast content
         toast.innerHTML = `
           <div>
-            <div style="font-weight: bold; margin-bottom: 4px;">Prompt Assistant</div>
-            <div>[DIRECT TEST] Suggestion available for column "${columnName || 'Column'}"</div>
+            <div style="font-weight: bold; margin-bottom: 4px; font-size: 15px;">✨ Prompt Assistant</div>
+            <div style="font-size: 13px;">[ULTRA DIRECT] Suggestion available for column ${columnId}</div>
           </div>
           <button 
-            style="background: transparent; border: 1px solid white; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer;"
-            onclick="alert('Review button clicked for card ${cardId}')">
+            style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: all 0.2s;"
+            onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+            onclick="alert('Review button clicked for card ${cardId} in column ${columnId}')">
             Review
           </button>
         `;
@@ -60,69 +67,75 @@
         toastContainer.appendChild(toast);
         
         // Add animation keyframes
-        if (!document.querySelector('#toast-animation')) {
+        if (!document.querySelector('#ultra-toast-animation')) {
           const style = document.createElement('style');
-          style.id = 'toast-animation';
+          style.id = 'ultra-toast-animation';
           style.textContent = `
-            @keyframes slideIn {
-              from { transform: translateX(100%); opacity: 0; }
+            @keyframes ultraSlideIn {
+              from { transform: translateX(120%); opacity: 0; }
               to { transform: translateX(0); opacity: 1; }
             }
           `;
           document.head.appendChild(style);
         }
         
-        // Auto-remove after 5 seconds
+        // Auto-remove after 8 seconds
         setTimeout(() => {
           toast.style.opacity = '0';
-          toast.style.transform = 'translateX(100%)';
-          toast.style.transition = 'all 0.3s ease-out';
-          setTimeout(() => toast.remove(), 300);
-        }, 5000);
+          toast.style.transform = 'translateX(120%)';
+          toast.style.transition = 'all 0.4s ease-out';
+          setTimeout(() => toast.remove(), 400);
+        }, 8000);
         
-        console.log(`[DIRECT TEST] Guaranteed test toast shown for card ${cardId}`);
+        console.log(`[ULTRA DIRECT TEST] Guaranteed test toast shown for card ${cardId}`);
       }
       
-      // Track drag operations using mousedown/up events
-      let dragStartTarget = null;
-      
-      // Add drag start detection
-      document.addEventListener('mousedown', (e) => {
-        // Look for card elements
-        let cardElement = e.target.closest('[data-card-id]');
-        if (cardElement) {
-          dragStartTarget = {
-            cardId: cardElement.dataset.cardId,
-            columnId: cardElement.closest('[data-column-id]')?.dataset.columnId,
-            columnName: cardElement.closest('[data-column-id]')?.querySelector('h3')?.textContent || 'Column'
-          };
-          console.log(`[DIRECT TEST] Drag start detected for card ${dragStartTarget.cardId}`);
-        }
-      });
-      
-      // Add drag end detection
-      document.addEventListener('mouseup', () => {
-        if (dragStartTarget) {
-          // When mouse is released and we had an active drag, check if it was a card being moved
-          console.log(`[DIRECT TEST] Drag ended, might have moved card ${dragStartTarget.cardId}`);
+      // Intercept all fetch calls to detect card moves
+      const originalFetch = window.fetch;
+      window.fetch = async function(input, init) {
+        const url = typeof input === 'string' ? input : input.url;
+        
+        // Detect card move API calls
+        if (url.includes('/api/cards/') && url.includes('/move')) {
+          console.log(`[ULTRA DIRECT TEST] Detected card move API call: ${url}`);
           
-          // Wait a brief moment for DOM changes to settle
-          setTimeout(() => {
-            // Show "card moved" toast
-            console.log(`[DIRECT TEST] Showing suggestion toast for card ${dragStartTarget.cardId} from ${dragStartTarget.columnName}`);
-            showSuggestionToast(dragStartTarget.cardId, dragStartTarget.columnName);
-            dragStartTarget = null;
-          }, 1500);
+          // Extract card and column IDs
+          const urlParts = url.split('/');
+          const cardIdIndex = urlParts.indexOf('cards') + 1;
+          const cardId = cardIdIndex < urlParts.length ? urlParts[cardIdIndex] : null;
+          
+          // Process with the original fetch
+          const response = await originalFetch.apply(this, arguments);
+          
+          // After the move is complete, show our toast
+          if (response.ok) {
+            // Clone the response as it can only be read once
+            const clonedResponse = response.clone();
+            
+            // Read the JSON to get the destination column ID
+            try {
+              const data = await clonedResponse.json();
+              const destinationColumnId = data.columnId;
+              
+              console.log(`[ULTRA DIRECT TEST] Card ${cardId} successfully moved to column ${destinationColumnId}`);
+              
+              // Show our guaranteed toast after a short delay (let the move complete first)
+              setTimeout(() => {
+                showSuggestionToast(cardId, destinationColumnId);
+              }, 1000);
+            } catch (error) {
+              console.error('[ULTRA DIRECT TEST] Error processing response:', error);
+            }
+          }
+          
+          return response;
         }
-      });
+        
+        // For all other requests, just pass through
+        return originalFetch.apply(this, arguments);
+      };
       
-      // Fallback mechanism - periodically check for cards
-      setInterval(() => {
-        const cards = document.querySelectorAll('[data-card-id]');
-        if (cards.length > 0) {
-          console.log(`[DIRECT TEST] ${cards.length} cards found on page`);
-        }
-      }, 5000);
+      console.log('[ULTRA DIRECT TEST] Fetch interceptor installed successfully');
     });
     </script>
   </head>
