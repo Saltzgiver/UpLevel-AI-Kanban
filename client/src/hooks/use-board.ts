@@ -50,35 +50,58 @@ export function useBoard(boardId: number) {
 
   // Helper function to create toast notification with review action
   const showSuggestionToast = useCallback((columnId: number, cardId: number, columnName?: string) => {
-    // Create a simple toast
-    const { dismiss } = toast({
-      title: "Prompt Assistant",
-      description: `Suggestion available for column "${columnName || 'Column'}". Click to review.`,
-      duration: 10000, // Show for 10 seconds
-      onClick: () => {
-        console.log(`[TOAST_CLICK] Toast clicked for column ${columnId}, card ${cardId}`);
-        openInSuggestionMode(columnId, cardId);
-        dismiss(); // Dismiss toast when clicked
-      }
-    });
+    console.log(`[TOAST_DEBUG] Starting to create toast for column ${columnId}, card ${cardId}`);
+    console.log(`[TOAST_DEBUG] toast type = ${typeof toast}, openInSuggestionMode type = ${typeof openInSuggestionMode}`);
     
-    // Log for debugging
-    console.log(`[TOAST] Showing suggestion toast for column: ${columnId}, card: ${cardId}`);
+    // Create a unique ID for tracking this specific toast
+    const toastId = `suggestion-${columnId}-${cardId}-${Date.now()}`;
     
-    // Also force open the modal directly after a delay (as a backup)
-    setTimeout(() => {
-      console.log(`[TOAST_BACKUP] Showing direct suggestion notification for column ${columnId}, card ${cardId}`);
-      toast({
-        title: "Prompt Suggestion Ready",
-        description: `A suggestion is available for column "${columnName || 'Column'}". Opening now...`,
-        duration: 3000,
+    try {
+      // Use multiple approaches to ensure toast appears
+      // 1. Standard toast with onClick handler - don't specify ID, it's generated automatically
+      const { dismiss } = toast({
+        title: "🔍 Prompt Improvement Available!",
+        description: `We analyzed cards from "${columnName || 'Column'}" and have suggestions to improve the prompt. Click to review.`,
+        duration: 60000, // Show for 60 seconds - much longer than default
+        onClick: () => {
+          console.log(`[TOAST_CLICK] Toast clicked for column ${columnId}, card ${cardId}`);
+          openInSuggestionMode(columnId, cardId);
+          dismiss(); // Dismiss toast when clicked
+        }
       });
       
-      // Open modal with a slight delay after the second toast
+      console.log(`[TOAST_SUCCESS] Created toast with ID ${toastId} for column ${columnId}`);
+      
+      // 2. Also automatically open the modal after a delay as a fallback
+      console.log(`[MODAL_FALLBACK] Setting up automatic modal opening as fallback in 3 seconds`);
       setTimeout(() => {
+        console.log(`[MODAL_FALLBACK] Automatically opening suggestion modal for column ${columnId}, card ${cardId}`);
         openInSuggestionMode(columnId, cardId);
-      }, 1000);
-    }, 15000);
+      }, 3000);
+      
+      // 3. Also show a second toast after a longer delay (in case first one was missed)
+      setTimeout(() => {
+        console.log(`[TOAST_BACKUP] Showing second suggestion notification for column ${columnId}, card ${cardId}`);
+        toast({
+          title: "Prompt Suggestion Ready",
+          description: `A suggestion is available for column "${columnName || 'Column'}". Opening now...`,
+          duration: 3000,
+        });
+      }, 15000);
+      
+    } catch (error) {
+      console.error(`[TOAST_ERROR] Error creating toast:`, error);
+      
+      // If toast creation fails completely, alert and open modal directly
+      console.warn(`[TOAST_FAILURE] Toast creation failed, using alert() as fallback`);
+      alert(`Prompt improvement suggestion available! Opening suggestion view.`);
+      
+      // Open suggestion modal immediately as ultimate fallback
+      openInSuggestionMode(columnId, cardId);
+    }
+    
+    // Return the toast ID for tracking
+    return toastId;
   }, [toast, openInSuggestionMode]);
 
   // Function to manually check for suggestions (for debugging or testing)
