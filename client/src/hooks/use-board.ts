@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useModalContext } from "@/contexts/ModalContext";
 import { useEffect, useState, useCallback } from "react";
 
@@ -29,20 +30,55 @@ export function useBoard(boardId: number) {
     });
   }, []);
   
-  const boardQuery = useQuery({
+  // Define type for board query
+  type BoardData = {
+    id: number;
+    name: string;
+    columns: Array<{
+      id: number;
+      name: string;
+      gptAssigned?: boolean;
+      gptName?: string;
+      cards?: any[];
+    }>;
+  };
+  
+  const boardQuery = useQuery<BoardData>({
     queryKey: [`/api/boards/${boardId}`],
     enabled: !!boardId,
   });
 
   // Helper function to create toast notification with review action
   const showSuggestionToast = useCallback((columnId: number, cardId: number, columnName?: string) => {
-    toast({
+    // Create a simple toast
+    const { dismiss } = toast({
       title: "Prompt Assistant",
-      description: `Suggestion available for column "${columnName || 'Column'}"`,
+      description: `Suggestion available for column "${columnName || 'Column'}". Click to review.`,
+      duration: 10000, // Show for 10 seconds
       onClick: () => {
+        console.log(`[TOAST_CLICK] Toast clicked for column ${columnId}, card ${cardId}`);
         openInSuggestionMode(columnId, cardId);
+        dismiss(); // Dismiss toast when clicked
       }
     });
+    
+    // Log for debugging
+    console.log(`[TOAST] Showing suggestion toast for column: ${columnId}, card: ${cardId}`);
+    
+    // Also force open the modal directly after a delay (as a backup)
+    setTimeout(() => {
+      console.log(`[TOAST_BACKUP] Showing direct suggestion notification for column ${columnId}, card ${cardId}`);
+      toast({
+        title: "Prompt Suggestion Ready",
+        description: `A suggestion is available for column "${columnName || 'Column'}". Opening now...`,
+        duration: 3000,
+      });
+      
+      // Open modal with a slight delay after the second toast
+      setTimeout(() => {
+        openInSuggestionMode(columnId, cardId);
+      }, 1000);
+    }, 15000);
   }, [toast, openInSuggestionMode]);
 
   // Function to manually check for suggestions (for debugging or testing)
