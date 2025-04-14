@@ -119,13 +119,21 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       prompt += `Previous GPT Output: ${card.gptOutput}\n\n`;
     }
 
-    // Include existing chats for context if enabled for this card
-    if (card.includeChatHistory && card.chats && card.chats.length > 0) {
-      prompt += "Previous conversations:\n";
-      for (const chat of card.chats) {
-        prompt += `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}\n`;
+    // For card processing in a new column, include previous chat history if enabled with includeChatHistory
+    // When moving between columns, includeChatHistory controls whether to bring the history
+    if (card.chats && card.chats.length > 0) {
+      // If the card has been moved to a new column, respect the includeChatHistory flag
+      // Otherwise, always include the chat history for the current column
+      if (card.includeChatHistory) {
+        console.log(`Including ${card.chats.length} previous chat messages in card processing`);
+        prompt += "Previous conversations:\n";
+        for (const chat of card.chats) {
+          prompt += `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}\n`;
+        }
+        prompt += "\n";
+      } else {
+        console.log(`Chat history exists but not included (includeChatHistory is disabled)`);
       }
-      prompt += "\n";
     }
     
     // Include attachments if any
@@ -421,8 +429,10 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     ];
 
-    // Add chat history if enabled for this card
-    if (card.includeChatHistory && card.chats && card.chats.length > 0) {
+    // Always include chat history for conversations in the same column
+    // The includeChatHistory flag only controls whether to include history when a card is moved to a new column
+    if (card.chats && card.chats.length > 0) {
+      console.log(`Including ${card.chats.length} previous chat messages in conversation history`);
       for (const chat of card.chats) {
         messages.push({
           role: chat.role as "user" | "assistant",
