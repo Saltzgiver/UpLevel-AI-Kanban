@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, ReactNode } from "react";
+import { useState, createContext, useContext, ReactNode, useEffect } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { Column } from "./column-wrapper";
 import { AddColumn } from "./add-column";
@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Board, Column as ColumnType, Card as CardType, Chat, Attachment } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { useBoard } from "@/hooks/use-board";
 
 type DndContextType = {
   onDragEnd: (result: DropResult) => void;
@@ -498,8 +500,88 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
     }
   };
 
+  // Add a prompt suggestion tester
+  const [testColumnId, setTestColumnId] = useState<string>("");
+  const [testCardId, setTestCardId] = useState<string>("");
+  const boardHook = useBoard(board.id);
+  
+  const handleTestSuggestion = () => {
+    if (!testColumnId || !testCardId) {
+      toast({
+        title: "Error",
+        description: "Please enter both column ID and card ID",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const colId = parseInt(testColumnId);
+    const cardId = parseInt(testCardId);
+    
+    if (isNaN(colId) || isNaN(cardId)) {
+      toast({
+        title: "Error",
+        description: "IDs must be numbers",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const column = columns.find(col => col.id === colId);
+    if (!column) {
+      toast({
+        title: "Error",
+        description: `Column with ID ${colId} not found`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Manually trigger checking for suggestions
+    toast({
+      title: "Testing Suggestion",
+      description: `Checking for suggestions in column ${column.name} for card ${cardId}...`
+    });
+    
+    // Manually start polling for 10 seconds
+    boardHook.startPollingForSuggestion(colId, cardId, column.name);
+  };
+
   return (
     <div className="w-full">
+      {/* Debug Panel for Testing Suggestions */}
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="mb-4 p-3 bg-gray-100 rounded-md border border-gray-300">
+          <h3 className="text-sm font-semibold mb-2">Debug: Test Prompt Suggestions</h3>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Column ID"
+              value={testColumnId}
+              onChange={(e) => setTestColumnId(e.target.value)}
+              className="px-2 py-1 border rounded text-sm w-24"
+            />
+            <input
+              type="text"
+              placeholder="Card ID"
+              value={testCardId}
+              onChange={(e) => setTestCardId(e.target.value)}
+              className="px-2 py-1 border rounded text-sm w-24"
+            />
+            <Button
+              size="sm"
+              onClick={handleTestSuggestion}
+              className="text-xs"
+            >
+              Test Suggestion
+            </Button>
+          </div>
+          <div className="text-xs text-gray-500">
+            Columns: {columns.map(col => `${col.name}(${col.id})`).join(', ')}
+          </div>
+        </div>
+      )}
+      
       <DragDropContext onDragEnd={dndContext.onDragEnd}>
         <div 
           className="flex gap-4 pb-6 overflow-x-auto"

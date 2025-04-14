@@ -2,7 +2,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { useModalContext } from "@/contexts/ModalContext";
 import { useEffect, useState, useCallback } from "react";
 
@@ -18,11 +17,33 @@ export function useBoard(boardId: number) {
   const { toast } = useToast();
   const [pollingState, setPollingState] = useState<PollingState | null>(null);
   const { openInSuggestionMode } = useModalContext();
+
+  // Function to manually start polling for a suggestion (for testing and debugging)
+  const startPollingForSuggestion = useCallback((columnId: number, cardId: number, columnName?: string) => {
+    console.log(`[MANUAL_POLLING] Starting poll for column ${columnId}, card ${cardId}`);
+    setPollingState({
+      columnId,
+      cardId,
+      sourceColumnName: columnName,
+      active: true
+    });
+  }, []);
   
   const boardQuery = useQuery({
     queryKey: [`/api/boards/${boardId}`],
     enabled: !!boardId,
   });
+
+  // Helper function to create toast notification with review action
+  const showSuggestionToast = useCallback((columnId: number, cardId: number, columnName?: string) => {
+    toast({
+      title: "Prompt Assistant",
+      description: `Suggestion available for column "${columnName || 'Column'}"`,
+      onClick: () => {
+        openInSuggestionMode(columnId, cardId);
+      }
+    });
+  }, [toast, openInSuggestionMode]);
 
   // Function to manually check for suggestions (for debugging or testing)
   const checkSuggestion = useCallback(async (columnId: number, cardId: number) => {
@@ -34,19 +55,8 @@ export function useBoard(boardId: number) {
       console.log(`[MANUAL_CHECK] Response:`, data);
       
       if (data.hasSuggestion) {
-        // Show toast
-        toast({
-          title: "Prompt Assistant",
-          description: `Suggestion available for column`,
-          action: (
-            <ToastAction 
-              altText="Review suggestion" 
-              onClick={() => openInSuggestionMode(columnId, cardId)}
-            >
-              Review
-            </ToastAction>
-          ),
-        });
+        // Show toast using helper function
+        showSuggestionToast(columnId, cardId);
       }
       
       return data;
@@ -54,7 +64,7 @@ export function useBoard(boardId: number) {
       console.error('[MANUAL_CHECK] Error checking suggestion:', error);
       return { hasSuggestion: false };
     }
-  }, [toast, openInSuggestionMode]);
+  }, [showSuggestionToast]);
   
   // Poll for suggestion status if polling is active
   useEffect(() => {
@@ -86,18 +96,8 @@ export function useBoard(boardId: number) {
           clearInterval(intervalId);
           setPollingState(prev => prev ? { ...prev, active: false } : null);
           
-          toast({
-            title: "Prompt Assistant",
-            description: `Suggestion available for column "${sourceColumnName || 'Column'}"`,
-            action: (
-              <ToastAction 
-                altText="Review suggestion" 
-                onClick={() => openInSuggestionMode(columnId, cardId)}
-              >
-                Review
-              </ToastAction>
-            ),
-          });
+          // Use helper function for toast
+          showSuggestionToast(columnId, cardId, sourceColumnName);
         } else if (data.hasSuggestion === false) {
           console.log(`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.`);
           
@@ -122,7 +122,7 @@ export function useBoard(boardId: number) {
       console.log(`[POLLING_CLEANUP] Clearing polling interval ID: ${intervalId} for column ${pollingState?.columnId}, card ${pollingState?.cardId}`);
       clearInterval(intervalId);
     };
-  }, [pollingState, toast, openInSuggestionMode]);
+  }, [pollingState, showSuggestionToast]);
 
   const createColumn = useMutation({
     mutationFn: async (data: { name: string }) => {
@@ -368,6 +368,7 @@ export function useBoard(boardId: number) {
     moveCard,
     assignGPTToColumn,
     triggerGPTProcessing,
-    checkSuggestion, // Adding manual check function for debugging
+    checkSuggestion, // Manual check function for debugging
+    startPollingForSuggestion, // Manual polling trigger for debugging
   };
 }
