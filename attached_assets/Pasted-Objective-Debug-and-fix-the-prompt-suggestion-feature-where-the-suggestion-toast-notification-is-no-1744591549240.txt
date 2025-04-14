@@ -1,0 +1,69 @@
+Objective: Debug and fix the prompt suggestion feature where the suggestion toast notification is not appearing after moving a card from a GPT-enabled column. Add detailed logging to the frontend polling mechanism to trace the flow.
+
+File: `client/src/hooks/use-board.ts`
+
+1.  **Locate the `moveCard` mutation.**
+2.  **Inside the `onSuccess` handler:**
+    * **Add Logging:** Before the `if (sourceColumn?.gptAssigned)` check, add:
+        ```typescript
+        console.log(`[MOVE_CARD_SUCCESS] Card ID: ${data.cardId}, Source Column ID: ${data.sourceColumnId}, Destination Column ID: ${data.destinationColumnId}`);
+        console.log(`[MOVE_CARD_SUCCESS] Attempting to find source column data...`);
+        ```
+    * **Refine Source Column Check (if necessary):** Review how `sourceColumn` is obtained. If it relies solely on potentially stale `boardQuery.data`, consider if `variables` (the input to the mutation function) can reliably pass `sourceColumnIsGptEnabled` and `sourceColumnName` directly, or add a specific query refetch for the source column if needed before the check. For now, proceed assuming `sourceColumn` lookup is intended.
+    * **Add Logging:** Immediately after obtaining `sourceColumn`, add:
+        ```typescript
+        console.log(`[MOVE_CARD_SUCCESS] Found source column data:`, sourceColumn ? { id: sourceColumn.id, name: sourceColumn.name, gptAssigned: sourceColumn.gptAssigned } : 'Not Found');
+        ```
+    * **Modify the `if` block:**
+        * Inside the `if (sourceColumn?.gptAssigned)` block, before setting state, add:
+            ```typescript
+            console.log(`[POLLING_INIT] Source column ${data.sourceColumnId} is GPT-enabled. Initializing polling state for card ${data.cardId}.`);
+            ```
+        * Add logging inside the `else` block for the `if (sourceColumn?.gptAssigned)`:
+            ```typescript
+            else {
+              console.log(`[POLLING_INIT] Source column ${data.sourceColumnId} is NOT GPT-enabled or not found. Skipping polling.`);
+            }
+            ```
+3.  **Locate the Polling `useEffect`:** Find the `useEffect` hook that depends on `pollingState`.
+4.  **Add Logging Inside `useEffect`:**
+    * At the very beginning of the `useEffect` callback:
+        ```typescript
+        console.log(`[POLLING_EFFECT] Running for pollingState:`, pollingState);
+        ```
+    * Inside the `setInterval` callback, before `attempts++`:
+        ```typescript
+        console.log(`[POLLING_ATTEMPT] Polling attempt ${attempts + 1}/${maxAttempts} for column ${columnId}, card ${cardId}...`);
+        const statusUrl = \`/api/columns/${columnId}/prompt-suggestion/status/${cardId}\`;
+        console.log(\`[POLLING_ATTEMPT] Fetching URL: ${statusUrl}\`);
+        ```
+    * Inside the `try` block, after getting the response:
+        ```typescript
+        // const data = await response.json(); // Assuming this line exists
+        console.log(\`[POLLING_ATTEMPT] Received status response: ${JSON.stringify(data)}\`);
+        ```
+    * Inside the `if (data.hasSuggestion === true)` block, before calling `toast`:
+        ```typescript
+        console.log(\`[POLLING_SUCCESS] Suggestion found! Calling toast notification.\`);
+        ```
+    * Inside the `else if (data.hasSuggestion === false)` block:
+        ```typescript
+        console.log(\`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.\`);
+        ```
+    * Inside the final `else` block (where polling continues):
+        ```typescript
+        console.log(\`[POLLING_CONTINUE] Suggestion status is undefined or still processing. Polling again soon...\`);
+        ```
+    * Inside the `catch (error)` block:
+        ```typescript
+        console.error(\`[POLLING_ERROR] Error during polling attempt ${attempts}:`, error);
+        ```
+    * Before the `clearInterval` call when `attempts >= maxAttempts`:
+        ```typescript
+        console.log(\`[POLLING_TIMEOUT] Max polling attempts (${maxAttempts}) reached. Stopping poll.\`);
+        ```
+    * Inside the `useEffect` cleanup function (`return () => ...`):
+        ```typescript
+        console.log(\`[POLLING_CLEANUP] Clearing polling interval ID: ${intervalId} for column ${pollingState?.columnId}, card ${pollingState?.cardId}\`);
+        ```
+5.  **Review Code:** Ensure all added logs use `console.log` or `console.error` and provide clear context.
