@@ -310,71 +310,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion/status", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      const requestTimestamp = Date.now();
-      const requestId = `${requestTimestamp}-${Math.floor(Math.random() * 1000)}`;
+      console.log(`Checking suggestion status for column ${columnId}`);
       
-      console.log(`[PROMPT_GEN_${requestId}] 🔍 Checking suggestion status for column ${columnId} at ${new Date(requestTimestamp).toISOString()}`);
-      
-      // Set headers for consistency with the card-specific endpoint
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // Check for valid input
-      if (isNaN(columnId)) {
-        console.log(`[PROMPT_GEN_${requestId}] ⚠️ Invalid column ID: ${columnId}`);
-        return res.status(400).json({ 
-          message: "Invalid column ID",
-          hasSuggestion: false,
-          columnId: null,
-          timestamp: requestTimestamp,
-          error: "Invalid column ID"
-        });
-      }
-      
-      // Check column existence first
-      const column = await storage.getColumnById(columnId);
-      if (!column) {
-        console.log(`[PROMPT_GEN_${requestId}] ⚠️ Column ${columnId} not found`);
-        return res.status(404).json({ 
-          message: "Column not found",
-          hasSuggestion: false,
-          columnId,
-          timestamp: requestTimestamp,
-          error: "Column not found"
-        });
-      }
-      
-      // Check for any suggestion for this column
       const status = checkSuggestion(columnId);
-      console.log(`[PROMPT_GEN_${requestId}] 📋 Status for column ${columnId}: ${JSON.stringify(status || { hasSuggestion: false })}`);
       
-      // Return a consistent response with the same structure as the card-specific endpoint
-      const responseData = {
-        hasSuggestion: status?.hasSuggestion === true, // Ensure boolean true
-        columnId,
-        timestamp: requestTimestamp,
-        currentTime: new Date(requestTimestamp).toISOString(),
-        // Include some debug info to help troubleshoot
-        debug: {
-          cacheHit: status !== undefined,
-          checkTime: new Date().toISOString(),
-          columnName: column.name
-        }
-      };
-      
-      console.log(`[PROMPT_GEN_${requestId}] ✅ Sending response:`, JSON.stringify(responseData));
-      return res.status(200).json(responseData);
-    } catch (error) {
-      console.error("[PROMPT_SUGGESTION_GENERAL] ❌ Error checking suggestion status:", error);
-      return res.status(500).json({ 
-        message: "Error checking suggestion status", 
-        hasSuggestion: false,
-        columnId: parseInt(req.params.id) || null,
-        timestamp: Date.now(),
-        error: error instanceof Error ? error.message : "Unknown error"
+      return res.json({
+        hasSuggestion: status?.hasSuggestion || false
       });
+    } catch (error) {
+      console.error("Error checking suggestion status:", error);
+      return res.status(500).json({ message: "Error checking suggestion status" });
     }
   });
   
@@ -383,103 +328,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      const requestTimestamp = Date.now();
-      const requestId = `${requestTimestamp}-${Math.floor(Math.random() * 1000)}`;
+      console.log(`Checking suggestion status for column ${columnId} and card ${cardId}`);
       
-      console.log(`[PROMPT_STATUS_${requestId}] 🔍 Checking suggestion status for column ${columnId} and card ${cardId} at ${new Date(requestTimestamp).toISOString()}`);
-      
-      // Set content type headers early
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // Check for valid input
-      if (isNaN(columnId) || isNaN(cardId)) {
-        console.log(`[PROMPT_STATUS_${requestId}] ⚠️ Invalid input: columnId=${columnId}, cardId=${cardId}`);
-        return res.status(400).json({ 
-          message: "Invalid column or card ID",
-          hasSuggestion: false,
-          columnId: isNaN(columnId) ? null : columnId,
-          cardId: isNaN(cardId) ? null : cardId,
-          timestamp: requestTimestamp,
-          error: "Invalid parameters"
-        });
-      }
-      
-      // Check column existence first
-      const column = await storage.getColumnById(columnId);
-      if (!column) {
-        console.log(`[PROMPT_STATUS_${requestId}] ⚠️ Column ${columnId} not found`);
-        return res.status(404).json({ 
-          message: "Column not found",
-          hasSuggestion: false,
-          columnId,
-          cardId,
-          timestamp: requestTimestamp,
-          error: "Column not found"
-        });
-      }
-      
-      // Check if card exists
-      const card = await storage.getCardById(cardId);
-      if (!card) {
-        console.log(`[PROMPT_STATUS_${requestId}] ⚠️ Card ${cardId} not found`);
-        return res.status(404).json({ 
-          message: "Card not found",
-          hasSuggestion: false,
-          columnId,
-          cardId,
-          timestamp: requestTimestamp,
-          error: "Card not found"
-        });
-      }
-      
-      // Check suggestion in cache
       const status = checkSuggestion(columnId, cardId);
       
-      console.log(`[PROMPT_STATUS_${requestId}] 📋 Cache status for column ${columnId} and card ${cardId}: ${status ? 
-        `has suggestion: ${status.hasSuggestion}, content length: ${status.suggestion ? 
-          (typeof status.suggestion === 'string' ? 
-            status.suggestion.length : 
-            JSON.stringify(status.suggestion).length) 
-          : 0}` 
-        : 'no cache entry'}`);
-      
-      // Return a consistent response, always including hasSuggestion
-      const responseData = {
-        hasSuggestion: status?.hasSuggestion === true, // Ensure this is boolean true, not truthy
-        columnId,
-        cardId,
-        timestamp: requestTimestamp,
-        currentTime: new Date(requestTimestamp).toISOString(),
-        // Include some debug info to help troubleshoot
-        debug: {
-          cacheHit: status !== undefined,
-          checkTime: new Date().toISOString(),
-          suggestionType: status?.suggestion ? typeof status.suggestion : null,
-          hasContent: status?.suggestion !== null && status?.suggestion !== undefined
-        }
-      };
-      
-      // Add extra logging for cache misses - this can help diagnose when suggestions aren't properly stored
-      if (!status || !status.hasSuggestion) {
-        console.log(`[PROMPT_STATUS_${requestId}] ℹ️ No suggestion available at this time for column ${columnId}, card ${cardId}`);
-      }
-      
-      console.log(`[PROMPT_STATUS_${requestId}] ✅ Sending response:`, JSON.stringify(responseData));
-      return res.status(200).json(responseData);
-    } catch (error) {
-      console.error("[PROMPT_ASSISTANT_STATUS] ❌ Error checking suggestion status for card:", error);
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(500).json({ 
-        message: "Error checking suggestion status for card",
-        hasSuggestion: false,
-        columnId: parseInt(req.params.id) || null,
-        cardId: parseInt(req.params.cardId) || null,
-        timestamp: Date.now(),
-        error: error instanceof Error ? error.message : "Unknown error"
+      return res.json({
+        hasSuggestion: status?.hasSuggestion || false
       });
+    } catch (error) {
+      console.error("Error checking suggestion status for card:", error);
+      return res.status(500).json({ message: "Error checking suggestion status for card" });
     }
   });
   
@@ -487,120 +345,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      const requestTimestamp = Date.now();
-      const requestId = `${requestTimestamp}-${Math.floor(Math.random() * 1000)}`;
+      console.log(`Retrieving suggestion for column ${columnId}`);
       
-      console.log(`[CONTENT_${requestId}] 📥 Retrieving suggestion for column ${columnId} at ${new Date(requestTimestamp).toISOString()}`);
-      
-      // Set cache prevention headers for consistency with status endpoints
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // Check for valid input
-      if (isNaN(columnId)) {
-        console.log(`[CONTENT_${requestId}] ⚠️ Invalid column ID: ${columnId}`);
-        return res.status(400).json({ 
-          message: "Invalid column ID",
-          hasSuggestion: false,
-          error: "Invalid parameters",
-          timestamp: requestTimestamp
-        });
-      }
-      
-      // Check suggestion availability
       const status = checkSuggestion(columnId);
-      console.log(`[CONTENT_${requestId}] 🔍 Cache status for column ${columnId}:`, 
-        status ? JSON.stringify({
-          hasSuggestion: status.hasSuggestion,
-          suggestionType: status.suggestion ? typeof status.suggestion : 'null'
-        }) : 'No cache entry found');
       
       if (!status || !status.hasSuggestion) {
-        console.log(`[CONTENT_${requestId}] ⚠️ No suggestion found in cache for column ${columnId}`);
-        return res.status(404).json({ 
-          message: "No suggestion available for this column",
-          hasSuggestion: false,
-          columnId,
-          timestamp: requestTimestamp,
-          error: "No suggestion available"
-        });
+        return res.status(404).json({ message: "No suggestion available for this column" });
       }
       
       // Get current column data to include with the response
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        console.log(`[CONTENT_${requestId}] ⚠️ Column ${columnId} not found in database`);
-        return res.status(404).json({ 
-          message: "Column not found",
-          hasSuggestion: false,
-          columnId,
-          timestamp: requestTimestamp,
-          error: "Column not found"
-        });
-      }
-      
-      // Enhanced debugging for suggestion content
-      if (status.suggestion) {
-        if (typeof status.suggestion === 'string') {
-          console.log(`[CONTENT_${requestId}] 📄 Found TEXT suggestion for column ${columnId}. Length: ${status.suggestion.length} chars, preview: "${status.suggestion.substring(0, 50)}..."`);
-        } else if (status.suggestion && typeof status.suggestion === 'object') {
-          console.log(`[CONTENT_${requestId}] 📄 Found OBJECT suggestion for column ${columnId}.`);
-          console.log(`[CONTENT_${requestId}] 📄 Instructions length: ${status.suggestion.suggestedInstructions?.length || 0} chars`);
-          console.log(`[CONTENT_${requestId}] 📄 Rationale length: ${status.suggestion.rationale?.length || 0} chars`);
-        } else {
-          console.log(`[CONTENT_${requestId}] ⚠️ Found suggestion for column ${columnId} but in unexpected format:`, typeof status.suggestion);
-        }
-      } else {
-        console.log(`[CONTENT_${requestId}] ⚠️ Status has hasSuggestion=true but empty suggestion for column ${columnId}`);
+        return res.status(404).json({ message: "Column not found" });
       }
       
       // Format response based on suggestion type
-      // Define the response type with all possible fields
-      type SuggestionResponse = {
-        hasSuggestion: boolean;
-        currentInstructions: string;
-        timestamp: number;
-        suggestedInstructions?: string;
-        rationale?: string;
-        columnId?: number;
-        columnName?: string;
-      };
-      
-      // Create base response
-      let responseData: SuggestionResponse = {
-        hasSuggestion: true,
-        currentInstructions: column.gptInstructions || "",
-        timestamp: requestTimestamp,
-        columnId,
-        columnName: column.name
-      };
-      
       if (typeof status.suggestion === 'string') {
-        responseData.suggestedInstructions = status.suggestion;
-        responseData.rationale = "Based on analysis of past card interactions";
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: status.suggestion || "",
+          timestamp: Date.now()
+        });
       } else if (status.suggestion && typeof status.suggestion === 'object') {
         // Handle structured suggestion format
-        responseData.suggestedInstructions = status.suggestion.suggestedInstructions || "";
-        responseData.rationale = status.suggestion.rationale || "Based on analysis of past card interactions";
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: status.suggestion.suggestedInstructions,
+          rationale: status.suggestion.rationale,
+          timestamp: Date.now()
+        });
       } else {
-        // No valid suggestion format, but we still reported hasSuggestion true
-        responseData.suggestedInstructions = "";
-        responseData.rationale = "Could not parse suggestion format";
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: "",
+          timestamp: Date.now()
+        });
       }
-      
-      console.log(`[CONTENT_${requestId}] ✅ Returning suggestion response to client`);
-      return res.status(200).json(responseData);
     } catch (error) {
-      console.error("[SUGGESTION_RETRIEVAL] ❌ Error retrieving suggestion:", error);
-      return res.status(500).json({ 
-        message: "Error retrieving suggestion",
-        hasSuggestion: false,
-        columnId: parseInt(req.params.id) || null,
-        timestamp: Date.now(),
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
+      console.error("Error retrieving suggestion:", error);
+      return res.status(500).json({ message: "Error retrieving suggestion" });
     }
   });
   
@@ -735,125 +518,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.id);
       const { destinationColumnId, position, sourceColumnId } = req.body;
       
-      console.log(`Moving card ${cardId} from column ${sourceColumnId} to ${destinationColumnId}`);
-      
       const card = await storage.moveCard(cardId, parseInt(destinationColumnId), position);
       
       if (!card) {
-        console.log(`Card ${cardId} not found when trying to move it`);
         return res.status(404).json({ message: "Card not found" });
       }
       
       // Get the source column to potentially analyze for prompt suggestions
       const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
-      console.log(`Source column for card ${cardId}: ${sourceColumn ? JSON.stringify({
-        id: sourceColumn.id,
-        name: sourceColumn.name,
-        gptAssigned: sourceColumn.gptAssigned,
-        apiKey: sourceColumn.apiKey ? (sourceColumn.apiKey === "from_env" ? "from_env" : "custom key set") : "no key"
-      }) : "none"}`);
       
       // Check if destination column has GPT assigned and auto-trigger is enabled
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
-      console.log(`Destination column for card ${cardId}: ${destColumn ? JSON.stringify({
-        id: destColumn.id,
-        name: destColumn.name,
-        gptAssigned: destColumn.gptAssigned,
-        autoTrigger: destColumn.autoTrigger,
-        apiKey: destColumn.apiKey ? (destColumn.apiKey === "from_env" ? "from_env" : "custom key set") : "no key"
-      }) : "none"}`);
       
       // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
       if (sourceColumn && sourceColumn.gptAssigned) {
-        // Generate a unique ID for tracking this suggestion generation process
-        const requestId = `sugg-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        console.log(`[SUGGESTION_INIT_${requestId}] 🚀 Starting prompt suggestion analysis for card ${cardId} from column ${sourceColumn.id} (${sourceColumn.name})`);
-        
         // Run this analysis asynchronously so it doesn't block the main flow
         setTimeout(async () => {
           try {
-            // First, mark that we're working on a suggestion - store a placeholder
-            storeSuggestion(sourceColumn.id, cardId, null);
-            
-            console.log(`[SUGGESTION_${requestId}] 📋 Getting card details for analysis...`);
-            
             // Get the card details for analysis
             const cardWithDetails = await storage.getCardById(cardId);
-            if (!cardWithDetails) {
-              console.error(`[SUGGESTION_${requestId}] ❌ Card ${cardId} not found in database. Cannot generate suggestion.`);
-              return;
-            }
-            
-            console.log(`[SUGGESTION_${requestId}] 📋 Getting chat history for card...`);
+            if (!cardWithDetails) return;
             
             // Get the chats from the card while it was in the source column
             const chats = await storage.getChatsByCardId(cardId);
             if (!chats || chats.length === 0) {
-              console.log(`[SUGGESTION_${requestId}] ℹ️ No chats available for card ${cardId}. Skipping suggestion generation.`);
-              // No chats to analyze, keep the placeholder in cache to indicate we checked but found nothing
+              // No chats to analyze, store no suggestion available in cache
+              storeSuggestion(sourceColumn.id, cardId, null);
               return;
             }
-            
-            console.log(`[SUGGESTION_${requestId}] ✓ Found ${chats.length} chat messages for card ${cardId}`);
             
             // Create card context object for analysis
             const cardContext = {
-              title: cardWithDetails.title || "Untitled Card",
-              description: cardWithDetails.description || "",
+              title: cardWithDetails.title,
+              description: cardWithDetails.description,
               attachments: cardWithDetails.attachments || []
             };
             
-            // Determine the API key to use
-            // If sourceColumn.apiKey is "from_env" or not specified, we'll use the environment variable
-            // Otherwise, use the column's specific API key
-            let apiKeyToUse = undefined;
-            if (sourceColumn.apiKey && sourceColumn.apiKey !== "from_env") {
-              apiKeyToUse = sourceColumn.apiKey;
-            } else {
-              // This will use the OPENAI_API_KEY environment variable
-              apiKeyToUse = process.env.OPENAI_API_KEY;
-            }
-
-            // Log the API key usage mode without exposing the actual key
-            console.log(`[SUGGESTION_${requestId}] 🔑 Using API key for prompt suggestion: ${sourceColumn.apiKey === "from_env" ? "from environment variable" : (sourceColumn.apiKey ? "from column settings" : "from environment variable")}`);
-            
-            // Only proceed if we have the necessary source column instructions
-            if (!sourceColumn.gptInstructions) {
-              console.log(`[SUGGESTION_${requestId}] ⚠️ Source column ${sourceColumn.id} has no instructions. Skipping suggestion generation.`);
-              return;
-            }
-            
-            console.log(`[SUGGESTION_${requestId}] 🤖 Generating prompt suggestion via GPT...`);
-            
             // Get prompt improvement suggestion
             const promptSuggestion = await getPromptSuggestion(
-              sourceColumn.gptInstructions, 
+              sourceColumn.gptInstructions || "", 
               cardContext,
               chats,
-              apiKeyToUse
+              sourceColumn.apiKey || undefined
             );
             
-            // Validate the suggestion to ensure it has the needed fields
-            if (
-              promptSuggestion && 
-              promptSuggestion.suggestedInstructions && 
-              promptSuggestion.rationale
-            ) {
-              console.log(`[SUGGESTION_${requestId}] ✅ Successfully generated suggestion for column ${sourceColumn.id}`);
-              
-              // Store the valid suggestion in the cache
-              storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
-              
+            // Store the suggestion in the cache
+            storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
+            
+            console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
+            if (promptSuggestion) {
               // Log a preview of the suggestion content
-              console.log(`[SUGGESTION_${requestId}] 📝 Suggested instructions (preview): "${promptSuggestion.suggestedInstructions.substring(0, 100)}${promptSuggestion.suggestedInstructions.length > 100 ? '...' : ''}"`);
-              console.log(`[SUGGESTION_${requestId}] 📝 Rationale (preview): "${promptSuggestion.rationale.substring(0, 100)}${promptSuggestion.rationale.length > 100 ? '...' : ''}"`);
-            } else {
-              console.log(`[SUGGESTION_${requestId}] ⚠️ GPT did not return a valid suggestion format. No improvement needed or available.`);
-              // Keep the null placeholder to indicate we checked but found no improvements
+              const suggestedInstructions = promptSuggestion.suggestedInstructions;
+              console.log(`Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
             }
           } catch (error) {
-            console.error(`[SUGGESTION_${requestId}] ❌ Error generating prompt suggestion:`, error);
-            // Keep the null placeholder in case of error, don't change it
+            console.error("Error generating prompt suggestion:", error);
+            // Store no suggestion available in case of error
+            storeSuggestion(sourceColumn.id, cardId, null);
           }
         }, 200);
       }
