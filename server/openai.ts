@@ -835,6 +835,9 @@ export async function getPromptSuggestion(
   apiKey?: string
 ): Promise<{ rationale: string; suggestedInstructions: string } | null> {
   try {
+    // Import the template system
+    const { getTemplate, generateMetaPrompt } = require('./promptAnalyzerTemplate');
+    
     // Log inputs for analysis
     console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
     console.log(`Source Column Instructions: ${sourceColumnInstructions}`);
@@ -887,122 +890,17 @@ export async function getPromptSuggestion(
     
     console.log(`Detected column type: ${columnType}`);
     
-    // Include specific guidance based on column type
-    let columnSpecificGuidance = "";
+    // Get the current template
+    const template = getTemplate();
     
-    switch (columnType) {
-      case "image-generation":
-        columnSpecificGuidance = `
-Additional Guidelines for Image Generation:
-- Consider if users frequently needed to specify style, composition, or lighting details
-- Look for patterns in requested revisions to images (colors, angles, subjects)
-- Identify if format specifications (resolution, aspect ratio) were missing
-- Check if the prompt needs more guidance on maintaining visual consistency across multiple images`;
-        break;
-        
-      case "spreadsheet-generation":
-        columnSpecificGuidance = `
-Additional Guidelines for Data/Spreadsheet Generation:
-- Identify if format specifications (CSV structure, headers) were missing or confusing
-- Look for patterns in data organization requests (sorting, grouping)
-- Consider if column types or data validation rules should be specified
-- Check if the prompt needs clearer guidance on data formatting and computation rules`;
-        break;
-        
-      case "text-drafting":
-        columnSpecificGuidance = `
-Additional Guidelines for Text Content Creation:
-- Check if tone and voice guidance was missing or needed clarification
-- Look for patterns in formatting requests (headings, bullet points, paragraphing)
-- Identify if length guidelines were missing or insufficient
-- Consider if the prompt should include specific structural elements (intro, conclusion, etc.)`;
-        break;
-        
-      case "content-refinement":
-        columnSpecificGuidance = `
-Additional Guidelines for Content Refinement:
-- Look for patterns in what aspects needed refinement (clarity, brevity, technical accuracy)
-- Check if the prompt needs clearer guidance on maintaining original meaning
-- Identify if style guide adherence instructions were missing
-- Consider if the level of editing (light, moderate, substantive) should be specified`;
-        break;
-    }
-    
-    // Success pattern identification guidance
-    let successPatternGuidance = "";
-    
-    // Check for successful interactions in chat history
-    if (chats.length > 0) {
-      // Check for positive feedback from users
-      const positiveResponses = chats.filter(chat => 
-        chat.role === 'user' && 
-        (chat.content.toLowerCase().includes("thank") || 
-         chat.content.toLowerCase().includes("good job") ||
-         chat.content.toLowerCase().includes("exactly") ||
-         chat.content.toLowerCase().includes("perfect") ||
-         chat.content.toLowerCase().includes("great"))
-      );
-      
-      if (positiveResponses.length > 0) {
-        console.log(`Detected ${positiveResponses.length} positive user responses - analyzing success patterns`);
-        successPatternGuidance = `
-## Success Patterns
-I've identified ${positiveResponses.length} instances where the user expressed satisfaction. 
-Pay special attention to what made these interactions successful and incorporate these elements into your suggestion.`;
-      }
-    }
-    
-    // Format meta-prompt that will guide the AI model
-    const metaPrompt = `
-# Prompt Improvement Assistant
-
-## Context
-You are a specialized AI designed to analyze card interactions and suggest improvements to column prompts in a Kanban board application. Your goal is to make AI interactions more efficient by improving the initial instructions.
-
-## Your Task
-Analyze the following information to identify potential improvements for the column's prompt instructions:
-
-1. Current column prompt instructions
-2. A card that was processed using these instructions
-3. The conversation history between the user and AI for this card
-
-## Current Column Prompt Instructions
-\`\`\`
-${sourceColumnInstructions || "No specific instructions provided"}
-\`\`\`
-
-## Card Details
-- Title: ${cardContext.title}
-- Description: ${cardContext.description || "No description provided"}
-${attachments.length > 0 
-  ? `- Attachments: ${attachments.map(a => `${a.filename} (${a.fileType})`).join(', ')}` 
-  : '- No attachments'}
-
-## Conversation History
-${chats.map(chat => `${chat.role === 'assistant' ? 'AI' : 'User'}: ${chat.content}`).join('\n\n')}
-
-## Analysis Guidelines
-1. Identify patterns in the conversation that suggest the initial prompt could be improved
-2. Look for clarification questions the user had to ask that could have been addressed in the initial prompt
-3. Consider information that had to be extracted or explained that could be systematically incorporated
-4. Focus on reusable patterns, not one-off requests or special cases
-5. Consider if the conversation revealed misunderstandings about what the AI should do
-6. Analyze the effectiveness of the responses and how they could be improved with better initial instructions
-${columnSpecificGuidance}
-${successPatternGuidance}
-
-## Response Format
-First provide a detailed rationale for your suggestion on a single line starting with "RATIONALE: ".
-Then, on a new line, provide your suggested prompt instructions.
-
-Example:
-RATIONALE: The original prompt lacked specific instructions about including environmental impact metrics, which the user had to request separately.
-Create compelling marketing copy that emphasizes environmental impact metrics and sustainability benefits. Include specific numbers about waste reduction and carbon footprint when possible.
-
-If no meaningful improvements can be made, simply respond with:
-RATIONALE: No improvements needed because [your reasoning]
-[original instructions]
-`;
+    // Generate the meta-prompt using the template
+    const metaPrompt = generateMetaPrompt(
+      template,
+      sourceColumnInstructions,
+      cardContext,
+      chats,
+      columnType
+    );
 
     console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
     console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
