@@ -67,6 +67,57 @@ export default function DirectToastTestPage() {
     });
   };
   
+  const createSuggestionAndTriggerToast = async () => {
+    const columnId = 9; // "image test" column
+    const cardId = 47; // "Image Generation Test" card
+    
+    try {
+      // First create a test suggestion
+      console.log(`Creating test suggestion for column ${columnId}, card ${cardId}`);
+      const createResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          suggestion: {
+            rationale: 'Based on recent image generation results, adding more specific details about style and composition yields better results.',
+            suggestedInstructions: 'Create an image based on the card content with attention to style (photorealistic, cartoon, etc.) and composition details.',
+          },
+        }),
+      });
+      
+      const result = await createResponse.json();
+      console.log('Suggestion created:', result);
+      
+      // Then show the toast
+      console.log(`Triggering toast with modal action for column ${columnId}, card ${cardId}`);
+      toast({
+        title: "Prompt Assistant",
+        description: `We have suggestions to improve the "Test Column" column's instructions based on recent card activity.`,
+        action: (
+          <ToastAction 
+            altText="View suggestion" 
+            onClick={() => {
+              console.log(`View button clicked for column ${columnId}, card ${cardId}`);
+              openInSuggestionMode(columnId, cardId);
+            }}
+          >
+            View
+          </ToastAction>
+        ),
+        duration: 10000,
+      });
+    } catch (error) {
+      console.error('Error creating suggestion:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create suggestion',
+        variant: 'destructive',
+      });
+    }
+  };
+  
   return (
     <div className="container max-w-3xl py-10">
       <Card>
@@ -90,10 +141,24 @@ export default function DirectToastTestPage() {
           </div>
           
           <div>
-            <Button onClick={triggerModalToast} variant="default" className="w-full mb-2">
-              Show Suggestion Toast
+            <Button onClick={createSuggestionAndTriggerToast} variant="default" className="w-full mb-2">
+              Create Suggestion and Show Toast
             </Button>
-            <p className="text-xs text-muted-foreground">Displays a toast with a "View" action button that opens the modal</p>
+            <p className="text-xs text-muted-foreground">Creates a suggestion first, then displays a toast with a "View" action button that opens the modal</p>
+          </div>
+          
+          <div>
+            <Button onClick={() => openInSuggestionMode(9, 47)} variant="outline" className="w-full mb-2">
+              Open GPT Modal Directly
+            </Button>
+            <p className="text-xs text-muted-foreground">Opens the GPT modal directly in suggestion mode for column 9, card 47</p>
+          </div>
+          
+          <div>
+            <Button onClick={triggerModalToast} variant="outline" className="w-full mb-2">
+              Show Toast Without Creating Suggestion
+            </Button>
+            <p className="text-xs text-muted-foreground">Shows a toast with "View" button without creating a suggestion first</p>
           </div>
         </CardContent>
         <CardFooter>
