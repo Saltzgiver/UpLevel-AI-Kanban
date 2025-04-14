@@ -310,29 +310,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion/status", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      console.log(`[PROMPT_SUGGESTION_GENERAL] Checking suggestion status for column ${columnId}`);
+      const requestTimestamp = Date.now();
+      const requestId = `${requestTimestamp}-${Math.floor(Math.random() * 1000)}`;
+      
+      console.log(`[PROMPT_GEN_${requestId}] 🔍 Checking suggestion status for column ${columnId} at ${new Date(requestTimestamp).toISOString()}`);
+      
+      // Set headers for consistency with the card-specific endpoint
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      // Check for valid input
+      if (isNaN(columnId)) {
+        console.log(`[PROMPT_GEN_${requestId}] ⚠️ Invalid column ID: ${columnId}`);
+        return res.status(400).json({ 
+          message: "Invalid column ID",
+          hasSuggestion: false,
+          columnId: null,
+          timestamp: requestTimestamp,
+          error: "Invalid column ID"
+        });
+      }
       
       // Check column existence first
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        console.log(`[PROMPT_SUGGESTION_GENERAL] Column ${columnId} not found`);
+        console.log(`[PROMPT_GEN_${requestId}] ⚠️ Column ${columnId} not found`);
         return res.status(404).json({ 
           message: "Column not found",
-          hasSuggestion: false
+          hasSuggestion: false,
+          columnId,
+          timestamp: requestTimestamp,
+          error: "Column not found"
         });
       }
       
+      // Check for any suggestion for this column
       const status = checkSuggestion(columnId);
-      console.log(`[PROMPT_SUGGESTION_GENERAL] Status response for column ${columnId}: ${JSON.stringify(status || { hasSuggestion: false })}`);
+      console.log(`[PROMPT_GEN_${requestId}] 📋 Status for column ${columnId}: ${JSON.stringify(status || { hasSuggestion: false })}`);
       
-      return res.json({
-        hasSuggestion: status?.hasSuggestion || false,
+      // Return a consistent response with the same structure as the card-specific endpoint
+      const responseData = {
+        hasSuggestion: status?.hasSuggestion === true, // Ensure boolean true
         columnId,
-        timestamp: Date.now()
-      });
+        timestamp: requestTimestamp,
+        currentTime: new Date(requestTimestamp).toISOString(),
+        // Include some debug info to help troubleshoot
+        debug: {
+          cacheHit: status !== undefined,
+          checkTime: new Date().toISOString(),
+          columnName: column.name
+        }
+      };
+      
+      console.log(`[PROMPT_GEN_${requestId}] ✅ Sending response:`, JSON.stringify(responseData));
+      return res.status(200).json(responseData);
     } catch (error) {
-      console.error("[PROMPT_SUGGESTION_GENERAL] Error checking suggestion status:", error);
-      return res.status(500).json({ message: "Error checking suggestion status" });
+      console.error("[PROMPT_SUGGESTION_GENERAL] ❌ Error checking suggestion status:", error);
+      return res.status(500).json({ 
+        message: "Error checking suggestion status", 
+        hasSuggestion: false,
+        columnId: parseInt(req.params.id) || null,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
   
@@ -341,44 +383,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      console.log(`[PROMPT_ASSISTANT_STATUS] Checking suggestion status for column ${columnId} and card ${cardId}`);
+      const requestTimestamp = Date.now();
+      const requestId = `${requestTimestamp}-${Math.floor(Math.random() * 1000)}`;
+      
+      console.log(`[PROMPT_STATUS_${requestId}] 🔍 Checking suggestion status for column ${columnId} and card ${cardId} at ${new Date(requestTimestamp).toISOString()}`);
       
       // Set content type headers early
       res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       
       // Check for valid input
       if (isNaN(columnId) || isNaN(cardId)) {
-        console.log(`[PROMPT_ASSISTANT_STATUS] Invalid input: columnId=${columnId}, cardId=${cardId}`);
+        console.log(`[PROMPT_STATUS_${requestId}] ⚠️ Invalid input: columnId=${columnId}, cardId=${cardId}`);
         return res.status(400).json({ 
           message: "Invalid column or card ID",
-          hasSuggestion: false
+          hasSuggestion: false,
+          columnId: isNaN(columnId) ? null : columnId,
+          cardId: isNaN(cardId) ? null : cardId,
+          timestamp: requestTimestamp,
+          error: "Invalid parameters"
         });
       }
       
       // Check column existence first
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        console.log(`[PROMPT_ASSISTANT_STATUS] Column ${columnId} not found`);
+        console.log(`[PROMPT_STATUS_${requestId}] ⚠️ Column ${columnId} not found`);
         return res.status(404).json({ 
           message: "Column not found",
-          hasSuggestion: false
+          hasSuggestion: false,
+          columnId,
+          cardId,
+          timestamp: requestTimestamp,
+          error: "Column not found"
         });
       }
       
       // Check if card exists
       const card = await storage.getCardById(cardId);
       if (!card) {
-        console.log(`[PROMPT_ASSISTANT_STATUS] Card ${cardId} not found`);
+        console.log(`[PROMPT_STATUS_${requestId}] ⚠️ Card ${cardId} not found`);
         return res.status(404).json({ 
           message: "Card not found",
-          hasSuggestion: false
+          hasSuggestion: false,
+          columnId,
+          cardId,
+          timestamp: requestTimestamp,
+          error: "Card not found"
         });
       }
       
       // Check suggestion in cache
       const status = checkSuggestion(columnId, cardId);
       
-      console.log(`[PROMPT_ASSISTANT_STATUS] Cache status for column ${columnId} and card ${cardId}: ${status ? 
+      console.log(`[PROMPT_STATUS_${requestId}] 📋 Cache status for column ${columnId} and card ${cardId}: ${status ? 
         `has suggestion: ${status.hasSuggestion}, content length: ${status.suggestion ? 
           (typeof status.suggestion === 'string' ? 
             status.suggestion.length : 
@@ -388,20 +448,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Return a consistent response, always including hasSuggestion
       const responseData = {
-        hasSuggestion: status?.hasSuggestion || false,
+        hasSuggestion: status?.hasSuggestion === true, // Ensure this is boolean true, not truthy
         columnId,
         cardId,
-        timestamp: Date.now()
+        timestamp: requestTimestamp,
+        currentTime: new Date(requestTimestamp).toISOString(),
+        // Include some debug info to help troubleshoot
+        debug: {
+          cacheHit: status !== undefined,
+          checkTime: new Date().toISOString()
+        }
       };
       
-      console.log(`[PROMPT_ASSISTANT_STATUS] Sending response:`, responseData);
-      return res.json(responseData);
+      console.log(`[PROMPT_STATUS_${requestId}] ✅ Sending response:`, JSON.stringify(responseData));
+      return res.status(200).json(responseData);
     } catch (error) {
-      console.error("[PROMPT_ASSISTANT_STATUS] Error checking suggestion status for card:", error);
+      console.error("[PROMPT_ASSISTANT_STATUS] ❌ Error checking suggestion status for card:", error);
       res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         message: "Error checking suggestion status for card",
-        hasSuggestion: false
+        hasSuggestion: false,
+        columnId: parseInt(req.params.id) || null,
+        cardId: parseInt(req.params.cardId) || null,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
@@ -410,41 +480,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      console.log(`[SUGGESTION_RETRIEVAL] Retrieving suggestion for column ${columnId}`);
+      const requestTimestamp = Date.now();
+      const requestId = `${requestTimestamp}-${Math.floor(Math.random() * 1000)}`;
       
+      console.log(`[CONTENT_${requestId}] 📥 Retrieving suggestion for column ${columnId} at ${new Date(requestTimestamp).toISOString()}`);
+      
+      // Set cache prevention headers for consistency with status endpoints
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      // Check for valid input
+      if (isNaN(columnId)) {
+        console.log(`[CONTENT_${requestId}] ⚠️ Invalid column ID: ${columnId}`);
+        return res.status(400).json({ 
+          message: "Invalid column ID",
+          hasSuggestion: false,
+          error: "Invalid parameters",
+          timestamp: requestTimestamp
+        });
+      }
+      
+      // Check suggestion availability
       const status = checkSuggestion(columnId);
-      console.log(`[SUGGESTION_RETRIEVAL] Cache status for column ${columnId}:`, 
-        status ? JSON.stringify(status, null, 2) : 'No cache entry found');
+      console.log(`[CONTENT_${requestId}] 🔍 Cache status for column ${columnId}:`, 
+        status ? JSON.stringify({
+          hasSuggestion: status.hasSuggestion,
+          suggestionType: status.suggestion ? typeof status.suggestion : 'null'
+        }) : 'No cache entry found');
       
       if (!status || !status.hasSuggestion) {
-        console.log(`[SUGGESTION_RETRIEVAL] No suggestion found in cache for column ${columnId}`);
+        console.log(`[CONTENT_${requestId}] ⚠️ No suggestion found in cache for column ${columnId}`);
         return res.status(404).json({ 
           message: "No suggestion available for this column",
-          hasSuggestion: false
+          hasSuggestion: false,
+          columnId,
+          timestamp: requestTimestamp,
+          error: "No suggestion available"
         });
       }
       
       // Get current column data to include with the response
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        console.log(`[SUGGESTION_RETRIEVAL] Column ${columnId} not found in database`);
+        console.log(`[CONTENT_${requestId}] ⚠️ Column ${columnId} not found in database`);
         return res.status(404).json({ 
           message: "Column not found",
-          hasSuggestion: false
+          hasSuggestion: false,
+          columnId,
+          timestamp: requestTimestamp,
+          error: "Column not found"
         });
       }
       
       // Enhanced debugging for suggestion content
       if (status.suggestion) {
         if (typeof status.suggestion === 'string') {
-          console.log(`[SUGGESTION_RETRIEVAL] Found string suggestion for column ${columnId}. Length: ${status.suggestion.length}`);
-        } else if (typeof status.suggestion === 'object') {
-          console.log(`[SUGGESTION_RETRIEVAL] Found object suggestion for column ${columnId}. suggestedInstructions length: ${status.suggestion.suggestedInstructions?.length || 0}, has rationale: ${!!status.suggestion.rationale}`);
+          console.log(`[CONTENT_${requestId}] 📄 Found TEXT suggestion for column ${columnId}. Length: ${status.suggestion.length} chars, preview: "${status.suggestion.substring(0, 50)}..."`);
+        } else if (status.suggestion && typeof status.suggestion === 'object') {
+          console.log(`[CONTENT_${requestId}] 📄 Found OBJECT suggestion for column ${columnId}.`);
+          console.log(`[CONTENT_${requestId}] 📄 Instructions length: ${status.suggestion.suggestedInstructions?.length || 0} chars`);
+          console.log(`[CONTENT_${requestId}] 📄 Rationale length: ${status.suggestion.rationale?.length || 0} chars`);
         } else {
-          console.log(`[SUGGESTION_RETRIEVAL] Found suggestion for column ${columnId} but in unexpected format:`, typeof status.suggestion);
+          console.log(`[CONTENT_${requestId}] ⚠️ Found suggestion for column ${columnId} but in unexpected format:`, typeof status.suggestion);
         }
       } else {
-        console.log(`[SUGGESTION_RETRIEVAL] status.hasSuggestion is true but status.suggestion is empty for column ${columnId}`);
+        console.log(`[CONTENT_${requestId}] ⚠️ Status has hasSuggestion=true but empty suggestion for column ${columnId}`);
       }
       
       // Format response based on suggestion type
@@ -455,13 +557,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: number;
         suggestedInstructions?: string;
         rationale?: string;
+        columnId?: number;
+        columnName?: string;
       };
       
       // Create base response
       let responseData: SuggestionResponse = {
         hasSuggestion: true,
         currentInstructions: column.gptInstructions || "",
-        timestamp: Date.now()
+        timestamp: requestTimestamp,
+        columnId,
+        columnName: column.name
       };
       
       if (typeof status.suggestion === 'string') {
@@ -477,13 +583,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         responseData.rationale = "Could not parse suggestion format";
       }
       
-      console.log(`[SUGGESTION_RETRIEVAL] Returning suggestion response to client:`, responseData);
-      return res.json(responseData);
+      console.log(`[CONTENT_${requestId}] ✅ Returning suggestion response to client`);
+      return res.status(200).json(responseData);
     } catch (error) {
-      console.error("[SUGGESTION_RETRIEVAL] Error retrieving suggestion:", error);
+      console.error("[SUGGESTION_RETRIEVAL] ❌ Error retrieving suggestion:", error);
       return res.status(500).json({ 
         message: "Error retrieving suggestion",
-        hasSuggestion: false
+        hasSuggestion: false,
+        columnId: parseInt(req.params.id) || null,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
