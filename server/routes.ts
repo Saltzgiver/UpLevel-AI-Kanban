@@ -538,6 +538,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the source column to potentially analyze for prompt suggestions
       const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
       
+      // Enhance the card object with source column name for the frontend interceptor
+      const enhancedCard = {
+        ...card,
+        sourceColumnName: sourceColumn?.name || null
+      };
+      
       // Log debug information about the current suggestion cache
       console.log('[PROMPT ASSISTANT] Current cache state before suggestion generation:');
       dumpCache();
@@ -613,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Return response immediately so UI isn't blocked
-        res.json(card);
+        res.json(enhancedCard);
         
         // Trigger GPT processing after response is sent
         try {
