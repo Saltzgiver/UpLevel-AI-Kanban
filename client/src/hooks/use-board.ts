@@ -30,23 +30,51 @@ export function useBoard(boardId: number) {
     
     const { columnId, cardId, sourceColumnName } = pollingState;
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 3; // TESTING CHANGE: Reduced for faster testing
     
-    console.log(`Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
+    console.log(`[TEST MODE] Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
     
     const intervalId = setInterval(async () => {
       attempts++;
-      console.log(`Polling attempt ${attempts} for suggestion availability`);
+      console.log(`[TEST MODE] Polling attempt ${attempts} for suggestion availability`);
       
       try {
-        // Check if a suggestion is available
+        // Check if a suggestion is available 
         const response = await apiRequest(
           "GET", 
           `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
         );
         
-        if (response?.hasSuggestion) {
+        // Log the response for debugging
+        console.log(`[TEST MODE] Suggestion status API response:`, response);
+        
+        // TESTING CHANGE: Always show a toast with suggestion info after a few polling attempts
+        if (attempts >= 2) {
           // Stop polling and show toast
+          clearInterval(intervalId);
+          setPollingState(prev => prev ? { ...prev, active: false } : null);
+          
+          // Always show a toast with the suggestion status
+          const hasSuggestion = response?.hasSuggestion || false;
+          
+          toast({
+            title: "Prompt Assistant",
+            description: hasSuggestion 
+              ? `Suggestion available for column "${sourceColumnName || 'Column'}"` 
+              : `[TEST MODE] No suggestion available for column "${sourceColumnName || 'Column'}", but showing anyway`,
+            action: (
+              <ToastAction 
+                altText="Review suggestion" 
+                onClick={() => openInSuggestionMode(columnId, cardId)}
+              >
+                Review
+              </ToastAction>
+            ),
+          });
+          
+          console.log(`[TEST MODE] Toast shown for column ${columnId}, card ${cardId}, hasSuggestion: ${hasSuggestion}`);
+        } else if (response?.hasSuggestion) {
+          // If we got a real suggestion before our test limit, show it right away
           clearInterval(intervalId);
           setPollingState(prev => prev ? { ...prev, active: false } : null);
           
@@ -62,16 +90,30 @@ export function useBoard(boardId: number) {
               </ToastAction>
             ),
           });
-        } else if (attempts >= maxAttempts) {
-          // Max attempts reached, stop polling
-          console.log("No suggestion available after maximum attempts");
-          clearInterval(intervalId);
-          setPollingState(prev => prev ? { ...prev, active: false } : null);
+          
+          console.log(`[TEST MODE] Real suggestion found, toast shown for column ${columnId}, card ${cardId}`);
         }
       } catch (error) {
-        console.error("Error checking suggestion availability:", error);
+        console.error("[TEST MODE] Error checking suggestion availability:", error);
+        
+        // TESTING CHANGE: Even on error, show a suggestion toast
         clearInterval(intervalId);
         setPollingState(prev => prev ? { ...prev, active: false } : null);
+        
+        toast({
+          title: "Prompt Assistant",
+          description: `[TEST MODE] Error checking suggestions, but showing notification anyway for column "${sourceColumnName || 'Column'}"`,
+          action: (
+            <ToastAction 
+              altText="Review suggestion" 
+              onClick={() => openInSuggestionMode(columnId, cardId)}
+            >
+              Review
+            </ToastAction>
+          ),
+        });
+        
+        console.log(`[TEST MODE] Error occurred but toast shown anyway for column ${columnId}, card ${cardId}`);
       }
     }, 2000);
     
@@ -223,20 +265,31 @@ export function useBoard(boardId: number) {
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/boards/${boardId}`] });
       
-      // Check if the source column was GPT-enabled by finding it in the board data
+      // Get the source column from board data
       const columns = boardQuery.data?.columns || [];
       const sourceColumn = columns.find((col: any) => col.id === data.sourceColumnId);
       
-      if (sourceColumn?.gptAssigned) {
-        // Start polling for suggestion availability
-        console.log(`Starting to poll for suggestion availability for column ${data.sourceColumnId}, card ${data.cardId}`);
-        setPollingState({
-          columnId: data.sourceColumnId,
-          cardId: data.cardId,
-          sourceColumnName: sourceColumn.name,
-          active: true
-        });
-      }
+      // TESTING CHANGE: Always start polling for suggestions regardless of GPT status
+      console.log(`[TEST MODE] Starting to poll for suggestion availability for column ${data.sourceColumnId}, card ${data.cardId}`);
+      console.log(`[TEST MODE] Source column details: ${sourceColumn ? JSON.stringify({
+        id: sourceColumn.id,
+        name: sourceColumn.name,
+        gptAssigned: sourceColumn.gptAssigned
+      }) : 'Column not found'}`);
+      
+      // Always activate polling for suggestions in test mode
+      setPollingState({
+        columnId: data.sourceColumnId,
+        cardId: data.cardId,
+        sourceColumnName: sourceColumn ? sourceColumn.name : 'Column',
+        active: true
+      });
+      
+      // Show immediate toast to verify move event was received
+      toast({
+        title: "Card Moved",
+        description: `Card moved from ${sourceColumn?.name || 'source'} column. Checking for suggestions...`,
+      });
     },
     onError: () => {
       toast({

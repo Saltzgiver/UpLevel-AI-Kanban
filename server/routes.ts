@@ -524,60 +524,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Card not found" });
       }
       
-      // Get the source column to potentially analyze for prompt suggestions
-      const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
+      // Get the source column and destination column - always analyze for suggestions
+      console.log(`===== CARD MOVE EVENT - Beginning Suggestion Analysis =====`);
+      console.log(`Card ID: ${cardId}, Source Column: ${sourceColumnId}, Destination Column: ${destinationColumnId}`);
       
-      // Check if destination column has GPT assigned and auto-trigger is enabled
+      const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
       
-      // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
-      if (sourceColumn && sourceColumn.gptAssigned) {
-        // Run this analysis asynchronously so it doesn't block the main flow
-        setTimeout(async () => {
-          try {
-            // Get the card details for analysis
-            const cardWithDetails = await storage.getCardById(cardId);
-            if (!cardWithDetails) return;
-            
-            // Get the chats from the card while it was in the source column
-            const chats = await storage.getChatsByCardId(cardId);
-            if (!chats || chats.length === 0) {
-              // No chats to analyze, store no suggestion available in cache
-              storeSuggestion(sourceColumn.id, cardId, null);
-              return;
-            }
-            
-            // Create card context object for analysis
-            const cardContext = {
-              title: cardWithDetails.title,
-              description: cardWithDetails.description,
-              attachments: cardWithDetails.attachments || []
-            };
-            
-            // Get prompt improvement suggestion
-            const promptSuggestion = await getPromptSuggestion(
-              sourceColumn.gptInstructions || "", 
-              cardContext,
-              chats,
-              sourceColumn.apiKey || undefined
-            );
-            
-            // Store the suggestion in the cache
-            storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
-            
-            console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
-            if (promptSuggestion) {
-              // Log a preview of the suggestion content
-              const suggestedInstructions = promptSuggestion.suggestedInstructions;
-              console.log(`Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
-            }
-          } catch (error) {
-            console.error("Error generating prompt suggestion:", error);
-            // Store no suggestion available in case of error
-            storeSuggestion(sourceColumn.id, cardId, null);
+      console.log(`Source Column Details: ${sourceColumn ? `ID: ${sourceColumn.id}, Name: ${sourceColumn.name}, GPT Assigned: ${!!sourceColumn.gptAssigned}` : 'None'}`);
+      console.log(`Destination Column Details: ID: ${destColumn.id}, Name: ${destColumn.name}, GPT Assigned: ${!!destColumn.gptAssigned}`);
+      
+      // TESTING CHANGE: Always analyze for prompt improvement suggestions regardless of source column
+      // Run this analysis asynchronously so it doesn't block the main flow
+      setTimeout(async () => {
+        console.log(`Beginning suggestion analysis for card ${cardId}`);
+        try {
+          // Get the card details for analysis
+          const cardWithDetails = await storage.getCardById(cardId);
+          if (!cardWithDetails) {
+            console.log(`Card ${cardId} not found for analysis`);
+            return;
           }
-        }, 200);
-      }
+          
+          console.log(`Card details retrieved: Title: "${cardWithDetails.title}"`);
+          
+          // Get the chats from the card while it was in the source column
+          const chats = await storage.getChatsByCardId(cardId);
+          console.log(`Chats retrieved for card ${cardId}: ${chats.length} messages found`);
+          
+          // TESTING CHANGE: Always create a suggestion, even if no chats
+          // Create card context object for analysis
+          const cardContext = {
+            title: cardWithDetails.title,
+            description: cardWithDetails.description,
+            attachments: cardWithDetails.attachments || []
+          };
+          
+          // Use source column instructions if available, otherwise use a test prompt
+          const instructions = (sourceColumn && sourceColumn.gptAssigned) 
+            ? (sourceColumn.gptInstructions || "Default instructions") 
+            : "Test instructions for suggestion analysis";
+          
+          const apiKey = (sourceColumn && sourceColumn.apiKey) 
+            ? sourceColumn.apiKey
+            : "test-api-key"; // Use test key to get mock data when no key available
+          
+          console.log(`Using instructions: "${instructions.substring(0, 50)}..."`);
+          console.log(`Using API key: ${apiKey === "test-api-key" ? "Test key (will return mock data)" : (apiKey === "from_env" ? "From environment" : "Custom key")}`);
+          
+          // Get prompt improvement suggestion
+          console.log(`Calling getPromptSuggestion function...`);
+          const promptSuggestion = await getPromptSuggestion(
+            instructions, 
+            cardContext,
+            chats,
+            apiKey
+          );
+          
+          console.log(`getPromptSuggestion returned: ${promptSuggestion ? 'Suggestion available' : 'No suggestion'}`);
+          
+          // TESTING CHANGE: For columns without GPT assigned, create a test suggestion
+          const finalSuggestion = promptSuggestion || {
+            rationale: "Test rationale for suggestion testing",
+            suggestedInstructions: "This is a test suggestion created for testing the suggestion feature. The original instructions could be improved by adding more specific details."
+          };
+          
+          console.log(`Final suggestion created: ${JSON.stringify(finalSuggestion).substring(0, 100)}...`);
+          
+          // Store the suggestion in the cache - always store a valid suggestion for testing
+          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn.id);
+          console.log(`Storing suggestion in cache for column ID ${targetColumnId}`);
+          storeSuggestion(targetColumnId, cardId, finalSuggestion);
+          
+          console.log(`Suggestion stored successfully for column ${targetColumnId}, card ${cardId}`);
+          console.log(`===== CARD MOVE EVENT - Suggestion Analysis Complete =====`);
+        } catch (error) {
+          console.error("Error generating prompt suggestion:", error);
+          // For testing, store a default suggestion even on error
+          const mockSuggestion = {
+            rationale: "Created after error in suggestion generation",
+            suggestedInstructions: "This is a fallback suggestion created when an error occurred during suggestion generation."
+          };
+          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn.id);
+          console.log(`Error occurred, storing fallback suggestion for column ${targetColumnId}`);
+          storeSuggestion(targetColumnId, cardId, mockSuggestion);
+        }
+      }, 200);
       
       if (destColumn && destColumn.gptAssigned && destColumn.autoTrigger) {
         // Mark card as processing
