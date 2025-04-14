@@ -328,15 +328,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      console.log(`Checking suggestion status for column ${columnId} and card ${cardId}`);
+      console.log(`[PROMPT ASSISTANT] Checking suggestion status for column ${columnId} and card ${cardId}`);
       
       const status = checkSuggestion(columnId, cardId);
       
-      return res.json({
+      console.log(`[PROMPT ASSISTANT] Suggestion status: ${JSON.stringify(status || { hasSuggestion: false })}`);
+      
+      const result = {
         hasSuggestion: status?.hasSuggestion || false
-      });
+      };
+      
+      console.log(`[PROMPT ASSISTANT] Returning status: ${JSON.stringify(result)}`);
+      
+      return res.json(result);
     } catch (error) {
-      console.error("Error checking suggestion status for card:", error);
+      console.error("[PROMPT ASSISTANT] Error checking suggestion status for card:", error);
       return res.status(500).json({ message: "Error checking suggestion status for card" });
     }
   });
@@ -532,17 +538,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
       if (sourceColumn && sourceColumn.gptAssigned) {
+        console.log(`[PROMPT ASSISTANT] Card ${cardId} moved from column ${sourceColumn.id} (${sourceColumn.title}) - Analyzing for suggestions`);
+        
         // Run this analysis asynchronously so it doesn't block the main flow
         setTimeout(async () => {
           try {
             // Get the card details for analysis
             const cardWithDetails = await storage.getCardById(cardId);
-            if (!cardWithDetails) return;
+            if (!cardWithDetails) {
+              console.log(`[PROMPT ASSISTANT] Card ${cardId} not found for suggestion analysis`);
+              return;
+            }
             
             // Get the chats from the card while it was in the source column
             const chats = await storage.getChatsByCardId(cardId);
+            console.log(`[PROMPT ASSISTANT] Found ${chats.length} chats for analysis for card ${cardId}`);
+            
             if (!chats || chats.length === 0) {
               // No chats to analyze, store no suggestion available in cache
+              console.log(`[PROMPT ASSISTANT] No chats found for card ${cardId}, storing null suggestion`);
               storeSuggestion(sourceColumn.id, cardId, null);
               return;
             }
@@ -554,6 +568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               attachments: cardWithDetails.attachments || []
             };
             
+            console.log(`[PROMPT ASSISTANT] Calling getPromptSuggestion for column ${sourceColumn.id}, card ${cardId}`);
+            
             // Get prompt improvement suggestion
             const promptSuggestion = await getPromptSuggestion(
               sourceColumn.gptInstructions || "", 
@@ -563,13 +579,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             // Store the suggestion in the cache
+            console.log(`[PROMPT ASSISTANT] Storing suggestion for column ${sourceColumn.id}, card ${cardId}: ${promptSuggestion ? 'Available' : 'None available'}`);
             storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
             
-            console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
+            console.log(`[PROMPT ASSISTANT] Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
             if (promptSuggestion) {
               // Log a preview of the suggestion content
               const suggestedInstructions = promptSuggestion.suggestedInstructions;
-              console.log(`Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
+              console.log(`[PROMPT ASSISTANT] Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
             }
           } catch (error) {
             console.error("Error generating prompt suggestion:", error);
