@@ -8,6 +8,7 @@ import { DndProvider } from "@/components/board/board";
 import TestUploadPage from "@/pages/test-upload";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
+import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
 
 function Router() {
   return (
@@ -27,6 +28,8 @@ function App() {
           <Router />
           {/* Add SuggestionListener to handle events from fetch interceptor */}
           <SuggestionListener />
+          {/* Global modal for handling GPT assignment from anywhere, including suggestions */}
+          <GlobalAssignGPTModal />
           <Toaster />
         </DndProvider>
       </ModalProvider>
