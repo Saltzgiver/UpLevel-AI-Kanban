@@ -16,9 +16,6 @@
           // Call original fetch
           const response = await originalFetch.apply(this, arguments);
           
-          // Clone the response so we can read the body and still return the original
-          const responseClone = response.clone();
-          
           try {
             // Only process if it's a card move request
             if (resource && typeof resource === 'string' && resource.includes('/api/cards/') && resource.includes('/move')) {
@@ -37,16 +34,36 @@
                     
                     console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId} to ${destinationColumnId}`);
                     
-                    // Wait 1 second to let backend process suggestion
-                    setTimeout(async () => {
-                      // Check if a suggestion is available
-                      if (sourceColumnId) {
+                    // If the source column exists and is different from destination,
+                    // this is a move between columns which might generate a suggestion
+                    if (sourceColumnId && sourceColumnId !== destinationColumnId) {
+                      // Start checking for suggestions with multiple attempts
+                      let attempts = 0;
+                      const maxAttempts = 5;
+                      const checkInterval = 1000; // 1 second between checks
+                      
+                      const checkForSuggestion = async () => {
+                        if (attempts >= maxAttempts) {
+                          console.log(`[Prompt Assistant] No suggestion found after ${maxAttempts} attempts`);
+                          return;
+                        }
+                        
+                        attempts++;
+                        console.log(`[Prompt Assistant] Checking for suggestion (attempt ${attempts}/${maxAttempts})`);
+                        
                         try {
-                          const suggestionResponse = await originalFetch(`/api/columns/${sourceColumnId}/prompt-suggestion/status`);
+                          // Check for a suggestion specific to this card
+                          const cardSpecificEndpoint = `/api/columns/${sourceColumnId}/prompt-suggestion/status/${cardId}`;
+                          const suggestionResponse = await originalFetch(cardSpecificEndpoint);
+                          
                           if (suggestionResponse.ok) {
                             const suggestionData = await suggestionResponse.json();
                             
+                            console.log(`[Prompt Assistant] Suggestion check result:`, suggestionData);
+                            
                             if (suggestionData.hasSuggestion) {
+                              console.log(`[Prompt Assistant] Suggestion available for column ${sourceColumnId}, card ${cardId}`);
+                              
                               // Dispatch custom event to show suggestion toast
                               const event = new CustomEvent('promptSuggestionAvailable', {
                                 detail: {
@@ -55,14 +72,53 @@
                                 }
                               });
                               window.dispatchEvent(event);
-                              console.log(`[Prompt Assistant] Suggestion available for column ${sourceColumnId}, dispatched event`);
+                              console.log(`[Prompt Assistant] Event dispatched to show suggestion toast`);
+                              return; // Exit the polling cycle
+                            } else if (attempts < maxAttempts) {
+                              // Continue checking if no suggestion yet
+                              setTimeout(checkForSuggestion, checkInterval);
+                            }
+                          } else {
+                            console.log(`[Prompt Assistant] Suggestion check failed with status: ${suggestionResponse.status}`);
+                            
+                            // Try the generic endpoint as fallback
+                            const genericEndpoint = `/api/columns/${sourceColumnId}/prompt-suggestion/status`;
+                            const fallbackResponse = await originalFetch(genericEndpoint);
+                            
+                            if (fallbackResponse.ok) {
+                              const fallbackData = await fallbackResponse.json();
+                              
+                              if (fallbackData.hasSuggestion) {
+                                console.log(`[Prompt Assistant] Suggestion available from fallback check`);
+                                
+                                const event = new CustomEvent('promptSuggestionAvailable', {
+                                  detail: {
+                                    columnId: sourceColumnId,
+                                    cardId: cardId
+                                  }
+                                });
+                                window.dispatchEvent(event);
+                                return; // Exit the polling cycle
+                              }
+                            }
+                            
+                            // Continue checking if we haven't reached max attempts
+                            if (attempts < maxAttempts) {
+                              setTimeout(checkForSuggestion, checkInterval);
                             }
                           }
                         } catch (error) {
                           console.error('[Prompt Assistant] Error checking for suggestions:', error);
+                          // Continue checking if we haven't reached max attempts
+                          if (attempts < maxAttempts) {
+                            setTimeout(checkForSuggestion, checkInterval);
+                          }
                         }
-                      }
-                    }, 1000);
+                      };
+                      
+                      // Wait a short time before first check to allow backend to process
+                      setTimeout(checkForSuggestion, 1000);
+                    }
                   } catch (e) {
                     console.error('[Prompt Assistant] Error parsing request body:', e);
                   }
