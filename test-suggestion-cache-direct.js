@@ -46,7 +46,7 @@ async function testSuggestionCacheDirectly() {
     // Step 2: Check if suggestion is available
     console.log("\nSTEP 2: Checking suggestion status via API");
     
-    const statusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/status/${TEST_CARD_ID}`);
+    const statusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/check/${TEST_CARD_ID}`);
     if (!statusResponse.ok) {
       throw new Error(`Failed to check suggestion status: ${statusResponse.status}`);
     }
@@ -64,15 +64,17 @@ async function testSuggestionCacheDirectly() {
     // Step 3: Get the suggestion content
     console.log("\nSTEP 3: Retrieving suggestion content via API");
     
-    const getResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/get/${TEST_CARD_ID}`);
+    const getResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/${TEST_CARD_ID}`);
     if (!getResponse.ok) {
       throw new Error(`Failed to get suggestion: ${getResponse.status}`);
     }
     
-    const suggestion = await getResponse.json();
-    console.log("Suggestion content:", suggestion);
+    const response = await getResponse.json();
+    console.log("Suggestion content:", response);
     
-    if (suggestion && suggestion.rationale === TEST_SUGGESTION.rationale) {
+    if (response && response.suggestion && 
+        response.suggestion.rationale === TEST_SUGGESTION.rationale &&
+        response.suggestion.suggestedInstructions === TEST_SUGGESTION.suggestedInstructions) {
       console.log("✅ Successfully retrieved suggestion content");
     } else {
       console.log("❌ Retrieved suggestion doesn't match the original");
@@ -97,7 +99,7 @@ async function testSuggestionCacheDirectly() {
     // Step 5: Verify the suggestion was cleared
     console.log("\nSTEP 5: Verifying suggestion was cleared after acceptance");
     
-    const finalStatusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/status/${TEST_CARD_ID}`);
+    const finalStatusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/check/${TEST_CARD_ID}`);
     const finalStatus = await finalStatusResponse.json();
     
     if (!finalStatus.hasSuggestion) {
