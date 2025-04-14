@@ -1,16 +1,26 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/header";
 import { BoardComponent } from "@/components/board/board";
+import { BoardList } from "@/components/board/board-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Board } from "@shared/schema";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { LayoutDashboard, KanbanSquare } from "lucide-react";
 
 export default function Home() {
   const { toast } = useToast();
+  const [activeBoardId, setActiveBoardId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
   
-  // Query for all boards (we'll use the first one)
+  // Query for all boards
   const { 
     data: boards,
     isLoading: isLoadingBoards,
@@ -44,6 +54,33 @@ export default function Home() {
       createDefaultBoard();
     }
   }, [isLoadingBoards, isErrorBoards, boards, toast]);
+
+  // Set the active board once we have data
+  useEffect(() => {
+    if (boards && boards.length > 0) {
+      // If we have a stored board ID in localStorage, use that
+      const storedBoardId = localStorage.getItem('activeBoardId');
+      if (storedBoardId) {
+        const boardId = parseInt(storedBoardId, 10);
+        // Check if the board exists in our list
+        const boardExists = boards.some(board => board.id === boardId);
+        if (boardExists) {
+          setActiveBoardId(boardId);
+          return;
+        }
+      }
+      
+      // Otherwise use the first board
+      setActiveBoardId(boards[0].id);
+    }
+  }, [boards]);
+
+  // Handle board selection
+  const handleSelectBoard = (boardId: number) => {
+    setActiveBoardId(boardId);
+    localStorage.setItem('activeBoardId', boardId.toString());
+    setViewMode("board");
+  };
 
   if (isLoadingBoards) {
     return (
@@ -86,32 +123,36 @@ export default function Home() {
     );
   }
 
-  // Use the first board if available, otherwise use a safe default
-  const activeBoard = boards && boards.length > 0 ? boards[0] : null;
+  // Find the active board
+  const activeBoard = boards.find(board => board.id === activeBoardId) || boards[0];
   
-  // Handle the case where board data might be empty but not caught by earlier conditions
-  if (!activeBoard) {
-    return (
-      <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
-        <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-xl font-bold mb-2">Loading board data...</h1>
-            <p className="text-muted-foreground">Please wait or refresh the page if this persists</p>
-          </div>
-        </main>
-      </div>
-    );
+  // Set the active board ID if it's not set yet
+  if (!activeBoardId && activeBoard) {
+    setActiveBoardId(activeBoard.id);
   }
 
   return (
     <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
+      <Header 
+        board={activeBoard} 
+        onBoardListClick={() => setViewMode(viewMode === "board" ? "list" : "board")}
+        viewMode={viewMode}
+      />
       <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8">
         <div className="py-6">
-          <BoardComponent 
-            board={activeBoard}
-            columns={activeBoard.columns || []}
-            isLoading={false}
-          />
+          {viewMode === "board" ? (
+            <BoardComponent 
+              board={activeBoard}
+              columns={activeBoard.columns || []}
+              isLoading={false}
+            />
+          ) : (
+            <BoardList 
+              boards={boards} 
+              onSelectBoard={handleSelectBoard}
+              currentBoardId={activeBoardId}
+            />
+          )}
         </div>
       </main>
     </div>

@@ -1,17 +1,25 @@
 import { useState } from "react";
-import { Edit, Plus, User } from "lucide-react";
+import { Edit, Plus, User, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Board } from "@shared/schema";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   board: Board;
+  onBoardListClick: () => void;
+  viewMode: "board" | "list";
 }
 
-export function Header({ board }: HeaderProps) {
+export function Header({ board, onBoardListClick, viewMode }: HeaderProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [boardName, setBoardName] = useState(board.name);
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +86,32 @@ export function Header({ board }: HeaderProps) {
           {/* Divider */}
           <div className="h-5 w-px bg-gray-300"></div>
           
+          {/* View Mode Toggle */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={onBoardListClick}
+                >
+                  {viewMode === "board" ? (
+                    <List className="h-4 w-4" />
+                  ) : (
+                    <LayoutGrid className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{viewMode === "board" ? "Switch to board list view" : "Switch to board view"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          {/* Divider */}
+          <div className="h-5 w-px bg-gray-300"></div>
+          
           {/* Board Title */}
           <div className="flex items-center">
             {isEditingTitle ? (
@@ -138,17 +172,19 @@ export function Header({ board }: HeaderProps) {
             </span>
           </Button>
           
-          {/* New Button */}
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-white rounded h-8 px-3"
-          >
-            <span className="flex items-center text-xs">
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              New Card
-            </span>
-          </Button>
+          {/* New Button - visible only in board view */}
+          {viewMode === "board" && (
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-white rounded h-8 px-3"
+            >
+              <span className="flex items-center text-xs">
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                New Card
+              </span>
+            </Button>
+          )}
           
           {/* User Avatar */}
           <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-medium border border-violet-200">
