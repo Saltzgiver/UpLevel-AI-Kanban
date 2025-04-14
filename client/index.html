@@ -3,6 +3,83 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>
+      // Intercept fetch API to detect card move operations and trigger suggestion toasts
+      (function() {
+        console.log('[Prompt Assistant] Installing fetch interceptor for card movements');
+        
+        // Store original fetch function
+        const originalFetch = window.fetch;
+        
+        // Replace with our interceptor
+        window.fetch = async function(resource, init) {
+          // Call original fetch
+          const response = await originalFetch.apply(this, arguments);
+          
+          // Clone the response so we can read the body and still return the original
+          const responseClone = response.clone();
+          
+          try {
+            // Only process if it's a card move request
+            if (resource && typeof resource === 'string' && resource.includes('/api/cards/') && resource.includes('/move')) {
+              // Extract card and column IDs from the URL and body
+              const cardIdMatch = resource.match(/\/api\/cards\/(\d+)\/move/);
+              const cardId = cardIdMatch ? parseInt(cardIdMatch[1]) : null;
+              
+              if (cardId && response.ok) {
+                // Process the request body to get destination column
+                if (init && init.body) {
+                  try {
+                    // Parse the request body to get source and destination columns
+                    const requestBody = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+                    const sourceColumnId = requestBody.sourceColumnId;
+                    const destinationColumnId = requestBody.destinationColumnId;
+                    
+                    console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId} to ${destinationColumnId}`);
+                    
+                    // Wait 1 second to let backend process suggestion
+                    setTimeout(async () => {
+                      // Check if a suggestion is available
+                      if (sourceColumnId) {
+                        try {
+                          const suggestionResponse = await originalFetch(`/api/columns/${sourceColumnId}/prompt-suggestion/status`);
+                          if (suggestionResponse.ok) {
+                            const suggestionData = await suggestionResponse.json();
+                            
+                            if (suggestionData.hasSuggestion) {
+                              // Dispatch custom event to show suggestion toast
+                              const event = new CustomEvent('promptSuggestionAvailable', {
+                                detail: {
+                                  columnId: sourceColumnId,
+                                  cardId: cardId
+                                }
+                              });
+                              window.dispatchEvent(event);
+                              console.log(`[Prompt Assistant] Suggestion available for column ${sourceColumnId}, dispatched event`);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('[Prompt Assistant] Error checking for suggestions:', error);
+                        }
+                      }
+                    }, 1000);
+                  } catch (e) {
+                    console.error('[Prompt Assistant] Error parsing request body:', e);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error('[Prompt Assistant] Error in fetch interceptor:', error);
+          }
+          
+          // Return original response regardless of our processing
+          return response;
+        };
+        
+        console.log('[Prompt Assistant] Fetch interceptor successfully installed');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
