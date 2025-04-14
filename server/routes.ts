@@ -525,32 +525,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the source column and destination column - always analyze for suggestions
-      console.log(`===== CARD MOVE EVENT - Beginning Suggestion Analysis =====`);
-      console.log(`Card ID: ${cardId}, Source Column: ${sourceColumnId}, Destination Column: ${destinationColumnId}`);
+      console.log(`[TEST MODE] ===== CARD MOVE EVENT - Beginning Suggestion Analysis =====`);
+      console.log(`[TEST MODE] Card ID: ${cardId}, Source Column: ${sourceColumnId}, Destination Column: ${destinationColumnId}`);
       
       const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
       
-      console.log(`Source Column Details: ${sourceColumn ? `ID: ${sourceColumn.id}, Name: ${sourceColumn.name}, GPT Assigned: ${!!sourceColumn.gptAssigned}` : 'None'}`);
-      console.log(`Destination Column Details: ID: ${destColumn.id}, Name: ${destColumn.name}, GPT Assigned: ${!!destColumn.gptAssigned}`);
+      console.log(`[TEST MODE] Source Column Details: ${sourceColumn ? `ID: ${sourceColumn.id}, Name: ${sourceColumn.name}, GPT Assigned: ${!!sourceColumn.gptAssigned}` : 'None'}`);
+      console.log(`[TEST MODE] Destination Column Details: ID: ${destColumn.id}, Name: ${destColumn.name}, GPT Assigned: ${!!destColumn.gptAssigned}`);
       
       // TESTING CHANGE: Always analyze for prompt improvement suggestions regardless of source column
       // Run this analysis asynchronously so it doesn't block the main flow
       setTimeout(async () => {
-        console.log(`Beginning suggestion analysis for card ${cardId}`);
+        console.log(`[TEST MODE] Beginning suggestion analysis for card ${cardId}`);
         try {
           // Get the card details for analysis
           const cardWithDetails = await storage.getCardById(cardId);
           if (!cardWithDetails) {
-            console.log(`Card ${cardId} not found for analysis`);
+            console.log(`[TEST MODE] Card ${cardId} not found for analysis`);
             return;
           }
           
-          console.log(`Card details retrieved: Title: "${cardWithDetails.title}"`);
+          console.log(`[TEST MODE] Card details retrieved: Title: "${cardWithDetails.title}"`);
           
           // Get the chats from the card while it was in the source column
           const chats = await storage.getChatsByCardId(cardId);
-          console.log(`Chats retrieved for card ${cardId}: ${chats.length} messages found`);
+          console.log(`[TEST MODE] Chats retrieved for card ${cardId}: ${chats.length} messages found`);
           
           // TESTING CHANGE: Always create a suggestion, even if no chats
           // Create card context object for analysis
@@ -569,11 +569,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? sourceColumn.apiKey
             : "test-api-key"; // Use test key to get mock data when no key available
           
-          console.log(`Using instructions: "${instructions.substring(0, 50)}..."`);
-          console.log(`Using API key: ${apiKey === "test-api-key" ? "Test key (will return mock data)" : (apiKey === "from_env" ? "From environment" : "Custom key")}`);
+          console.log(`[TEST MODE] Using instructions: "${instructions.substring(0, 50)}..."`);
+          console.log(`[TEST MODE] Using API key: ${apiKey === "test-api-key" ? "Test key (will return mock data)" : (apiKey === "from_env" ? "From environment" : "Custom key")}`);
           
           // Get prompt improvement suggestion
-          console.log(`Calling getPromptSuggestion function...`);
+          console.log(`[TEST MODE] Calling getPromptSuggestion function...`);
           const promptSuggestion = await getPromptSuggestion(
             instructions, 
             cardContext,
@@ -581,23 +581,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             apiKey
           );
           
-          console.log(`getPromptSuggestion returned: ${promptSuggestion ? 'Suggestion available' : 'No suggestion'}`);
+          console.log(`[TEST MODE] getPromptSuggestion returned: ${promptSuggestion ? 'Suggestion available' : 'No suggestion'}`);
           
           // TESTING CHANGE: For columns without GPT assigned, create a test suggestion
           const finalSuggestion = promptSuggestion || {
-            rationale: "Test rationale for suggestion testing",
-            suggestedInstructions: "This is a test suggestion created for testing the suggestion feature. The original instructions could be improved by adding more specific details."
+            rationale: "[TEST MODE] Test rationale for suggestion testing",
+            suggestedInstructions: "[TEST MODE] This is a test suggestion created for testing the suggestion feature. The original instructions could be improved by adding more specific details."
           };
           
-          console.log(`Final suggestion created: ${JSON.stringify(finalSuggestion).substring(0, 100)}...`);
+          console.log(`[TEST MODE] Final suggestion created: ${JSON.stringify(finalSuggestion).substring(0, 100)}...`);
           
           // Store the suggestion in the cache - always store a valid suggestion for testing
           const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn.id);
-          console.log(`Storing suggestion in cache for column ID ${targetColumnId}`);
+          console.log(`[TEST MODE] Storing suggestion in cache for column ID ${targetColumnId}`);
           storeSuggestion(targetColumnId, cardId, finalSuggestion);
           
-          console.log(`Suggestion stored successfully for column ${targetColumnId}, card ${cardId}`);
-          console.log(`===== CARD MOVE EVENT - Suggestion Analysis Complete =====`);
+          console.log(`[TEST MODE] Suggestion stored successfully for column ${targetColumnId}, card ${cardId}`);
+          console.log(`[TEST MODE] ===== CARD MOVE EVENT - Suggestion Analysis Complete =====`);
         } catch (error) {
           console.error("Error generating prompt suggestion:", error);
           // For testing, store a default suggestion even on error
