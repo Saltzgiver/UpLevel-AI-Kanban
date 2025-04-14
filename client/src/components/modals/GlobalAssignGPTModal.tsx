@@ -24,9 +24,15 @@ export function GlobalAssignGPTModal() {
     return null;
   }
 
+  // Add empty cards array to satisfy the type expected by AssignGPTModal
+  const columnWithCards = {
+    ...column,
+    cards: []
+  };
+
   return (
     <AssignGPTModal
-      column={column}
+      column={columnWithCards}
       isOpen={isOpen}
       onClose={closeModal}
     />

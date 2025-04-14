@@ -169,6 +169,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error updating column" });
     }
   });
+  
+  // Get a specific column
+  app.get("/api/columns/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const column = await storage.getColumnById(id);
+      
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      return res.json(column);
+    } catch (error) {
+      console.error("Error fetching column:", error);
+      return res.status(500).json({ message: "Error fetching column" });
+    }
+  });
 
   app.delete("/api/columns/:id", async (req, res) => {
     try {
@@ -347,6 +364,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[PROMPT ASSISTANT] Error checking suggestion status for card:", error);
       return res.status(500).json({ message: "Error checking suggestion status for card" });
+    }
+  });
+  
+  // Get the actual suggestion content for a column and specific card
+  app.get("/api/columns/:id/prompt-suggestion/:cardId", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const cardId = parseInt(req.params.cardId);
+      
+      console.log(`[PROMPT ASSISTANT] Retrieving suggestion for column ${columnId} and card ${cardId}`);
+      
+      const status = checkSuggestion(columnId, cardId);
+      
+      if (!status || !status.hasSuggestion) {
+        return res.status(404).json({ message: "No suggestion available for this column and card" });
+      }
+      
+      // Get current column data to include with the response
+      const column = await storage.getColumnById(columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Format response based on suggestion type
+      if (typeof status.suggestion === 'string') {
+        return res.json({
+          suggestion: {
+            rationale: "Suggested improvements for column instructions",
+            suggestedInstructions: status.suggestion
+          }
+        });
+      } else if (status.suggestion && typeof status.suggestion === 'object') {
+        // Handle structured suggestion format
+        return res.json({
+          suggestion: status.suggestion
+        });
+      } else {
+        return res.json({
+          suggestion: null
+        });
+      }
+    } catch (error) {
+      console.error("[PROMPT ASSISTANT] Error retrieving suggestion for card:", error);
+      return res.status(500).json({ message: "Error retrieving suggestion for card" });
     }
   });
   
