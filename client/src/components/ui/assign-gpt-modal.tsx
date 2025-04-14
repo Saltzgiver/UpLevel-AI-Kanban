@@ -80,9 +80,100 @@ const getNextColorInRotation = async (): Promise<string> => {
   }
 };
 
+// Simple interface for bullet point items
+interface BulletPoint {
+  id: string;
+  text: string;
+}
+
+// Parse instructions text to extract do's and don'ts
+const parseInstructions = (text: string): { dos: BulletPoint[]; donts: BulletPoint[] } => {
+  const result = { 
+    dos: [] as BulletPoint[], 
+    donts: [] as BulletPoint[] 
+  };
+  
+  if (!text) return result;
+  
+  // Check if the text already has a structured format with Do's and Don'ts
+  const doSection = text.match(/DO'S:([\s\S]*?)(?=DON'TS:|$)/i);
+  const dontSection = text.match(/DON'TS:([\s\S]*?)$/i);
+  
+  if (doSection || dontSection) {
+    // Extract bullet points from the Do's section
+    if (doSection && doSection[1]) {
+      const doPoints = doSection[1].split('\n')
+        .map(line => line.trim())
+        .filter(line => line.startsWith('- ') || line.startsWith('• '))
+        .map(line => ({
+          id: crypto.randomUUID(),
+          text: line.replace(/^[-•]\s+/, '')
+        }));
+      result.dos = doPoints;
+    }
+    
+    // Extract bullet points from the Don'ts section
+    if (dontSection && dontSection[1]) {
+      const dontPoints = dontSection[1].split('\n')
+        .map(line => line.trim())
+        .filter(line => line.startsWith('- ') || line.startsWith('• '))
+        .map(line => ({
+          id: crypto.randomUUID(),
+          text: line.replace(/^[-•]\s+/, '')
+        }));
+      result.donts = dontPoints;
+    }
+  } else {
+    // If not in the structured format, treat all lines as do's
+    const lines = text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => ({
+        id: crypto.randomUUID(),
+        text: line.startsWith('- ') || line.startsWith('• ') 
+          ? line.replace(/^[-•]\s+/, '') 
+          : line
+      }));
+    result.dos = lines;
+  }
+  
+  return result;
+};
+
+// Convert do's and don'ts back to a formatted string
+const formatInstructions = (dos: BulletPoint[], donts: BulletPoint[]): string => {
+  let result = '';
+  
+  if (dos.length > 0) {
+    result += "DO'S:\n";
+    dos.forEach(item => {
+      result += `- ${item.text}\n`;
+    });
+  }
+  
+  if (donts.length > 0) {
+    if (result) result += '\n';
+    result += "DON'TS:\n";
+    donts.forEach(item => {
+      result += `- ${item.text}\n`;
+    });
+  }
+  
+  return result;
+};
+
 export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, cardId }: AssignGPTModalProps) {
   const [gptName, setGptName] = useState<string>(column.gptName || "GPT Assistant");
   const [instructions, setInstructions] = useState<string>(column.gptInstructions || "");
+  
+  // State for the structured bullet points
+  const [dosList, setDosList] = useState<BulletPoint[]>([]);
+  const [dontsList, setDontsList] = useState<BulletPoint[]>([]);
+  
+  // State for new bullet point input
+  const [newDoPoint, setNewDoPoint] = useState<string>("");
+  const [newDontPoint, setNewDontPoint] = useState<string>("");
+  
   const [gptColor, setGptColor] = useState<string>(column.gptColor || "");
   const [autoTrigger, setAutoTrigger] = useState<boolean>(column.autoTrigger !== false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -118,7 +209,14 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     });
     
     setGptName(column.gptName || "GPT Assistant");
-    setInstructions(column.gptInstructions || "");
+    const instructionsText = column.gptInstructions || "";
+    setInstructions(instructionsText);
+    
+    // Parse the instructions into do's and don'ts lists
+    const { dos, donts } = parseInstructions(instructionsText);
+    setDosList(dos);
+    setDontsList(donts);
+    
     setAutoTrigger(column.autoTrigger !== false);
     
     // Check if we're in suggestion mode and fetch suggestion
@@ -223,11 +321,63 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     }
   }, [isOpen, column, modalState, toast]);
 
+  // Functions to manage bullet points
+  const addDoPoint = () => {
+    if (newDoPoint.trim()) {
+      const newPoint: BulletPoint = {
+        id: crypto.randomUUID(),
+        text: newDoPoint.trim()
+      };
+      setDosList([...dosList, newPoint]);
+      setNewDoPoint('');
+      
+      // Also update the instructions string
+      const updatedInstructions = formatInstructions([...dosList, newPoint], dontsList);
+      setInstructions(updatedInstructions);
+    }
+  };
+  
+  const addDontPoint = () => {
+    if (newDontPoint.trim()) {
+      const newPoint: BulletPoint = {
+        id: crypto.randomUUID(),
+        text: newDontPoint.trim()
+      };
+      setDontsList([...dontsList, newPoint]);
+      setNewDontPoint('');
+      
+      // Also update the instructions string
+      const updatedInstructions = formatInstructions(dosList, [...dontsList, newPoint]);
+      setInstructions(updatedInstructions);
+    }
+  };
+  
+  const removeDoPoint = (id: string) => {
+    const updatedDosList = dosList.filter(point => point.id !== id);
+    setDosList(updatedDosList);
+    
+    // Also update the instructions string
+    const updatedInstructions = formatInstructions(updatedDosList, dontsList);
+    setInstructions(updatedInstructions);
+  };
+  
+  const removeDontPoint = (id: string) => {
+    const updatedDontsList = dontsList.filter(point => point.id !== id);
+    setDontsList(updatedDontsList);
+    
+    // Also update the instructions string
+    const updatedInstructions = formatInstructions(dosList, updatedDontsList);
+    setInstructions(updatedInstructions);
+  };
+  
   const handleSubmit = async () => {
-    if (!instructions.trim()) {
+    // Format final instructions from bullet points
+    const formattedInstructions = formatInstructions(dosList, dontsList);
+    
+    if (!formattedInstructions.trim()) {
       toast({
         title: "Error",
-        description: "Please enter custom instructions for the GPT",
+        description: "Please add at least one instruction for the GPT",
         variant: "destructive"
       });
       return;
@@ -239,7 +389,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
       await apiRequest("PATCH", `/api/columns/${column.id}/assign-gpt`, {
         gptAssigned: true,
         gptName,
-        gptInstructions: instructions,
+        gptInstructions: formattedInstructions,
         gptColor,
         autoTrigger
       });
@@ -286,7 +436,13 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   const handleApplySuggestion = () => {
     if (suggestion && suggestion.suggestedInstructions) {
       // Update the instructions with the suggestion
-      setInstructions(suggestion.suggestedInstructions);
+      const suggestedText = suggestion.suggestedInstructions;
+      setInstructions(suggestedText);
+      
+      // Parse the suggestion into dos and donts
+      const { dos, donts } = parseInstructions(suggestedText);
+      setDosList(dos);
+      setDontsList(donts);
       
       // Hide the suggestion UI
       setShowingSuggestion(false);
@@ -487,24 +643,120 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                 </div>
               ) : null}
               
-              {/* Current instructions editing textarea */}
-              <div className="space-y-1">
-                {modalState.isSuggestionMode && suggestion && showingSuggestion && (
-                  <Label htmlFor="instructions" className="text-sm font-medium">
-                    Edit Final Instructions <span className="text-red-500">*</span>
-                  </Label>
-                )}
-                <Textarea 
-                  id="instructions" 
-                  placeholder="Write detailed instructions for how the AI should process cards in this column..." 
-                  rows={4}
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                  className="w-full resize-none"
-                />
+              {/* Structured Do's and Don'ts Lists */}
+              <div className="grid grid-cols-1 gap-4 mt-3">
+                {/* Do's Section */}
+                <div className="border rounded-md p-3 bg-green-50 border-green-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <ListChecks className="h-4 w-4 text-green-600" />
+                      <Label className="text-sm font-semibold text-green-700">DO'S</Label>
+                    </div>
+                    <Badge variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">
+                      {dosList.length} items
+                    </Badge>
+                  </div>
+                  
+                  {/* Bullet points list */}
+                  <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                    {dosList.length > 0 ? (
+                      dosList.map((item) => (
+                        <div key={item.id} className="flex items-start gap-2 group">
+                          <div className="flex-shrink-0 w-4 h-4 mt-1 text-green-500">•</div>
+                          <div className="flex-1 text-sm">{item.text}</div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeDoPoint(item.id)}
+                          >
+                            <XCircle className="h-4 w-4 text-green-600" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-green-600/60 italic">Add instructions below for what the AI should do</p>
+                    )}
+                  </div>
+                  
+                  {/* Add new point input */}
+                  <div className="flex gap-2 items-center mt-3">
+                    <Input
+                      placeholder="Add a new 'do' instruction..."
+                      value={newDoPoint}
+                      onChange={(e) => setNewDoPoint(e.target.value)}
+                      className="text-sm border-green-200 focus-visible:ring-green-400"
+                      onKeyDown={(e) => e.key === 'Enter' && addDoPoint()}
+                    />
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      className="h-8 w-8 bg-green-100 hover:bg-green-200 text-green-600 border border-green-200"
+                      onClick={addDoPoint}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Don'ts Section */}
+                <div className="border rounded-md p-3 bg-red-50 border-red-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-600" />
+                      <Label className="text-sm font-semibold text-red-700">DON'TS</Label>
+                    </div>
+                    <Badge variant="outline" className="text-xs text-red-600 border-red-200 bg-red-50">
+                      {dontsList.length} items
+                    </Badge>
+                  </div>
+                  
+                  {/* Bullet points list */}
+                  <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                    {dontsList.length > 0 ? (
+                      dontsList.map((item) => (
+                        <div key={item.id} className="flex items-start gap-2 group">
+                          <div className="flex-shrink-0 w-4 h-4 mt-1 text-red-500">•</div>
+                          <div className="flex-1 text-sm">{item.text}</div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeDontPoint(item.id)}
+                          >
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-red-600/60 italic">Add instructions below for what the AI should avoid</p>
+                    )}
+                  </div>
+                  
+                  {/* Add new point input */}
+                  <div className="flex gap-2 items-center mt-3">
+                    <Input
+                      placeholder="Add a new 'don't' instruction..."
+                      value={newDontPoint}
+                      onChange={(e) => setNewDontPoint(e.target.value)}
+                      className="text-sm border-red-200 focus-visible:ring-red-400"
+                      onKeyDown={(e) => e.key === 'Enter' && addDontPoint()}
+                    />
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      className="h-8 w-8 bg-red-100 hover:bg-red-200 text-red-600 border border-red-200"
+                      onClick={addDontPoint}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Example: "Generate a poem based on the card title and description"
+              <p className="text-xs text-muted-foreground mt-2">
+                Add clear bullet points for what the AI should and shouldn't do when processing cards
               </p>
             </div>
             
