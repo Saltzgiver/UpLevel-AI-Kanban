@@ -385,7 +385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return the status (without the actual suggestion for efficiency)
       return res.status(200).json({
         hasSuggestion: !!(status && status.hasSuggestion),
-        timestamp: status?.timestamp || Date.now()
+        timestamp: status?.timestamp || Date.now(),
+        cardId: cardId,
+        columnId: columnId
       });
     } catch (error) {
       console.error("Error checking prompt suggestion:", error);

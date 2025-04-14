@@ -216,6 +216,84 @@ export default function DirectToastTestPage() {
           </div>
           
           <div>
+            <Button
+              onClick={async () => {
+                try {
+                  // First create a test suggestion
+                  console.log('Creating test suggestion for column 9, card 47');
+                  const createResponse = await fetch('/api/columns/9/prompt-suggestion/create-test/47', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      suggestion: {
+                        rationale: 'This is a comprehensive test suggestion created via the full E2E test.',
+                        suggestedInstructions: 'Create an image based on the card content with attention to style (photorealistic, cartoon, etc.) and composition details.',
+                      },
+                    }),
+                  });
+                  
+                  if (!createResponse.ok) {
+                    throw new Error('Failed to create test suggestion');
+                  }
+                  
+                  const createResult = await createResponse.json();
+                  console.log('Test suggestion created successfully:', createResult);
+                  
+                  // Then verify it with the check endpoint
+                  console.log('Verifying suggestion with /check endpoint');
+                  const checkResponse = await fetch('/api/columns/9/prompt-suggestion/check/47');
+                  
+                  if (!checkResponse.ok) {
+                    throw new Error(`Check failed with status ${checkResponse.status}`);
+                  }
+                  
+                  const checkResult = await checkResponse.json();
+                  console.log('Check result:', checkResult);
+                  
+                  // If check passes, show the toast
+                  if (checkResult.hasSuggestion) {
+                    console.log('Suggestion verified, showing toast...');
+                    toast({
+                      title: "Prompt Assistant",
+                      description: "We have suggestions for the 'image test' column's instructions",
+                      action: (
+                        <ToastAction 
+                          altText="View suggestion" 
+                          onClick={() => {
+                            console.log('Opening suggestion modal from toast');
+                            openInSuggestionMode(9, 47);
+                          }}
+                        >
+                          View
+                        </ToastAction>
+                      ),
+                      duration: 10000,
+                    });
+                  } else {
+                    toast({
+                      title: "Test Failed",
+                      description: "Suggestion created but verification failed",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (error) {
+                  console.error('E2E test failed:', error);
+                  toast({
+                    title: "Test Failed",
+                    description: error instanceof Error ? error.message : "Unknown error",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              variant="default"
+              className="w-full mb-2 bg-green-600 hover:bg-green-700"
+            >
+              E2E Test: Create + Verify + Show
+            </Button>
+            <p className="text-xs text-muted-foreground">Runs a full end-to-end test: create suggestion, verify it, then show toast with modal</p>
+          </div>
+          
+          <div>
             <Button 
               onClick={async () => {
                 const columnId = 9; // "image test" column
