@@ -226,6 +226,14 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
           position: destination.index,
         });
         
+        // [TEST MODE] Show toast notification for card movement
+        toast({
+          title: "Card Moved",
+          description: `Card moved from ${sourceColumn?.name || 'source'} column. Checking for suggestions...`,
+        });
+        
+        console.log(`[TEST MODE] Card ${cardId} moved from column ${sourceColId} to column ${destColId}`);
+        
         // If the destination column has a GPT assigned and auto-trigger is enabled
         if (destColumn.gptAssigned && destColumn.autoTrigger) {
           // Set up a timer to check for updates and refresh the board data
@@ -429,6 +437,14 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
         sourceColumnId,  // Add source column ID for prompt improvement analysis
         position: 0, // Place at the top of the destination column
       });
+      
+      // [TEST MODE] Show toast notification for card movement from modal
+      toast({
+        title: "Card Moved From Modal",
+        description: `Card moved from ${sourceColumn?.name || 'source'} column. Checking for suggestions...`,
+      });
+      
+      console.log(`[TEST MODE] Card ${cardId} moved from column ${sourceColumnId} to column ${destinationColumnId} via modal`);
       
       // If the destination column has a GPT assigned and auto-trigger is enabled
       if (destColumn?.gptAssigned && destColumn?.autoTrigger) {
