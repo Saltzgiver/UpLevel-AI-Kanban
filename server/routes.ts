@@ -1394,9 +1394,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Prompt Analyzer Template API Routes
-  app.get("/api/prompt-analyzer/template", (req, res) => {
+  app.get("/api/prompt-analyzer/template", async (req, res) => {
     try {
-      const { getTemplate } = require('./promptAnalyzerTemplate');
+      // Import using ES modules syntax
+      const { getTemplate } = await import('./promptAnalyzerTemplate');
       const template = getTemplate();
       res.json({ template });
     } catch (error) {
@@ -1405,9 +1406,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/prompt-analyzer/template", (req, res) => {
+  app.post("/api/prompt-analyzer/template", async (req, res) => {
     try {
-      const { saveTemplate } = require('./promptAnalyzerTemplate');
+      // Import using ES modules syntax
+      const { saveTemplate } = await import('./promptAnalyzerTemplate');
       const template = req.body;
       
       // Basic validation

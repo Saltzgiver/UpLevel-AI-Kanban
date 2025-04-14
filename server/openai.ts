@@ -836,7 +836,7 @@ export async function getPromptSuggestion(
 ): Promise<{ rationale: string; suggestedInstructions: string } | null> {
   try {
     // Import the template system
-    const { getTemplate, generateMetaPrompt } = require('./promptAnalyzerTemplate');
+    const { getTemplate, generateMetaPrompt } = await import('./promptAnalyzerTemplate');
     
     // Log inputs for analysis
     console.log(`\n======== PROMPT ASSISTANT ANALYSIS ========`);
