@@ -223,11 +223,15 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
       // Remove suggestion from UI but keep modal open for review/editing
       setSuggestion(null);
       
-      // Also clear suggestion from server (similar to dismissal but don't close modal)
+      // Also clear suggestion from server based on whether we're in card-specific mode
       if (modalState.columnId) {
-        apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion`, {})
+        const endpoint = modalState.cardId 
+          ? `/api/columns/${modalState.columnId}/prompt-suggestion/accept/${modalState.cardId}`
+          : `/api/columns/${modalState.columnId}/prompt-suggestion/accept`;
+        
+        apiRequest("POST", endpoint, {})
           .catch(error => {
-            console.error("Failed to clear suggestion:", error);
+            console.error("Failed to accept suggestion:", error);
           });
       }
     }
@@ -237,11 +241,15 @@ export function AssignGPTModal({ column, isOpen, onClose }: AssignGPTModalProps)
     // Close the modal
     onClose();
     
-    // Clear suggestion from server
+    // Clear suggestion from server based on whether we're in card-specific mode
     if (modalState.columnId) {
-      apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion`, {})
+      const endpoint = modalState.cardId 
+        ? `/api/columns/${modalState.columnId}/prompt-suggestion/reject/${modalState.cardId}`
+        : `/api/columns/${modalState.columnId}/prompt-suggestion/reject`;
+      
+      apiRequest("POST", endpoint, {})
         .catch(error => {
-          console.error("Failed to clear suggestion:", error);
+          console.error("Failed to reject suggestion:", error);
         });
     }
     

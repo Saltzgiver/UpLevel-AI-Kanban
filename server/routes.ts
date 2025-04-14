@@ -509,6 +509,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Accept a card-specific suggestion and update the column's instructions
+  app.post("/api/columns/:id/prompt-suggestion/accept/:cardId", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const cardId = parseInt(req.params.cardId);
+      
+      console.log(`[PROMPT ASSISTANT] Accepting suggestion for column ${columnId} and card ${cardId}`);
+      
+      // Get the suggestion
+      const status = checkSuggestion(columnId, cardId);
+      
+      if (!status || !status.hasSuggestion) {
+        return res.status(404).json({ message: "No suggestion available for this column and card" });
+      }
+      
+      // Optional - allow overriding the suggestion with edited text
+      const { instructions } = req.body;
+      let updatedInstructions = instructions;
+      
+      // If no explicit instructions provided, use the suggestion
+      if (!updatedInstructions) {
+        if (typeof status.suggestion === 'string') {
+          updatedInstructions = status.suggestion;
+        } else if (status.suggestion && typeof status.suggestion === 'object') {
+          updatedInstructions = status.suggestion.suggestedInstructions;
+        }
+      }
+      
+      if (!updatedInstructions) {
+        return res.status(400).json({ message: "No instructions provided and no suggestion available" });
+      }
+      
+      // Update the column with the new instructions
+      const column = await storage.updateColumn(columnId, { 
+        gptInstructions: updatedInstructions 
+      });
+      
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Clear the suggestion from cache as it's been accepted
+      clearSuggestion(columnId, cardId);
+      
+      return res.json({
+        message: "Card-specific suggestion accepted and column updated",
+        column
+      });
+    } catch (error) {
+      console.error("[PROMPT ASSISTANT] Error accepting card-specific suggestion:", error);
+      return res.status(500).json({ message: "Error accepting card-specific suggestion" });
+    }
+  });
+  
   // Reject a suggestion
   app.post("/api/columns/:id/prompt-suggestion/reject", async (req, res) => {
     try {
@@ -524,6 +578,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error rejecting suggestion:", error);
       return res.status(500).json({ message: "Error rejecting suggestion" });
+    }
+  });
+  
+  // Reject a card-specific suggestion
+  app.post("/api/columns/:id/prompt-suggestion/reject/:cardId", async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const cardId = parseInt(req.params.cardId);
+      
+      console.log(`[PROMPT ASSISTANT] Rejecting suggestion for column ${columnId} and card ${cardId}`);
+      
+      // Clear the suggestion from cache
+      clearSuggestion(columnId, cardId);
+      
+      return res.json({
+        message: "Card-specific suggestion rejected and cleared"
+      });
+    } catch (error) {
+      console.error("[PROMPT ASSISTANT] Error rejecting card-specific suggestion:", error);
+      return res.status(500).json({ message: "Error rejecting card-specific suggestion" });
     }
   });
 
