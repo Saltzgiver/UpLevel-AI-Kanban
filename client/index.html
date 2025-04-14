@@ -104,16 +104,19 @@
                       
                       // Try to get column name from the response (our enhanced response)
                       responseClone.json().then(responseData => {
-                        const sourceColumnName = responseData.sourceColumnName || null;
+                        // Get column name from the enhanced response if available
+                        const sourceColumnName = responseData.sourceColumnName || requestData.sourceColumnName || null;
                         
                         console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId}${sourceColumnName ? ` (${sourceColumnName})` : ''}`);
+                        console.log(`[Prompt Assistant] Response data:`, responseData);
                         
                         // Call the global function to check for suggestions
                         window.checkSuggestionAndShowToast(sourceColumnId, cardId, sourceColumnName);
                       }).catch(error => {
                         console.error('[Prompt Assistant] Error parsing response:', error);
-                        // Fallback to using the suggestion system without column name
-                        window.checkSuggestionAndShowToast(sourceColumnId, cardId, null);
+                        // Fallback to using the source column name from the request if available
+                        const fallbackColumnName = requestData.sourceColumnName || null;
+                        window.checkSuggestionAndShowToast(sourceColumnId, cardId, fallbackColumnName);
                       });
                     }
                   } catch (error) {
