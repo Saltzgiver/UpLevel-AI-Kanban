@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import { DndProvider } from "@/components/board/board";
 import TestUploadPage from "@/pages/test-upload";
 import { ModalProvider } from "@/contexts/ModalContext";
+import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 
 function Router() {
   return (
@@ -24,6 +25,8 @@ function App() {
       <ModalProvider>
         <DndProvider>
           <Router />
+          {/* Add SuggestionListener to handle events from fetch interceptor */}
+          <SuggestionListener />
           <Toaster />
         </DndProvider>
       </ModalProvider>
