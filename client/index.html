@@ -3,6 +3,93 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>
+      // Prompt Assistant - Fetch API Interceptor
+      // This script intercepts network requests to detect card moves and ensure suggestion toasts are shown reliably
+      (function() {
+        console.log("[Prompt Assistant] Installing fetch interceptor for card movements");
+        
+        // Store the original fetch function
+        const originalFetch = window.fetch;
+        
+        // Create a function to show suggestion toast independent of React's lifecycle
+        function checkForSuggestion(cardId, sourceColumnId, sourceColumnName) {
+          console.log(`[Prompt Assistant] Checking for suggestion for card ${cardId} from column ${sourceColumnId}`);
+          
+          // Wait a bit for the backend to process the suggestion
+          setTimeout(async () => {
+            try {
+              // Check if a suggestion is available directly using fetch
+              const response = await originalFetch(`/api/columns/${sourceColumnId}/prompt-suggestion/status/${cardId}`);
+              const data = await response.json();
+              
+              if (data && data.hasSuggestion) {
+                console.log(`[Prompt Assistant] Suggestion available for column ${sourceColumnId}`);
+                
+                // Dispatch a custom event that will be listened for in React
+                const event = new CustomEvent('promptAssistantSuggestion', { 
+                  detail: { 
+                    columnId: sourceColumnId,
+                    cardId: cardId,
+                    sourceColumnName: sourceColumnName || 'Column'
+                  }
+                });
+                window.dispatchEvent(event);
+              }
+            } catch (error) {
+              console.error("[Prompt Assistant] Error checking for suggestion:", error);
+            }
+          }, 2000); // Wait 2 seconds before first check
+        }
+        
+        // Override the fetch function to intercept requests
+        window.fetch = function(...args) {
+          const url = args[0].toString();
+          
+          // Check if this is a card move request
+          if (url.includes('/api/cards/') && url.includes('/move')) {
+            console.log(`[Prompt Assistant] Detected card move API call: ${url}`);
+            
+            // Extract the card ID from the URL
+            const cardIdMatch = url.match(/\/api\/cards\/(\d+)\/move/);
+            const cardId = cardIdMatch ? parseInt(cardIdMatch[1]) : null;
+            
+            if (cardId) {
+              // Get the request body if available
+              const options = args[1] || {};
+              
+              if (options.body) {
+                try {
+                  const body = JSON.parse(options.body);
+                  const sourceColumnId = body.sourceColumnId;
+                  const sourceColumnName = body.sourceColumnName || '';
+                  
+                  if (sourceColumnId) {
+                    // Make the original request and chain a promise to check for suggestions after it succeeds
+                    const fetchPromise = originalFetch.apply(this, args);
+                    fetchPromise.then(response => {
+                      if (response.ok) {
+                        console.log(`[Prompt Assistant] Card ${cardId} successfully moved from column ${sourceColumnId}`);
+                        checkForSuggestion(cardId, sourceColumnId, sourceColumnName);
+                      }
+                      return response;
+                    });
+                    return fetchPromise;
+                  }
+                } catch (e) {
+                  console.error("[Prompt Assistant] Error parsing request body:", e);
+                }
+              }
+            }
+          }
+          
+          // For all other requests, use the original fetch
+          return originalFetch.apply(this, args);
+        };
+        
+        console.log("[Prompt Assistant] Fetch interceptor successfully installed");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
