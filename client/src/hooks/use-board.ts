@@ -19,36 +19,7 @@ export function useBoard(boardId: number) {
   const [pollingState, setPollingState] = useState<PollingState | null>(null);
   const { openInSuggestionMode } = useModalContext();
 
-  // Function to manually start polling for a suggestion (for testing and debugging)
-  const startPollingForSuggestion = useCallback((columnId: number, cardId: number, columnName?: string) => {
-    console.log(`[MANUAL_POLLING] Starting poll for column ${columnId}, card ${cardId}`);
-    setPollingState({
-      columnId,
-      cardId,
-      sourceColumnName: columnName,
-      active: true
-    });
-  }, []);
-  
-  // Define type for board query
-  type BoardData = {
-    id: number;
-    name: string;
-    columns: Array<{
-      id: number;
-      name: string;
-      gptAssigned?: boolean;
-      gptName?: string;
-      cards?: any[];
-    }>;
-  };
-  
-  const boardQuery = useQuery<BoardData>({
-    queryKey: [`/api/boards/${boardId}`],
-    enabled: !!boardId,
-  });
-
-  // Helper function to create toast notification with review action
+  // Helper function to show suggestion toast (define before other functions that use it)
   const showSuggestionToast = useCallback((columnId: number, cardId: number, columnName?: string) => {
     console.log(`[TOAST_DEBUG] Starting to create toast for column ${columnId}, card ${cardId}`);
     console.log(`[TOAST_DEBUG] toast type = ${typeof toast}, openInSuggestionMode type = ${typeof openInSuggestionMode}`);
@@ -104,41 +75,172 @@ export function useBoard(boardId: number) {
     return toastId;
   }, [toast, openInSuggestionMode]);
 
-  // Function to manually check for suggestions (for debugging or testing)
+  // Function to check for suggestions with improved error handling
   const checkSuggestion = useCallback(async (columnId: number, cardId: number) => {
+    // Create a unique ID for this specific check for logging
+    const checkId = `check-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
     try {
-      console.log(`[MANUAL_CHECK] Checking suggestion for column ${columnId}, card ${cardId}`);
+      console.log(`[CHECK_${checkId}] 🔍 Checking suggestion for column ${columnId}, card ${cardId}`);
       
-      // Use the specific endpoint for prompt suggestions, not card processing
-      const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`;
-      console.log(`[MANUAL_CHECK] Fetching URL: ${statusUrl}`);
+      // Validate input parameters
+      if (!columnId || isNaN(columnId) || columnId <= 0) {
+        console.error(`[CHECK_${checkId}] ⚠️ Invalid column ID: ${columnId}`);
+        return { hasSuggestion: false, error: "Invalid column ID" };
+      }
+      
+      if (!cardId || isNaN(cardId) || cardId <= 0) {
+        console.error(`[CHECK_${checkId}] ⚠️ Invalid card ID: ${cardId}`);
+        return { hasSuggestion: false, error: "Invalid card ID" };
+      }
+      
+      // Use the specific endpoint for prompt suggestions with cache prevention
+      const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}?_=${Date.now()}`;
+      console.log(`[CHECK_${checkId}] 🌐 Fetching URL: ${statusUrl}`);
       
       const response = await fetch(statusUrl, {
         headers: {
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         }
       });
       
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${await response.text()}`);
+        const errorText = await response.text();
+        console.error(`[CHECK_${checkId}] ❌ Server returned ${response.status}: ${errorText}`);
+        return { 
+          hasSuggestion: false, 
+          error: `Server error: ${response.status}`,
+          details: errorText
+        };
+      }
+      
+      // Verify the content type is JSON to avoid parsing non-JSON responses
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error(`[CHECK_${checkId}] ❌ Expected JSON, but got ${contentType}`);
+        return { 
+          hasSuggestion: false, 
+          error: `Invalid content type: ${contentType}`
+        };
       }
       
       const data = await response.json();
-      console.log(`[MANUAL_CHECK] Response:`, data);
+      console.log(`[CHECK_${checkId}] 📊 Response:`, data);
       
-      if (data.hasSuggestion) {
-        console.log(`[MANUAL_CHECK] Suggestion found, showing toast notification`);
-        // Show toast using helper function
-        showSuggestionToast(columnId, cardId);
+      // More detailed checks on the response data
+      if (data && typeof data === 'object') {
+        // Verify hasSuggestion is present and is an actual boolean
+        if (typeof data.hasSuggestion !== 'boolean') {
+          console.error(`[CHECK_${checkId}] ⚠️ Missing or invalid hasSuggestion field:`, data.hasSuggestion);
+          return { 
+            hasSuggestion: false, 
+            error: "Invalid response format"
+          };
+        }
+        
+        // If we have a suggestion, show toast and verify the content
+        if (data.hasSuggestion === true) {
+          console.log(`[CHECK_${checkId}] ✅ Suggestion found, showing toast notification`);
+          
+          // Get the source column name from the response if available
+          const columnName = data.columnName || data.sourceColumnName || null;
+          
+          // Show toast notification
+          showSuggestionToast(columnId, cardId, columnName);
+          
+          // Add extra debug info to the response
+          return {
+            ...data,
+            _debug: {
+              checkedAt: new Date().toISOString(),
+              checkId,
+              toastShown: true
+            }
+          };
+        } else {
+          // No suggestion available yet
+          console.log(`[CHECK_${checkId}] ℹ️ No suggestion available yet`);
+          return {
+            ...data,
+            _debug: {
+              checkedAt: new Date().toISOString(),
+              checkId,
+              toastShown: false
+            }
+          };
+        }
+      } else {
+        // Invalid response format
+        console.error(`[CHECK_${checkId}] ⚠️ Invalid response format:`, data);
+        return { 
+          hasSuggestion: false, 
+          error: "Invalid response format"
+        };
       }
-      
-      return data;
     } catch (error) {
-      console.error('[MANUAL_CHECK] Error checking suggestion:', error);
-      return { hasSuggestion: false };
+      console.error(`[CHECK_${checkId}] ❌ Error checking suggestion:`, error);
+      return { 
+        hasSuggestion: false, 
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
     }
   }, [showSuggestionToast]);
+
+  // Function to start polling for a suggestion
+  const startPollingForSuggestion = useCallback((columnId: number, cardId: number, columnName?: string) => {
+    console.log(`[POLLING_START] 🔄 Starting suggestion polling for column ${columnId}, card ${cardId}, source: ${columnName || 'unknown'}`);
+    
+    // Validate parameters
+    if (!columnId || isNaN(columnId) || columnId <= 0) {
+      console.error(`[POLLING_ERROR] ⚠️ Invalid column ID: ${columnId}. Cannot start polling.`);
+      return;
+    }
+    
+    if (!cardId || isNaN(cardId) || cardId <= 0) {
+      console.error(`[POLLING_ERROR] ⚠️ Invalid card ID: ${cardId}. Cannot start polling.`);
+      return;
+    }
+    
+    // Start a new polling session
+    const pollingId = `poll-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    console.log(`[POLLING_${pollingId}] ✅ Starting new polling session for column ${columnId}, card ${cardId}`);
+    
+    // Set polling state to activate the useEffect
+    setPollingState({
+      columnId,
+      cardId,
+      sourceColumnName: columnName,
+      active: true
+    });
+    
+    // Also try checking immediately as an optimization
+    setTimeout(() => {
+      console.log(`[POLLING_${pollingId}] 🔍 Performing immediate first check`);
+      checkSuggestion(columnId, cardId);
+    }, 1000);
+  }, [checkSuggestion]);
+  
+  // Define type for board query
+  type BoardData = {
+    id: number;
+    name: string;
+    columns: Array<{
+      id: number;
+      name: string;
+      gptAssigned?: boolean;
+      gptName?: string;
+      cards?: any[];
+    }>;
+  };
+  
+  const boardQuery = useQuery<BoardData>({
+    queryKey: [`/api/boards/${boardId}`],
+    enabled: !!boardId,
+  });
+
+  // Helper function to create toast notification with review action
   
   // Poll for suggestion status if polling is active
   useEffect(() => {
