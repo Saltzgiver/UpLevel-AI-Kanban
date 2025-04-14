@@ -91,6 +91,9 @@
               const cardId = cardIdMatch ? parseInt(cardIdMatch[1]) : null;
               
               if (cardId) {
+                // First, clone the response so we can read its body
+                const responseClone = response.clone();
+                
                 // Parse request body to get source column ID
                 if (options.body && typeof options.body === 'string') {
                   try {
@@ -98,12 +101,20 @@
                     
                     if (requestData.sourceColumnId) {
                       const sourceColumnId = requestData.sourceColumnId;
-                      const sourceColumnName = requestData.sourceColumnName || null;
                       
-                      console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId}${sourceColumnName ? ` (${sourceColumnName})` : ''}`);
-                      
-                      // Call the global function to check for suggestions
-                      window.checkSuggestionAndShowToast(sourceColumnId, cardId, sourceColumnName);
+                      // Try to get column name from the response (our enhanced response)
+                      responseClone.json().then(responseData => {
+                        const sourceColumnName = responseData.sourceColumnName || null;
+                        
+                        console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId}${sourceColumnName ? ` (${sourceColumnName})` : ''}`);
+                        
+                        // Call the global function to check for suggestions
+                        window.checkSuggestionAndShowToast(sourceColumnId, cardId, sourceColumnName);
+                      }).catch(error => {
+                        console.error('[Prompt Assistant] Error parsing response:', error);
+                        // Fallback to using the suggestion system without column name
+                        window.checkSuggestionAndShowToast(sourceColumnId, cardId, null);
+                      });
                     }
                   } catch (error) {
                     console.error('[Prompt Assistant] Error parsing request data:', error);

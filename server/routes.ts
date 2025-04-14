@@ -642,7 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return; // Already sent response
       }
       
-      return res.json(card);
+      return res.json(enhancedCard);
     } catch (error) {
       console.error("Error moving card:", error);
       return res.status(500).json({ message: "Error moving card" });
