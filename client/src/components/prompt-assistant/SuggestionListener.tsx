@@ -13,6 +13,33 @@ import { useModalContext } from '@/contexts/ModalContext';
 export function SuggestionListener() {
   const { toast } = useToast();
   const { openInSuggestionMode } = useModalContext();
+  
+  // Function to test toast notifications directly
+  const testToast = () => {
+    console.log('[SuggestionListener] Testing toast with action button');
+    toast({
+      title: "Test Toast",
+      description: "This is a test toast with an action button",
+      action: (
+        <ToastAction 
+          altText="Test Action" 
+          onClick={() => {
+            console.log('[SuggestionListener] Test action button clicked');
+          }}
+        >
+          Test
+        </ToastAction>
+      ),
+      duration: 10000,
+    });
+    console.log('[SuggestionListener] Test toast triggered');
+  };
+  
+  // Call the test function after component mounts
+  useEffect(() => {
+    // Wait a moment before triggering the test toast
+    setTimeout(testToast, 3000);
+  }, []);
 
   useEffect(() => {
     console.log('[SuggestionListener] Component mounted');

@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import { DndProvider } from "@/components/board/board";
 import TestUploadPage from "@/pages/test-upload";
 import TestSuggestionPage from "@/pages/test-suggestion";
+import DirectToastTestPage from "@/pages/direct-toast-test";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/test-upload" component={TestUploadPage} />
       <Route path="/test-suggestion" component={TestSuggestionPage} />
+      <Route path="/direct-toast-test" component={DirectToastTestPage} />
       <Route component={NotFound} />
     </Switch>
   );
