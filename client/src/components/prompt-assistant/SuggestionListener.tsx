@@ -14,7 +14,7 @@ export function SuggestionListener() {
   const { toast } = useToast();
   const { openInSuggestionMode } = useModalContext();
   
-  // Function to test toast notifications directly
+  // Function to test toast notifications directly - disabled in production
   const testToast = () => {
     console.log('[SuggestionListener] Testing toast with action button');
     toast({
@@ -35,11 +35,13 @@ export function SuggestionListener() {
     console.log('[SuggestionListener] Test toast triggered');
   };
   
-  // Call the test function after component mounts
+  // Test function is now disabled - uncomment for testing
+  /*
   useEffect(() => {
     // Wait a moment before triggering the test toast
     setTimeout(testToast, 3000);
   }, []);
+  */
 
   useEffect(() => {
     console.log('[SuggestionListener] Component mounted');
@@ -71,20 +73,20 @@ export function SuggestionListener() {
       console.log('[SuggestionListener] Toast notification triggered');
     };
 
-    // Test event dispatcher for debugging
+    // Test event dispatcher for debugging - disabled in production
     const testEvent = () => {
       console.log('[SuggestionListener] Dispatching test event');
       const event = new CustomEvent('test', { detail: { message: 'Test event received' } });
       window.dispatchEvent(event);
     };
     
-    // Add both event listeners
+    // Add event listener for suggestions
     console.log('[SuggestionListener] Adding event listener for promptAssistantSuggestion');
     window.addEventListener('promptAssistantSuggestion', handleSuggestionEvent as EventListener);
     window.addEventListener('test', ((e: CustomEvent) => console.log(e.detail.message)) as EventListener);
     
-    // Dispatch test event after a short delay
-    setTimeout(testEvent, 2000);
+    // Test event dispatch is disabled - uncomment for testing
+    // setTimeout(testEvent, 2000);
     
     // Clean up
     return () => {
