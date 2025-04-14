@@ -314,6 +314,27 @@ export function useBoard(boardId: number) {
         title: "Card Moved",
         description: `Card moved from ${sourceColumn?.name || 'source'} column. Checking for suggestions...`,
       });
+      
+      // ULTRA CRITICAL FIX: Show suggestion toast immediately here, don't rely on polling mechanism
+      // This ensures the toast is always shown even if polling effect doesn't trigger
+      setTimeout(() => {
+        console.log(`[TEST MODE] IMMEDIATE SUGGESTION TOAST: Showing directly in moveCard success handler`);
+        
+        toast({
+          title: "Prompt Assistant",
+          description: `[TEST MODE] Suggestion available for column "${sourceColumn?.name || 'Column'}"`,
+          action: (
+            <ToastAction 
+              altText="Review suggestion" 
+              onClick={() => openInSuggestionMode(data.sourceColumnId, data.cardId)}
+            >
+              Review
+            </ToastAction>
+          ),
+        });
+        
+        console.log(`[TEST MODE] Direct suggestion toast shown for column ${data.sourceColumnId}, card ${data.cardId}`);
+      }, 1500); // Show after a delay so it appears after the first toast
     },
     onError: () => {
       toast({
