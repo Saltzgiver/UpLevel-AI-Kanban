@@ -9,7 +9,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { fromZodError } from "zod-validation-error";
-import { storeSuggestion, checkSuggestion, clearSuggestion } from "./suggestionCache";
+import { storeSuggestion, checkSuggestion, clearSuggestion, dumpCache } from "./suggestionCache";
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
@@ -330,6 +330,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.cardId);
       console.log(`[PROMPT ASSISTANT] Checking suggestion status for column ${columnId} and card ${cardId}`);
       
+      // First dump the current cache for debugging
+      dumpCache();
+      
       const status = checkSuggestion(columnId, cardId);
       
       console.log(`[PROMPT ASSISTANT] Suggestion status: ${JSON.stringify(status || { hasSuggestion: false })}`);
@@ -524,6 +527,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.id);
       const { destinationColumnId, position, sourceColumnId } = req.body;
       
+      console.log(`[PROMPT ASSISTANT] Card ${cardId} move request: from column ${sourceColumnId} to column ${destinationColumnId}`);
+      
       const card = await storage.moveCard(cardId, parseInt(destinationColumnId), position);
       
       if (!card) {
@@ -532,6 +537,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the source column to potentially analyze for prompt suggestions
       const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
+      
+      // Log debug information about the current suggestion cache
+      console.log('[PROMPT ASSISTANT] Current cache state before suggestion generation:');
+      dumpCache();
       
       // Check if destination column has GPT assigned and auto-trigger is enabled
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
