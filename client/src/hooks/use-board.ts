@@ -146,33 +146,39 @@ export function useBoard(boardId: number) {
     
     const { columnId, cardId, sourceColumnName } = pollingState;
     let attemptCount = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 15; // Increase max attempts to allow more time for suggestions
     
-    console.log(`[POLLING_EFFECT] Running for pollingState:`, pollingState);
+    console.log(`[POLLING_EFFECT] 🔄 STARTED for column ${columnId}, card ${cardId}, source column: ${sourceColumnName || 'unknown'}`);
     
     const intervalId = setInterval(async () => {
-      console.log(`[POLLING_ATTEMPT] Polling attempt ${attemptCount + 1}/${maxAttempts} for column ${columnId}, card ${cardId}...`);
+      console.log(`[POLLING_ATTEMPT] 📊 Attempt ${attemptCount + 1}/${maxAttempts} for column ${columnId}, card ${cardId}...`);
+      
+      // Ensure we're using the card-specific endpoint
       const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`;
-      console.log(`[POLLING_ATTEMPT] Fetching URL: ${statusUrl}`);
+      
+      // Force timestamp parameter to avoid caching
+      const timestampedUrl = `${statusUrl}?t=${Date.now()}`;
+      console.log(`[POLLING_ATTEMPT] 🔍 Fetching URL: ${timestampedUrl}`);
       
       attemptCount++;
       
       try {
-        // Check if a suggestion is available with proper headers
-        const response = await fetch(statusUrl, {
+        // Check if a suggestion is available with proper headers to prevent caching
+        const response = await fetch(timestampedUrl, {
           headers: {
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache'
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
           }
         });
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[POLLING_FETCH_ERROR] Server returned ${response.status}: ${errorText}`);
+          console.error(`[POLLING_FETCH_ERROR] ❌ Server returned ${response.status}: ${errorText}`);
           
           // If the card or column doesn't exist, stop polling
           if (response.status === 404) {
-            console.log(`[POLLING_STOP] Received 404, stopping polling for column ${columnId}, card ${cardId}`);
+            console.log(`[POLLING_STOP] ⛔ Received 404, stopping polling`);
             clearInterval(intervalId);
             setPollingState(prev => prev ? { ...prev, active: false } : null);
             return;
@@ -183,52 +189,63 @@ export function useBoard(boardId: number) {
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-          console.warn(`[POLLING_WARNING] Response is not JSON (${contentType})`);
+          console.error(`[POLLING_ERROR] ❌ Expected JSON, but got ${contentType}`);
+          throw new Error(`Expected JSON, but got ${contentType}`);
         }
         
         const data = await response.json();
-        console.log(`[POLLING_ATTEMPT] Received status response:`, data);
+        console.log(`[POLLING_RESPONSE] 📡 Data from poll attempt ${attemptCount}:`, data);
         
-        if (data.hasSuggestion === true) { // Explicit check for true
-          // Stop polling and show toast
-          console.log(`[POLLING_SUCCESS] Suggestion found! Calling toast notification.`);
-          clearInterval(intervalId);
-          setPollingState(prev => prev ? { ...prev, active: false } : null);
+        // Check if we have a valid suggestion
+        if (data && data.hasSuggestion === true) {
+          console.log(`[POLLING_SUCCESS] ✅ SUGGESTION FOUND for column ${columnId}, card ${cardId}. Showing toast...`);
           
-          // Use helper function for toast
-          showSuggestionToast(columnId, cardId, sourceColumnName);
-          
-          // Also try direct suggestion retrieval to verify data exists
+          // Double-verify the suggestion exists by fetching the actual content
           try {
             const contentUrl = `/api/columns/${columnId}/prompt-suggestion`;
-            console.log(`[POLLING_VERIFICATION] Fetching suggestion content from ${contentUrl}`);
+            console.log(`[POLLING_VERIFICATION] 🔍 Verifying suggestion content from ${contentUrl}`);
             const contentResponse = await fetch(contentUrl);
+            
             if (contentResponse.ok) {
               const contentData = await contentResponse.json();
-              console.log(`[POLLING_VERIFICATION] Suggestion content retrieved successfully, length: ${
-                JSON.stringify(contentData).length
-              } chars`);
+              console.log(`[POLLING_VERIFICATION] ✓ Suggestion content verified, content available`);
+              
+              // Show toast notification - with extra logging
+              console.log(`[TOAST_TRIGGER] 🔔 Triggering toast notification for suggestion`);
+              const toastId = showSuggestionToast(columnId, cardId, sourceColumnName);
+              console.log(`[TOAST_TRIGGER] ✓ Toast triggered with ID: ${toastId}`);
+              
+              // Stop polling after suggestion is found
+              console.log(`[POLLING_STOP] ✓ Suggestion confirmed, stopping polling`);
+              clearInterval(intervalId);
+              setPollingState(prev => prev ? { ...prev, active: false } : null);
+            } else {
+              console.error(`[POLLING_VERIFICATION] ❌ Suggestion content verification failed: ${contentResponse.status}`);
+              // Continue polling - this may be a temporary issue
+              console.log(`[POLLING_CONTINUE] ⚠️ Continuing polling despite content verification failure`);
             }
           } catch (contentError) {
-            console.error(`[POLLING_VERIFICATION] Error verifying suggestion content:`, contentError);
+            console.error(`[POLLING_VERIFICATION] ❌ Error verifying suggestion content:`, contentError);
+            // Continue polling - this could be a network issue
           }
-        } else if (data.hasSuggestion === false) { // Explicit check for false
-          console.log(`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.`);
+        } else if (data && data.hasSuggestion === false) { // Explicit check for false
+          console.log(`[POLLING_NO_SUGGESTION] ℹ️ Backend confirmed NO SUGGESTION available.`);
           
           if (attemptCount >= maxAttempts) {
             // Max attempts reached, stop polling
-            console.log(`[POLLING_TIMEOUT] Max polling attempts (${maxAttempts}) reached. Stopping poll.`);
+            console.log(`[POLLING_TIMEOUT] ⏱️ Max polling attempts (${maxAttempts}) reached. Stopping poll.`);
             clearInterval(intervalId);
             setPollingState(prev => prev ? { ...prev, active: false } : null);
           }
         } else {
-          console.log(`[POLLING_CONTINUE] Suggestion status is undefined or still processing. Polling again soon...`);
+          console.log(`[POLLING_CONTINUE] ⏳ Waiting for suggestion processing to complete. Polling again soon...`);
         }
       } catch (error) {
-        console.error(`[POLLING_ERROR] Error during polling attempt ${attemptCount}:`, error);
+        console.error(`[POLLING_ERROR] ❌ Error during polling attempt ${attemptCount}:`, error);
         
         // Only stop on the last attempt or on serious errors to avoid stopping due to temporary network issues
         if (attemptCount >= maxAttempts - 2) {
+          console.log(`[POLLING_STOP] ⛔ Stopping polling due to repeated errors`);
           clearInterval(intervalId);
           setPollingState(prev => prev ? { ...prev, active: false } : null);
         }
@@ -237,7 +254,7 @@ export function useBoard(boardId: number) {
     
     // Clean up interval on unmount or when polling state changes
     return () => {
-      console.log(`[POLLING_CLEANUP] Clearing polling interval ID: ${intervalId} for column ${pollingState?.columnId}, card ${pollingState?.cardId}`);
+      console.log(`[POLLING_CLEANUP] 🧹 Cleaning up interval for column ${pollingState?.columnId}, card ${pollingState?.cardId}`);
       clearInterval(intervalId);
     };
   }, [pollingState, showSuggestionToast]);
