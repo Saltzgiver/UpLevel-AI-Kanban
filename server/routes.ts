@@ -351,6 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 0}` 
         : 'no cache entry'}`);
       
+      // Make sure we return a JSON object with a hasSuggestion property (client code checks response.hasSuggestion)
       return res.json({
         hasSuggestion: status?.hasSuggestion || false,
         columnId,
