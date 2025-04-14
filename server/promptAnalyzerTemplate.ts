@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Define the template structure for type safety
 export interface PromptAnalyzerTemplate {
@@ -20,6 +21,10 @@ export interface PromptAnalyzerTemplate {
   };
   responseFormat: string;
 }
+
+// In ES modules, __dirname is not available, so we need to recreate it
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Path to the template file
 const templateFilePath = path.join(__dirname, 'prompt-analyzer-template.json');
