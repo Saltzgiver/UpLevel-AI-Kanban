@@ -32,25 +32,27 @@ export function useBoard(boardId: number) {
     let attempts = 0;
     const maxAttempts = 10;
     
-    console.log(`🔍 POLLING: Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
+    console.log(`[POLLING_EFFECT] Running for pollingState:`, pollingState);
     
     const intervalId = setInterval(async () => {
+      console.log(`[POLLING_ATTEMPT] Polling attempt ${attempts + 1}/${maxAttempts} for column ${columnId}, card ${cardId}...`);
+      const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`;
+      console.log(`[POLLING_ATTEMPT] Fetching URL: ${statusUrl}`);
+      
       attempts++;
-      console.log(`🔍 POLLING: Attempt ${attempts} for suggestion availability (column ${columnId}, card ${cardId})`);
       
       try {
         // Check if a suggestion is available
-        console.log(`🔍 POLLING: Sending status check request to /api/columns/${columnId}/prompt-suggestion/status/${cardId}`);
         const response = await apiRequest(
           "GET", 
           `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
         );
         
-        console.log(`🔍 POLLING: Got response:`, response);
+        console.log(`[POLLING_ATTEMPT] Received status response: ${JSON.stringify(response)}`);
         
         if (response?.hasSuggestion) {
           // Stop polling and show toast
-          console.log(`🔍 POLLING: Suggestion available! Stopping poll and showing toast`);
+          console.log(`[POLLING_SUCCESS] Suggestion found! Calling toast notification.`);
           clearInterval(intervalId);
           setPollingState(prev => prev ? { ...prev, active: false } : null);
           
@@ -66,21 +68,30 @@ export function useBoard(boardId: number) {
               </ToastAction>
             ),
           });
-        } else if (attempts >= maxAttempts) {
-          // Max attempts reached, stop polling
-          console.log("No suggestion available after maximum attempts");
-          clearInterval(intervalId);
-          setPollingState(prev => prev ? { ...prev, active: false } : null);
+        } else if (response?.hasSuggestion === false) {
+          console.log(`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.`);
+          
+          if (attempts >= maxAttempts) {
+            // Max attempts reached, stop polling
+            console.log(`[POLLING_TIMEOUT] Max polling attempts (${maxAttempts}) reached. Stopping poll.`);
+            clearInterval(intervalId);
+            setPollingState(prev => prev ? { ...prev, active: false } : null);
+          }
+        } else {
+          console.log(`[POLLING_CONTINUE] Suggestion status is undefined or still processing. Polling again soon...`);
         }
       } catch (error) {
-        console.error("Error checking suggestion availability:", error);
+        console.error(`[POLLING_ERROR] Error during polling attempt ${attempts}:`, error);
         clearInterval(intervalId);
         setPollingState(prev => prev ? { ...prev, active: false } : null);
       }
     }, 2000);
     
     // Clean up interval on unmount or when polling state changes
-    return () => clearInterval(intervalId);
+    return () => {
+      console.log(`[POLLING_CLEANUP] Clearing polling interval ID: ${intervalId} for column ${pollingState?.columnId}, card ${pollingState?.cardId}`);
+      clearInterval(intervalId);
+    };
   }, [pollingState, toast, openInSuggestionMode]);
 
   const createColumn = useMutation({
@@ -227,22 +238,23 @@ export function useBoard(boardId: number) {
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/boards/${boardId}`] });
       
+      console.log(`[MOVE_CARD_SUCCESS] Card ID: ${data.cardId}, Source Column ID: ${data.sourceColumnId}, Destination Column ID: ${data.destinationColumnId}`);
+      console.log(`[MOVE_CARD_SUCCESS] Attempting to find source column data...`);
+      
       // Check if the source column was GPT-enabled by finding it in the board data
       const columns = boardQuery.data?.columns || [];
       const sourceColumn = columns.find((col: any) => col.id === data.sourceColumnId);
       
-      console.log(`🔍 MOVE CARD: Column data for source column ${data.sourceColumnId}:`, 
-        sourceColumn ? {
-          id: sourceColumn.id,
-          name: sourceColumn.name,
-          gptAssigned: sourceColumn.gptAssigned,
-          gptName: sourceColumn.gptName
-        } : 'not found'
-      );
+      console.log(`[MOVE_CARD_SUCCESS] Found source column data:`, sourceColumn ? {
+        id: sourceColumn.id,
+        name: sourceColumn.name,
+        gptAssigned: sourceColumn.gptAssigned,
+        gptName: sourceColumn.gptName
+      } : 'Not Found');
       
       if (sourceColumn?.gptAssigned) {
         // Start polling for suggestion availability
-        console.log(`🔍 MOVE CARD: Starting polling for suggestion - column ${data.sourceColumnId}, card ${data.cardId}`);
+        console.log(`[POLLING_INIT] Source column ${data.sourceColumnId} is GPT-enabled. Initializing polling state for card ${data.cardId}.`);
         setPollingState({
           columnId: data.sourceColumnId,
           cardId: data.cardId,
@@ -250,7 +262,7 @@ export function useBoard(boardId: number) {
           active: true
         });
       } else {
-        console.log(`🔍 MOVE CARD: Not starting polling - source column ${data.sourceColumnId} is not GPT-enabled`);
+        console.log(`[POLLING_INIT] Source column ${data.sourceColumnId} is NOT GPT-enabled or not found. Skipping polling.`);
       }
     },
     onError: () => {
