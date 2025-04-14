@@ -134,9 +134,12 @@ export default function Home() {
   return (
     <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
       <Header 
-        board={activeBoard} 
+        board={activeBoard}
+        boards={boards || []}
         onBoardListClick={() => setViewMode(viewMode === "board" ? "list" : "board")}
         viewMode={viewMode}
+        onSelectBoard={handleSelectBoard}
+        currentBoardId={activeBoardId}
       />
       <main className="flex-1 overflow-auto pb-6 px-4 sm:px-6 md:px-8">
         <div className="py-6">
@@ -147,11 +150,13 @@ export default function Home() {
               isLoading={false}
             />
           ) : (
-            <BoardList 
-              boards={boards} 
-              onSelectBoard={handleSelectBoard}
-              currentBoardId={activeBoardId}
-            />
+            <div className="mt-4">
+              <BoardList 
+                boards={boards} 
+                onSelectBoard={handleSelectBoard}
+                currentBoardId={activeBoardId}
+              />
+            </div>
           )}
         </div>
       </main>
