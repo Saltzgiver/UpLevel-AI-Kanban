@@ -328,16 +328,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      console.log(`Checking suggestion status for column ${columnId} and card ${cardId}`);
+      console.log(`[TEST MODE] Checking suggestion status for column ${columnId} and card ${cardId}`);
       
       const status = checkSuggestion(columnId, cardId);
       
+      // TESTING CHANGE: Log the response we're sending back
+      console.log(`[TEST MODE] Suggestion status response for column ${columnId}, card ${cardId}: ${status?.hasSuggestion ? 'Has suggestion' : 'No suggestion'}`);
+      
+      // TESTING CHANGE: Always return a suggestion exists
       return res.json({
-        hasSuggestion: status?.hasSuggestion || false
+        hasSuggestion: true
       });
     } catch (error) {
-      console.error("Error checking suggestion status for card:", error);
-      return res.status(500).json({ message: "Error checking suggestion status for card" });
+      console.error("[TEST MODE] Error checking suggestion status for card:", error);
+      // TESTING CHANGE: Even on error, return success with a suggestion
+      return res.json({
+        hasSuggestion: true
+      });
     }
   });
   
@@ -345,45 +352,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      console.log(`Retrieving suggestion for column ${columnId}`);
+      console.log(`[TEST MODE] Retrieving suggestion for column ${columnId}`);
       
       const status = checkSuggestion(columnId);
+      console.log(`[TEST MODE] Suggestion status for content retrieval: ${status?.hasSuggestion ? 'Has suggestion' : 'No suggestion'}`);
       
-      if (!status || !status.hasSuggestion) {
-        return res.status(404).json({ message: "No suggestion available for this column" });
-      }
+      // TESTING CHANGE: Always return a suggestion even if none exists
       
       // Get current column data to include with the response
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        return res.status(404).json({ message: "Column not found" });
+        console.log(`[TEST MODE] Column ${columnId} not found, returning test suggestion anyway`);
+        // Return a test response even if column doesn't exist
+        return res.json({
+          currentInstructions: "Default instructions (column not found)",
+          suggestedInstructions: "[TEST MODE] This is a test suggestion when column doesn't exist.",
+          rationale: "[TEST MODE] This is a test rationale when column doesn't exist.",
+          timestamp: Date.now()
+        });
       }
       
-      // Format response based on suggestion type
-      if (typeof status.suggestion === 'string') {
-        return res.json({
-          currentInstructions: column.gptInstructions || "",
-          suggestedInstructions: status.suggestion || "",
-          timestamp: Date.now()
-        });
-      } else if (status.suggestion && typeof status.suggestion === 'object') {
-        // Handle structured suggestion format
-        return res.json({
-          currentInstructions: column.gptInstructions || "",
-          suggestedInstructions: status.suggestion.suggestedInstructions,
-          rationale: status.suggestion.rationale,
-          timestamp: Date.now()
-        });
-      } else {
-        return res.json({
-          currentInstructions: column.gptInstructions || "",
-          suggestedInstructions: "",
-          timestamp: Date.now()
-        });
+      // If we have a valid suggestion in the cache, use it
+      if (status?.hasSuggestion && status.suggestion) {
+        console.log(`[TEST MODE] Using real suggestion from cache for column ${columnId}`);
+        
+        // Format response based on suggestion type
+        if (typeof status.suggestion === 'string') {
+          return res.json({
+            currentInstructions: column.gptInstructions || "",
+            suggestedInstructions: status.suggestion || "",
+            timestamp: Date.now()
+          });
+        } else if (typeof status.suggestion === 'object') {
+          // Handle structured suggestion format
+          return res.json({
+            currentInstructions: column.gptInstructions || "",
+            suggestedInstructions: status.suggestion.suggestedInstructions,
+            rationale: status.suggestion.rationale,
+            timestamp: Date.now()
+          });
+        }
       }
+      
+      // TESTING CHANGE: If no valid suggestion found, create a test one
+      console.log(`[TEST MODE] Creating test suggestion for column ${columnId}`);
+      return res.json({
+        currentInstructions: column.gptInstructions || "Default instructions",
+        suggestedInstructions: "[TEST MODE] This is a test suggestion created when no suggestion was found in the cache.",
+        rationale: "[TEST MODE] This is a test rationale explaining why this suggestion would be better than the original.",
+        timestamp: Date.now()
+      });
     } catch (error) {
-      console.error("Error retrieving suggestion:", error);
-      return res.status(500).json({ message: "Error retrieving suggestion" });
+      console.error("[TEST MODE] Error retrieving suggestion:", error);
+      // TESTING CHANGE: Even on error, return a test suggestion
+      return res.json({
+        currentInstructions: "Default instructions (error occurred)",
+        suggestedInstructions: "[TEST MODE] This is a test suggestion created when an error occurred.",
+        rationale: "[TEST MODE] This is a test rationale created when an error occurred.",
+        timestamp: Date.now()
+      });
     }
   });
   

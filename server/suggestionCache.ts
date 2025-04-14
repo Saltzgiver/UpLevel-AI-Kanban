@@ -47,22 +47,54 @@ export function storeSuggestion(
 export function checkSuggestion(columnId: number, cardId?: number): { hasSuggestion: boolean, suggestion?: string | PromptSuggestion | null } | undefined {
   const data = suggestionCache.get(columnId);
   
+  console.log(`[TEST MODE] checkSuggestion called for column ${columnId}${cardId ? `, card ${cardId}` : ''}`);
+  console.log(`[TEST MODE] Current cache state for column ${columnId}: ${data ? JSON.stringify({
+    cardId: data.cardId,
+    hasSuggestion: data.hasSuggestion,
+    timestamp: new Date(data.timestamp).toISOString()
+  }) : 'No data in cache'}`);
+  
   // No data found
   if (!data) {
-    return undefined;
+    console.log(`[TEST MODE] No suggestion data found for column ${columnId}`);
+    // TESTING CHANGE: Return a test suggestion even if none exists
+    return {
+      hasSuggestion: true,
+      suggestion: {
+        rationale: "[TEST MODE] This is a test suggestion rationale created on demand when no suggestion was found",
+        suggestedInstructions: "[TEST MODE] This is a test suggestion instruction created on demand when no suggestion was found"
+      }
+    };
   }
   
   // Check if expired
   if (Date.now() - data.timestamp > CACHE_TTL) {
+    console.log(`[TEST MODE] Suggestion for column ${columnId} has expired, removing from cache`);
     suggestionCache.delete(columnId);
-    return undefined;
+    // TESTING CHANGE: Return a test suggestion even if expired
+    return {
+      hasSuggestion: true,
+      suggestion: {
+        rationale: "[TEST MODE] This is a test suggestion rationale created on demand when the original suggestion expired",
+        suggestedInstructions: "[TEST MODE] This is a test suggestion instruction created on demand when the original suggestion expired"
+      }
+    };
   }
   
   // If cardId is provided, make sure it matches
   if (cardId !== undefined && data.cardId !== cardId) {
-    return undefined;
+    console.log(`[TEST MODE] Card ID mismatch: Expected ${cardId}, found ${data.cardId}`);
+    // TESTING CHANGE: Return a test suggestion even if card IDs don't match
+    return {
+      hasSuggestion: true,
+      suggestion: {
+        rationale: "[TEST MODE] This is a test suggestion rationale created on demand when card IDs didn't match",
+        suggestedInstructions: "[TEST MODE] This is a test suggestion instruction created on demand when card IDs didn't match"
+      }
+    };
   }
   
+  console.log(`[TEST MODE] Valid suggestion found for column ${columnId}, card ${data.cardId}`);
   return {
     hasSuggestion: data.hasSuggestion,
     suggestion: data.suggestion
