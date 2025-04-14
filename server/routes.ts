@@ -328,23 +328,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       const cardId = parseInt(req.params.cardId);
-      console.log(`[TEST MODE] Checking suggestion status for column ${columnId} and card ${cardId}`);
+      console.log(`Checking suggestion status for column ${columnId} and card ${cardId}`);
       
       const status = checkSuggestion(columnId, cardId);
       
-      // TESTING CHANGE: Log the response we're sending back
-      console.log(`[TEST MODE] Suggestion status response for column ${columnId}, card ${cardId}: ${status?.hasSuggestion ? 'Has suggestion' : 'No suggestion'}`);
-      
-      // TESTING CHANGE: Always return a suggestion exists
       return res.json({
-        hasSuggestion: true
+        hasSuggestion: status?.hasSuggestion || false
       });
     } catch (error) {
-      console.error("[TEST MODE] Error checking suggestion status for card:", error);
-      // TESTING CHANGE: Even on error, return success with a suggestion
-      return res.json({
-        hasSuggestion: true
-      });
+      console.error("Error checking suggestion status for card:", error);
+      return res.status(500).json({ message: "Error checking suggestion status for card" });
     }
   });
   
@@ -352,65 +345,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/columns/:id/prompt-suggestion", async (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
-      console.log(`[TEST MODE] Retrieving suggestion for column ${columnId}`);
+      console.log(`Retrieving suggestion for column ${columnId}`);
       
       const status = checkSuggestion(columnId);
-      console.log(`[TEST MODE] Suggestion status for content retrieval: ${status?.hasSuggestion ? 'Has suggestion' : 'No suggestion'}`);
       
-      // TESTING CHANGE: Always return a suggestion even if none exists
+      if (!status || !status.hasSuggestion) {
+        return res.status(404).json({ message: "No suggestion available for this column" });
+      }
       
       // Get current column data to include with the response
       const column = await storage.getColumnById(columnId);
       if (!column) {
-        console.log(`[TEST MODE] Column ${columnId} not found, returning test suggestion anyway`);
-        // Return a test response even if column doesn't exist
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Format response based on suggestion type
+      if (typeof status.suggestion === 'string') {
         return res.json({
-          currentInstructions: "Default instructions (column not found)",
-          suggestedInstructions: "[TEST MODE] This is a test suggestion when column doesn't exist.",
-          rationale: "[TEST MODE] This is a test rationale when column doesn't exist.",
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: status.suggestion || "",
+          timestamp: Date.now()
+        });
+      } else if (status.suggestion && typeof status.suggestion === 'object') {
+        // Handle structured suggestion format
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: status.suggestion.suggestedInstructions,
+          rationale: status.suggestion.rationale,
+          timestamp: Date.now()
+        });
+      } else {
+        return res.json({
+          currentInstructions: column.gptInstructions || "",
+          suggestedInstructions: "",
           timestamp: Date.now()
         });
       }
-      
-      // If we have a valid suggestion in the cache, use it
-      if (status?.hasSuggestion && status.suggestion) {
-        console.log(`[TEST MODE] Using real suggestion from cache for column ${columnId}`);
-        
-        // Format response based on suggestion type
-        if (typeof status.suggestion === 'string') {
-          return res.json({
-            currentInstructions: column.gptInstructions || "",
-            suggestedInstructions: status.suggestion || "",
-            timestamp: Date.now()
-          });
-        } else if (typeof status.suggestion === 'object') {
-          // Handle structured suggestion format
-          return res.json({
-            currentInstructions: column.gptInstructions || "",
-            suggestedInstructions: status.suggestion.suggestedInstructions,
-            rationale: status.suggestion.rationale,
-            timestamp: Date.now()
-          });
-        }
-      }
-      
-      // TESTING CHANGE: If no valid suggestion found, create a test one
-      console.log(`[TEST MODE] Creating test suggestion for column ${columnId}`);
-      return res.json({
-        currentInstructions: column.gptInstructions || "Default instructions",
-        suggestedInstructions: "[TEST MODE] This is a test suggestion created when no suggestion was found in the cache.",
-        rationale: "[TEST MODE] This is a test rationale explaining why this suggestion would be better than the original.",
-        timestamp: Date.now()
-      });
     } catch (error) {
-      console.error("[TEST MODE] Error retrieving suggestion:", error);
-      // TESTING CHANGE: Even on error, return a test suggestion
-      return res.json({
-        currentInstructions: "Default instructions (error occurred)",
-        suggestedInstructions: "[TEST MODE] This is a test suggestion created when an error occurred.",
-        rationale: "[TEST MODE] This is a test rationale created when an error occurred.",
-        timestamp: Date.now()
-      });
+      console.error("Error retrieving suggestion:", error);
+      return res.status(500).json({ message: "Error retrieving suggestion" });
     }
   });
   
@@ -551,92 +524,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Card not found" });
       }
       
-      // Get the source column and destination column - always analyze for suggestions
-      console.log(`[TEST MODE] ===== CARD MOVE EVENT - Beginning Suggestion Analysis =====`);
-      console.log(`[TEST MODE] Card ID: ${cardId}, Source Column: ${sourceColumnId}, Destination Column: ${destinationColumnId}`);
-      
+      // Get the source column to potentially analyze for prompt suggestions
       const sourceColumn = sourceColumnId ? await storage.getColumnById(parseInt(sourceColumnId)) : null;
+      
+      // Check if destination column has GPT assigned and auto-trigger is enabled
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
       
-      console.log(`[TEST MODE] Source Column Details: ${sourceColumn ? `ID: ${sourceColumn.id}, Name: ${sourceColumn.name}, GPT Assigned: ${!!sourceColumn.gptAssigned}` : 'None'}`);
-      console.log(`[TEST MODE] Destination Column Details: ${destColumn ? `ID: ${destColumn.id}, Name: ${destColumn.name}, GPT Assigned: ${!!destColumn.gptAssigned}` : 'Destination column not found'}`);
-      
-      // TESTING CHANGE: Always analyze for prompt improvement suggestions regardless of source column
-      // Run this analysis asynchronously so it doesn't block the main flow
-      setTimeout(async () => {
-        console.log(`[TEST MODE] Beginning suggestion analysis for card ${cardId}`);
-        try {
-          // Get the card details for analysis
-          const cardWithDetails = await storage.getCardById(cardId);
-          if (!cardWithDetails) {
-            console.log(`[TEST MODE] Card ${cardId} not found for analysis`);
-            return;
+      // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
+      if (sourceColumn && sourceColumn.gptAssigned) {
+        // Run this analysis asynchronously so it doesn't block the main flow
+        setTimeout(async () => {
+          try {
+            // Get the card details for analysis
+            const cardWithDetails = await storage.getCardById(cardId);
+            if (!cardWithDetails) return;
+            
+            // Get the chats from the card while it was in the source column
+            const chats = await storage.getChatsByCardId(cardId);
+            if (!chats || chats.length === 0) {
+              // No chats to analyze, store no suggestion available in cache
+              storeSuggestion(sourceColumn.id, cardId, null);
+              return;
+            }
+            
+            // Create card context object for analysis
+            const cardContext = {
+              title: cardWithDetails.title,
+              description: cardWithDetails.description,
+              attachments: cardWithDetails.attachments || []
+            };
+            
+            // Get prompt improvement suggestion
+            const promptSuggestion = await getPromptSuggestion(
+              sourceColumn.gptInstructions || "", 
+              cardContext,
+              chats,
+              sourceColumn.apiKey || undefined
+            );
+            
+            // Store the suggestion in the cache
+            storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
+            
+            console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
+            if (promptSuggestion) {
+              // Log a preview of the suggestion content
+              const suggestedInstructions = promptSuggestion.suggestedInstructions;
+              console.log(`Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
+            }
+          } catch (error) {
+            console.error("Error generating prompt suggestion:", error);
+            // Store no suggestion available in case of error
+            storeSuggestion(sourceColumn.id, cardId, null);
           }
-          
-          console.log(`[TEST MODE] Card details retrieved: Title: "${cardWithDetails.title}"`);
-          
-          // Get the chats from the card while it was in the source column
-          const chats = await storage.getChatsByCardId(cardId);
-          console.log(`[TEST MODE] Chats retrieved for card ${cardId}: ${chats.length} messages found`);
-          
-          // TESTING CHANGE: Always create a suggestion, even if no chats
-          // Create card context object for analysis
-          const cardContext = {
-            title: cardWithDetails.title,
-            description: cardWithDetails.description,
-            attachments: cardWithDetails.attachments || []
-          };
-          
-          // Use source column instructions if available, otherwise use a test prompt
-          const instructions = (sourceColumn && sourceColumn.gptAssigned) 
-            ? (sourceColumn.gptInstructions || "Default instructions") 
-            : "Test instructions for suggestion analysis";
-          
-          const apiKey = (sourceColumn && sourceColumn.apiKey) 
-            ? sourceColumn.apiKey
-            : "test-api-key"; // Use test key to get mock data when no key available
-          
-          console.log(`[TEST MODE] Using instructions: "${instructions.substring(0, 50)}..."`);
-          console.log(`[TEST MODE] Using API key: ${apiKey === "test-api-key" ? "Test key (will return mock data)" : (apiKey === "from_env" ? "From environment" : "Custom key")}`);
-          
-          // Get prompt improvement suggestion
-          console.log(`[TEST MODE] Calling getPromptSuggestion function...`);
-          const promptSuggestion = await getPromptSuggestion(
-            instructions, 
-            cardContext,
-            chats,
-            apiKey
-          );
-          
-          console.log(`[TEST MODE] getPromptSuggestion returned: ${promptSuggestion ? 'Suggestion available' : 'No suggestion'}`);
-          
-          // TESTING CHANGE: For columns without GPT assigned, create a test suggestion
-          const finalSuggestion = promptSuggestion || {
-            rationale: "[TEST MODE] Test rationale for suggestion testing",
-            suggestedInstructions: "[TEST MODE] This is a test suggestion created for testing the suggestion feature. The original instructions could be improved by adding more specific details."
-          };
-          
-          console.log(`[TEST MODE] Final suggestion created: ${JSON.stringify(finalSuggestion).substring(0, 100)}...`);
-          
-          // Store the suggestion in the cache - always store a valid suggestion for testing
-          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn ? destColumn.id : 0);
-          console.log(`[TEST MODE] Storing suggestion in cache for column ID ${targetColumnId}`);
-          storeSuggestion(targetColumnId, cardId, finalSuggestion);
-          
-          console.log(`[TEST MODE] Suggestion stored successfully for column ${targetColumnId}, card ${cardId}`);
-          console.log(`[TEST MODE] ===== CARD MOVE EVENT - Suggestion Analysis Complete =====`);
-        } catch (error) {
-          console.error("[TEST MODE] Error generating prompt suggestion:", error);
-          // For testing, store a default suggestion even on error
-          const mockSuggestion = {
-            rationale: "[TEST MODE] Created after error in suggestion generation",
-            suggestedInstructions: "[TEST MODE] This is a fallback suggestion created when an error occurred during suggestion generation."
-          };
-          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn ? destColumn.id : 0);
-          console.log(`[TEST MODE] Error occurred, storing fallback suggestion for column ${targetColumnId}`);
-          storeSuggestion(targetColumnId, cardId, mockSuggestion);
-        }
-      }, 200);
+        }, 200);
+      }
       
       if (destColumn && destColumn.gptAssigned && destColumn.autoTrigger) {
         // Mark card as processing

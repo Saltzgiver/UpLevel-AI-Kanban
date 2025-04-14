@@ -26,79 +26,27 @@ export function useBoard(boardId: number) {
 
   // Poll for suggestion status if polling is active
   useEffect(() => {
-    if (!pollingState || !pollingState.active) {
-      console.log(`[TEST MODE] Polling not active or no polling state exists`);
-      return;
-    }
+    if (!pollingState || !pollingState.active) return;
     
     const { columnId, cardId, sourceColumnName } = pollingState;
     let attempts = 0;
-    const maxAttempts = 3; // TESTING CHANGE: Reduced for faster testing
+    const maxAttempts = 10;
     
-    console.log(`[TEST MODE] Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
-    
-    // CRITICAL FIX: Immediately show a test toast to ensure suggestion UI always appears
-    // This bypasses the polling entirely for testing purposes
-    setTimeout(() => {
-      console.log(`[TEST MODE] IMMEDIATE TEST MODE: Showing suggestion toast without waiting for polling`);
-      
-      toast({
-        title: "Prompt Assistant",
-        description: `[TEST MODE] Test suggestion available for column "${sourceColumnName || 'Column'}"`,
-        action: (
-          <ToastAction 
-            altText="Review suggestion" 
-            onClick={() => openInSuggestionMode(columnId, cardId)}
-          >
-            Review
-          </ToastAction>
-        ),
-      });
-      
-      console.log(`[TEST MODE] Immediate test toast shown for column ${columnId}, card ${cardId}`);
-    }, 500); // Show test toast immediately after a short delay
+    console.log(`Starting to poll for suggestion availability for column ${columnId}, card ${cardId}`);
     
     const intervalId = setInterval(async () => {
       attempts++;
-      console.log(`[TEST MODE] Polling attempt ${attempts} for suggestion availability`);
+      console.log(`Polling attempt ${attempts} for suggestion availability`);
       
       try {
-        // Check if a suggestion is available 
+        // Check if a suggestion is available
         const response = await apiRequest(
           "GET", 
           `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`
         );
         
-        // Log the response for debugging
-        console.log(`[TEST MODE] Suggestion status API response:`, response);
-        
-        // TESTING CHANGE: Always show a toast with suggestion info after a few polling attempts
-        if (attempts >= 2) {
+        if (response?.hasSuggestion) {
           // Stop polling and show toast
-          clearInterval(intervalId);
-          setPollingState(prev => prev ? { ...prev, active: false } : null);
-          
-          // Always show a toast with the suggestion status
-          const hasSuggestion = response?.hasSuggestion || false;
-          
-          toast({
-            title: "Prompt Assistant",
-            description: hasSuggestion 
-              ? `Suggestion available for column "${sourceColumnName || 'Column'}"` 
-              : `[TEST MODE] No suggestion available for column "${sourceColumnName || 'Column'}", but showing anyway`,
-            action: (
-              <ToastAction 
-                altText="Review suggestion" 
-                onClick={() => openInSuggestionMode(columnId, cardId)}
-              >
-                Review
-              </ToastAction>
-            ),
-          });
-          
-          console.log(`[TEST MODE] Toast shown for column ${columnId}, card ${cardId}, hasSuggestion: ${hasSuggestion}`);
-        } else if (response?.hasSuggestion) {
-          // If we got a real suggestion before our test limit, show it right away
           clearInterval(intervalId);
           setPollingState(prev => prev ? { ...prev, active: false } : null);
           
@@ -114,30 +62,16 @@ export function useBoard(boardId: number) {
               </ToastAction>
             ),
           });
-          
-          console.log(`[TEST MODE] Real suggestion found, toast shown for column ${columnId}, card ${cardId}`);
+        } else if (attempts >= maxAttempts) {
+          // Max attempts reached, stop polling
+          console.log("No suggestion available after maximum attempts");
+          clearInterval(intervalId);
+          setPollingState(prev => prev ? { ...prev, active: false } : null);
         }
       } catch (error) {
-        console.error("[TEST MODE] Error checking suggestion availability:", error);
-        
-        // TESTING CHANGE: Even on error, show a suggestion toast
+        console.error("Error checking suggestion availability:", error);
         clearInterval(intervalId);
         setPollingState(prev => prev ? { ...prev, active: false } : null);
-        
-        toast({
-          title: "Prompt Assistant",
-          description: `[TEST MODE] Error checking suggestions, but showing notification anyway for column "${sourceColumnName || 'Column'}"`,
-          action: (
-            <ToastAction 
-              altText="Review suggestion" 
-              onClick={() => openInSuggestionMode(columnId, cardId)}
-            >
-              Review
-            </ToastAction>
-          ),
-        });
-        
-        console.log(`[TEST MODE] Error occurred but toast shown anyway for column ${columnId}, card ${cardId}`);
       }
     }, 2000);
     
@@ -289,52 +223,20 @@ export function useBoard(boardId: number) {
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/boards/${boardId}`] });
       
-      // Get the source column from board data
+      // Check if the source column was GPT-enabled by finding it in the board data
       const columns = boardQuery.data?.columns || [];
       const sourceColumn = columns.find((col: any) => col.id === data.sourceColumnId);
       
-      // TESTING CHANGE: Always start polling for suggestions regardless of GPT status
-      console.log(`[TEST MODE] Starting to poll for suggestion availability for column ${data.sourceColumnId}, card ${data.cardId}`);
-      console.log(`[TEST MODE] Source column details: ${sourceColumn ? JSON.stringify({
-        id: sourceColumn.id,
-        name: sourceColumn.name,
-        gptAssigned: sourceColumn.gptAssigned
-      }) : 'Column not found'}`);
-      
-      // Always activate polling for suggestions in test mode
-      setPollingState({
-        columnId: data.sourceColumnId,
-        cardId: data.cardId,
-        sourceColumnName: sourceColumn ? sourceColumn.name : 'Column',
-        active: true
-      });
-      
-      // Show immediate toast to verify move event was received
-      toast({
-        title: "Card Moved",
-        description: `Card moved from ${sourceColumn?.name || 'source'} column. Checking for suggestions...`,
-      });
-      
-      // ULTRA CRITICAL FIX: Show suggestion toast immediately here, don't rely on polling mechanism
-      // This ensures the toast is always shown even if polling effect doesn't trigger
-      setTimeout(() => {
-        console.log(`[TEST MODE] IMMEDIATE SUGGESTION TOAST: Showing directly in moveCard success handler`);
-        
-        toast({
-          title: "Prompt Assistant",
-          description: `[TEST MODE] Suggestion available for column "${sourceColumn?.name || 'Column'}"`,
-          action: (
-            <ToastAction 
-              altText="Review suggestion" 
-              onClick={() => openInSuggestionMode(data.sourceColumnId, data.cardId)}
-            >
-              Review
-            </ToastAction>
-          ),
+      if (sourceColumn?.gptAssigned) {
+        // Start polling for suggestion availability
+        console.log(`Starting to poll for suggestion availability for column ${data.sourceColumnId}, card ${data.cardId}`);
+        setPollingState({
+          columnId: data.sourceColumnId,
+          cardId: data.cardId,
+          sourceColumnName: sourceColumn.name,
+          active: true
         });
-        
-        console.log(`[TEST MODE] Direct suggestion toast shown for column ${data.sourceColumnId}, card ${data.cardId}`);
-      }, 1500); // Show after a delay so it appears after the first toast
+      }
     },
     onError: () => {
       toast({
