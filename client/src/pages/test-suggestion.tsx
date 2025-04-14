@@ -45,9 +45,21 @@ export default function TestSuggestionPage() {
       const createResult = await createResponse.json();
       setResponseData(createResult);
 
+      // Manually dispatch the custom event to trigger the SuggestionListener
+      console.log(`[Test Page] Manually dispatching promptAssistantSuggestion event for column ${columnId}, card ${cardId}`);
+      const event = new CustomEvent('promptAssistantSuggestion', {
+        detail: {
+          columnId: parseInt(columnId),
+          cardId: parseInt(cardId),
+          columnName: 'Test Column'
+        }
+      });
+      window.dispatchEvent(event);
+      console.log('[Test Page] Custom event dispatched');
+
       toast({
         title: 'Suggestion Created',
-        description: 'Test suggestion has been created. Watch for the toast notification from the SuggestionListener.',
+        description: 'Test suggestion has been created and event dispatched. Watch for the toast notification from the SuggestionListener.',
       });
     } catch (error) {
       console.error('Error creating suggestion:', error);

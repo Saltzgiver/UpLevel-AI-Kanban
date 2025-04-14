@@ -31,6 +31,8 @@
                 if (data && data.hasSuggestion) {
                   // We need to wait for React to be fully initialized before we can access the toast function
                   // This event will be picked up by a listener in a React component
+                  console.log(`[Prompt Assistant] Dispatching custom event with columnId: ${sourceColumnId}, cardId: ${cardId}, columnName: ${sourceColumnName || 'Column'}`);
+                  
                   const event = new CustomEvent('promptAssistantSuggestion', { 
                     detail: { 
                       columnId: sourceColumnId, 
@@ -38,7 +40,9 @@
                       columnName: sourceColumnName || 'Column' 
                     } 
                   });
+                  
                   window.dispatchEvent(event);
+                  console.log('[Prompt Assistant] Custom event dispatched');
                   return true;
                 }
                 return false;
