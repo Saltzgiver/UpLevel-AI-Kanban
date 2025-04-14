@@ -6,7 +6,7 @@
  * 2. Getting the suggestion content
  * 3. Accepting/rejecting the suggestion
  */
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 // Sample suggestion data
 const sampleSuggestion = {
@@ -24,6 +24,10 @@ async function testPromptAssistantFlow() {
   const columnId = 1;  // Use a real column ID from your database
   const cardId = 123;  // Use a test card ID
   
+  // Use the current hostname instead of hardcoding localhost
+  const baseUrl = 'https://' + process.env.REPL_SLUG + '.' + process.env.REPL_OWNER + '.repl.co';
+  console.log(`Using base URL: ${baseUrl}`);
+  
   // First, insert a test suggestion into the server using HTTP API
   try {
     console.log("STEP 1: Creating a test suggestion via API");
@@ -31,7 +35,7 @@ async function testPromptAssistantFlow() {
     // Normally this would happen automatically when a card is moved, but for testing
     // we'll use the manual endpoint
     console.log(`Creating test suggestion for column ${columnId}, card ${cardId}`);
-    const response = await fetch(`http://localhost:3000/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`, {
+    const response = await fetch(`${baseUrl}/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -60,7 +64,7 @@ async function testPromptAssistantFlow() {
     
     // Make a request to the status endpoint
     console.log(`Checking suggestion status via API for column ${columnId}, card ${cardId}`);
-    const response = await fetch(`http://localhost:3000/api/columns/${columnId}/prompt-suggestion/status/${cardId}`);
+    const response = await fetch(`${baseUrl}/api/columns/${columnId}/prompt-suggestion/status/${cardId}`);
     
     // Check response
     if (response.ok) {
@@ -86,7 +90,7 @@ async function testPromptAssistantFlow() {
     
     // Make a request to get the full suggestion
     console.log(`Fetching suggestion content via API for column ${columnId}, card ${cardId}`);
-    const response = await fetch(`http://localhost:3000/api/columns/${columnId}/prompt-suggestion/${cardId}`);
+    const response = await fetch(`${baseUrl}/api/columns/${columnId}/prompt-suggestion/${cardId}`);
     
     // Check response
     if (response.ok) {
@@ -112,7 +116,7 @@ async function testPromptAssistantFlow() {
     
     // Make a request to accept the suggestion
     console.log(`Accepting suggestion via API for column ${columnId}, card ${cardId}`);
-    const response = await fetch(`http://localhost:3000/api/columns/${columnId}/prompt-suggestion/accept/${cardId}`, {
+    const response = await fetch(`${baseUrl}/api/columns/${columnId}/prompt-suggestion/accept/${cardId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
