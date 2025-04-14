@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { DndProvider } from "@/components/board/board";
 import TestUploadPage from "@/pages/test-upload";
+import TestSuggestionPage from "@/pages/test-suggestion";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/test-upload" component={TestUploadPage} />
+      <Route path="/test-suggestion" component={TestSuggestionPage} />
       <Route component={NotFound} />
     </Switch>
   );
