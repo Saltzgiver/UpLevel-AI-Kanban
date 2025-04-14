@@ -1,11 +1,27 @@
 import { useState } from "react";
-import { Edit, Plus, User, LayoutGrid, List, ChevronDown, ChevronUp, KanbanSquare } from "lucide-react";
+import { 
+  Edit, 
+  Plus, 
+  User, 
+  LayoutGrid, 
+  List, 
+  ChevronDown, 
+  ChevronUp, 
+  KanbanSquare,
+  Settings,
+  Layout,
+  FileText,
+  Wrench,
+  Bell,
+  Upload
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Board } from "@shared/schema";
+import { Link } from "wouter";
 import {
   Tooltip,
   TooltipContent,
@@ -19,6 +35,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -325,10 +342,76 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
             </Button>
           )}
           
-          {/* User Avatar */}
-          <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-medium border border-violet-200">
-            <User className="h-4 w-4" />
-          </div>
+          {/* User Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 rounded-full flex items-center">
+                <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-medium border border-violet-200">
+                  <User className="h-4 w-4" />
+                </div>
+                <ChevronDown className="ml-1 h-4 w-4 text-gray-600" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">Admin</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    admin@example.com
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <Link href="/" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Layout className="mr-2 h-4 w-4" />
+                    <span>Boards</span>
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
+                <Link href="/prompt-analyzer-settings" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Wrench className="mr-2 h-4 w-4" />
+                    <span>Prompt Analyzer Settings</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/test-upload" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    <span>Test Upload</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/test-suggestion" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Bell className="mr-2 h-4 w-4" />
+                    <span>Test Suggestion</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/direct-toast-test" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Direct Toast Test</span>
+                  </DropdownMenuItem>
+                </Link>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer">
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

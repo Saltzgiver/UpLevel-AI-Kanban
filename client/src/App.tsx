@@ -14,15 +14,30 @@ import { SuggestionListener } from "@/components/prompt-assistant/SuggestionList
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
 import { PageLayout } from "@/components/layout/page-layout";
 
+// Use a custom route component to handle which routes should have the navigation bar
+function CustomRoute({ component: Component, showNav = true, ...rest }: any) {
+  return (
+    <Route
+      {...rest}
+      component={(props: any) => (
+        <PageLayout showNav={showNav}>
+          <Component {...props} />
+        </PageLayout>
+      )}
+    />
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/test-upload" component={TestUploadPage} />
-      <Route path="/test-suggestion" component={TestSuggestionPage} />
-      <Route path="/direct-toast-test" component={DirectToastTestPage} />
-      <Route path="/prompt-analyzer-settings" component={PromptAnalyzerSettings} />
-      <Route component={NotFound} />
+      {/* Home route doesn't need the default navigation bar, as it has its own */}
+      <CustomRoute path="/" component={Home} showNav={false} />
+      <CustomRoute path="/test-upload" component={TestUploadPage} />
+      <CustomRoute path="/test-suggestion" component={TestSuggestionPage} />
+      <CustomRoute path="/direct-toast-test" component={DirectToastTestPage} />
+      <CustomRoute path="/prompt-analyzer-settings" component={PromptAnalyzerSettings} />
+      <CustomRoute component={NotFound} />
     </Switch>
   );
 }
@@ -32,9 +47,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ModalProvider>
         <DndProvider>
-          <PageLayout>
-            <Router />
-          </PageLayout>
+          <Router />
           {/* Add SuggestionListener to handle events from fetch interceptor */}
           <SuggestionListener />
           {/* Global modal for handling GPT assignment from anywhere, including suggestions */}
