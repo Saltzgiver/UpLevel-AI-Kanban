@@ -385,7 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return the status (without the actual suggestion for efficiency)
       return res.status(200).json({
         hasSuggestion: !!(status && status.hasSuggestion),
-        timestamp: status?.timestamp || Date.now(),
+        timestamp: Date.now(), // Use current timestamp instead of from status to avoid type errors
         cardId: cardId,
         columnId: columnId
       });

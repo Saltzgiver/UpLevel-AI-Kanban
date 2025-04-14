@@ -165,18 +165,20 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
             return;
           }
           
-          // If we got here, a suggestion exists - now fetch it
-          const response = await apiRequest(
-            "GET", 
-            `/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`
-          );
+          // If we got here, a suggestion exists - now fetch it directly using fetch instead of apiRequest
+          // The issue was that apiRequest might be processing the response differently
+          console.log(`[AssignGPTModal] Using direct fetch for suggestion endpoint`);
+          const response = await fetch(`/api/columns/${column.id}/prompt-suggestion/${modalState.cardId}`);
           
-          // Type assertion for the response
+          if (!response.ok) {
+            throw new Error(`Failed to fetch suggestion: ${response.status}`);
+          }
+          
           interface SuggestionResponse {
             suggestion?: { rationale: string; suggestedInstructions: string }
           }
           
-          const data = response as SuggestionResponse;
+          const data = await response.json() as SuggestionResponse;
           console.log(`[AssignGPTModal] Suggestion response:`, data);
           
           if (data && data.suggestion) {
