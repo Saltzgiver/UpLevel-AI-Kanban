@@ -8,8 +8,8 @@
  * 4. Retrieving and displaying the suggestion
  */
 
-const fetch = require('node-fetch');
-const { storeSuggestion, checkSuggestion, clearSuggestion, dumpCache } = require('./server/suggestionCache.js');
+import fetch from 'node-fetch';
+import { storeSuggestion, checkSuggestion, clearSuggestion, dumpCache } from './server/suggestionCache.js';
 
 // Test column and card data
 const TEST_COLUMN_ID = 9;  // "image test" column
@@ -118,7 +118,7 @@ async function testFullPromptAssistantWorkflow() {
     // Step 6: Test the API endpoint for checking suggestion status
     console.log("\nSTEP 6: Testing suggestion status API endpoint");
     
-    const statusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/status/${TEST_CARD_ID}`);
+    const statusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/check/${TEST_CARD_ID}`);
     if (!statusResponse.ok) {
       throw new Error(`Failed to check suggestion status: ${statusResponse.status}`);
     }
