@@ -488,5 +488,34 @@ export function useBoard(boardId: number) {
     triggerGPTProcessing,
     checkSuggestion, // Manual check function for debugging
     startPollingForSuggestion, // Manual polling trigger for debugging
+    // Debug function to directly show a toast - exposed for testing
+    directToastTest: () => {
+      console.log('[DEBUG_TOAST] Manually triggering toast notification directly');
+      
+      // Try direct toast
+      try {
+        toast({
+          title: "Test Notification",
+          description: "This is a test toast to verify the notification system works.",
+          duration: 60000
+        });
+        console.log('[DEBUG_TOAST] Direct toast triggered successfully');
+      } catch (error) {
+        console.error('[DEBUG_TOAST] Direct toast failed:', error);
+      }
+      
+      // Also try via the suggestion helper after a delay
+      setTimeout(() => {
+        try {
+          console.log('[DEBUG_TOAST] Attempting via suggestion helper');
+          const columnId = boardQuery.data?.columns?.[0]?.id || 1;
+          const cardId = 1;
+          showSuggestionToast(columnId, cardId, "Test Column");
+          console.log('[DEBUG_TOAST] Suggestion toast triggered');
+        } catch (error) {
+          console.error('[DEBUG_TOAST] Suggestion toast failed:', error);
+        }
+      }, 2000);
+    }
   };
 }
