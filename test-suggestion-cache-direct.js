@@ -1,0 +1,122 @@
+/**
+ * Test script to directly interact with the suggestion cache
+ * 
+ * This script doesn't rely on imports from TypeScript files and
+ * instead works directly with the suggestion API endpoints
+ */
+
+import fetch from 'node-fetch';
+
+// Test data
+const TEST_COLUMN_ID = 13;
+const TEST_CARD_ID = 61;
+const TEST_SUGGESTION = {
+  rationale: "This is a test rationale from direct cache test",
+  suggestedInstructions: "This is a test suggestion instruction. Follow it carefully!"
+};
+
+async function testSuggestionCacheDirectly() {
+  console.log("\n==================================================");
+  console.log("DIRECT SUGGESTION CACHE TEST");
+  console.log("==================================================\n");
+  
+  try {
+    // Step 1: Create a test suggestion
+    console.log("STEP 1: Creating a test suggestion via API");
+    
+    const createResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/create-test/${TEST_CARD_ID}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ suggestion: TEST_SUGGESTION }),
+    });
+    
+    if (!createResponse.ok) {
+      console.error("Error creating test suggestion:", createResponse.status, createResponse.statusText);
+      const errorText = await createResponse.text();
+      console.error("Error details:", errorText);
+      throw new Error("Failed to create test suggestion");
+    }
+    
+    const createResult = await createResponse.json();
+    console.log("Create response:", createResult);
+    console.log("✅ Test suggestion created successfully");
+    
+    // Step 2: Check if suggestion is available
+    console.log("\nSTEP 2: Checking suggestion status via API");
+    
+    const statusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/status/${TEST_CARD_ID}`);
+    if (!statusResponse.ok) {
+      throw new Error(`Failed to check suggestion status: ${statusResponse.status}`);
+    }
+    
+    const statusResult = await statusResponse.json();
+    console.log("Status response:", statusResult);
+    
+    if (statusResult.hasSuggestion) {
+      console.log("✅ API correctly reports suggestion is available");
+    } else {
+      console.log("❌ API reports no suggestion is available");
+      throw new Error("Suggestion not found in cache");
+    }
+    
+    // Step 3: Get the suggestion content
+    console.log("\nSTEP 3: Retrieving suggestion content via API");
+    
+    const getResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/get/${TEST_CARD_ID}`);
+    if (!getResponse.ok) {
+      throw new Error(`Failed to get suggestion: ${getResponse.status}`);
+    }
+    
+    const suggestion = await getResponse.json();
+    console.log("Suggestion content:", suggestion);
+    
+    if (suggestion && suggestion.rationale === TEST_SUGGESTION.rationale) {
+      console.log("✅ Successfully retrieved suggestion content");
+    } else {
+      console.log("❌ Retrieved suggestion doesn't match the original");
+      throw new Error("Suggestion content mismatch");
+    }
+    
+    // Step 4: Accept the suggestion (simulate user accepting it)
+    console.log("\nSTEP 4: Accepting the suggestion via API");
+    
+    const acceptResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/accept/${TEST_CARD_ID}`, {
+      method: 'POST',
+    });
+    
+    if (!acceptResponse.ok) {
+      throw new Error(`Failed to accept suggestion: ${acceptResponse.status}`);
+    }
+    
+    const acceptResult = await acceptResponse.json();
+    console.log("Accept response:", acceptResult);
+    console.log("✅ Suggestion accepted successfully");
+    
+    // Step 5: Verify the suggestion was cleared
+    console.log("\nSTEP 5: Verifying suggestion was cleared after acceptance");
+    
+    const finalStatusResponse = await fetch(`http://localhost:5000/api/columns/${TEST_COLUMN_ID}/prompt-suggestion/status/${TEST_CARD_ID}`);
+    const finalStatus = await finalStatusResponse.json();
+    
+    if (!finalStatus.hasSuggestion) {
+      console.log("✅ Suggestion correctly cleared after acceptance");
+    } else {
+      console.log("❌ Suggestion still available after acceptance");
+    }
+    
+    console.log("\n✅ Complete direct cache test successful!");
+    
+  } catch (error) {
+    console.error("Error during direct cache test:", error);
+    console.log("❌ Direct cache test failed");
+  }
+  
+  console.log("\n==================================================");
+  console.log("TEST COMPLETE");
+  console.log("==================================================\n");
+}
+
+// Run the test
+testSuggestionCacheDirectly();

@@ -410,6 +410,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[PROMPT ASSISTANT] Retrieving suggestion for column ${columnId} and card ${cardId}`);
       
+      // Explicitly set content type to JSON
+      res.setHeader('Content-Type', 'application/json');
+      
       const status = checkSuggestion(columnId, cardId);
       
       if (!status || !status.hasSuggestion) {
@@ -432,6 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else if (status.suggestion && typeof status.suggestion === 'object') {
         // Handle structured suggestion format
+        console.log(`[PROMPT ASSISTANT] Returning structured suggestion:`, status.suggestion);
         return res.json({
           suggestion: status.suggestion
         });
@@ -442,6 +446,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("[PROMPT ASSISTANT] Error retrieving suggestion for card:", error);
+      // Set content type even on error
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ message: "Error retrieving suggestion for card" });
     }
   });
@@ -451,6 +457,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const columnId = parseInt(req.params.id);
       console.log(`Retrieving suggestion for column ${columnId}`);
+      
+      // Explicitly set content type to JSON
+      res.setHeader('Content-Type', 'application/json');
       
       const status = checkSuggestion(columnId);
       
@@ -473,6 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else if (status.suggestion && typeof status.suggestion === 'object') {
         // Handle structured suggestion format
+        console.log(`[PROMPT ASSISTANT] Returning structured suggestion for column:`, status.suggestion);
         return res.json({
           currentInstructions: column.gptInstructions || "",
           suggestedInstructions: status.suggestion.suggestedInstructions,
@@ -488,6 +498,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error retrieving suggestion:", error);
+      // Set content type even on error
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ message: "Error retrieving suggestion" });
     }
   });
