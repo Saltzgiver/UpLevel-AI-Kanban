@@ -532,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const destColumn = await storage.getColumnById(parseInt(destinationColumnId));
       
       console.log(`[TEST MODE] Source Column Details: ${sourceColumn ? `ID: ${sourceColumn.id}, Name: ${sourceColumn.name}, GPT Assigned: ${!!sourceColumn.gptAssigned}` : 'None'}`);
-      console.log(`[TEST MODE] Destination Column Details: ID: ${destColumn.id}, Name: ${destColumn.name}, GPT Assigned: ${!!destColumn.gptAssigned}`);
+      console.log(`[TEST MODE] Destination Column Details: ${destColumn ? `ID: ${destColumn.id}, Name: ${destColumn.name}, GPT Assigned: ${!!destColumn.gptAssigned}` : 'Destination column not found'}`);
       
       // TESTING CHANGE: Always analyze for prompt improvement suggestions regardless of source column
       // Run this analysis asynchronously so it doesn't block the main flow
@@ -592,21 +592,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[TEST MODE] Final suggestion created: ${JSON.stringify(finalSuggestion).substring(0, 100)}...`);
           
           // Store the suggestion in the cache - always store a valid suggestion for testing
-          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn.id);
+          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn ? destColumn.id : 0);
           console.log(`[TEST MODE] Storing suggestion in cache for column ID ${targetColumnId}`);
           storeSuggestion(targetColumnId, cardId, finalSuggestion);
           
           console.log(`[TEST MODE] Suggestion stored successfully for column ${targetColumnId}, card ${cardId}`);
           console.log(`[TEST MODE] ===== CARD MOVE EVENT - Suggestion Analysis Complete =====`);
         } catch (error) {
-          console.error("Error generating prompt suggestion:", error);
+          console.error("[TEST MODE] Error generating prompt suggestion:", error);
           // For testing, store a default suggestion even on error
           const mockSuggestion = {
-            rationale: "Created after error in suggestion generation",
-            suggestedInstructions: "This is a fallback suggestion created when an error occurred during suggestion generation."
+            rationale: "[TEST MODE] Created after error in suggestion generation",
+            suggestedInstructions: "[TEST MODE] This is a fallback suggestion created when an error occurred during suggestion generation."
           };
-          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn.id);
-          console.log(`Error occurred, storing fallback suggestion for column ${targetColumnId}`);
+          const targetColumnId = sourceColumn ? sourceColumn.id : (destColumn ? destColumn.id : 0);
+          console.log(`[TEST MODE] Error occurred, storing fallback suggestion for column ${targetColumnId}`);
           storeSuggestion(targetColumnId, cardId, mockSuggestion);
         }
       }, 200);
