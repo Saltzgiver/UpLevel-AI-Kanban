@@ -4,7 +4,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useModalContext } from "@/contexts/ModalContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 // Interface for tracking polling state
 interface PollingState {
@@ -24,31 +24,63 @@ export function useBoard(boardId: number) {
     enabled: !!boardId,
   });
 
+  // Function to manually check for suggestions (for debugging or testing)
+  const checkSuggestion = useCallback(async (columnId: number, cardId: number) => {
+    try {
+      console.log(`[MANUAL_CHECK] Checking suggestion for column ${columnId}, card ${cardId}`);
+      const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`;
+      const response = await fetch(statusUrl);
+      const data = await response.json();
+      console.log(`[MANUAL_CHECK] Response:`, data);
+      
+      if (data.hasSuggestion) {
+        // Show toast
+        toast({
+          title: "Prompt Assistant",
+          description: `Suggestion available for column`,
+          action: (
+            <ToastAction 
+              altText="Review suggestion" 
+              onClick={() => openInSuggestionMode(columnId, cardId)}
+            >
+              Review
+            </ToastAction>
+          ),
+        });
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('[MANUAL_CHECK] Error checking suggestion:', error);
+      return { hasSuggestion: false };
+    }
+  }, [toast, openInSuggestionMode]);
+  
   // Poll for suggestion status if polling is active
   useEffect(() => {
     if (!pollingState || !pollingState.active) return;
     
     const { columnId, cardId, sourceColumnName } = pollingState;
-    let attempts = 0;
+    let attemptCount = 0;
     const maxAttempts = 10;
     
     console.log(`[POLLING_EFFECT] Running for pollingState:`, pollingState);
     
     const intervalId = setInterval(async () => {
-      console.log(`[POLLING_ATTEMPT] Polling attempt ${attempts + 1}/${maxAttempts} for column ${columnId}, card ${cardId}...`);
+      console.log(`[POLLING_ATTEMPT] Polling attempt ${attemptCount + 1}/${maxAttempts} for column ${columnId}, card ${cardId}...`);
       const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`;
       console.log(`[POLLING_ATTEMPT] Fetching URL: ${statusUrl}`);
       
-      attempts++;
+      attemptCount++;
       
       try {
         // Check if a suggestion is available
         const response = await fetch(statusUrl);
-        const responseData = await response.json();
+        const data = await response.json();
         
-        console.log(`[POLLING_ATTEMPT] Received status response:`, responseData);
+        console.log(`[POLLING_ATTEMPT] Received status response:`, data);
         
-        if (responseData.hasSuggestion) {
+        if (data.hasSuggestion) {
           // Stop polling and show toast
           console.log(`[POLLING_SUCCESS] Suggestion found! Calling toast notification.`);
           clearInterval(intervalId);
@@ -66,10 +98,10 @@ export function useBoard(boardId: number) {
               </ToastAction>
             ),
           });
-        } else if (responseData.hasSuggestion === false) {
+        } else if (data.hasSuggestion === false) {
           console.log(`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.`);
           
-          if (attempts >= maxAttempts) {
+          if (attemptCount >= maxAttempts) {
             // Max attempts reached, stop polling
             console.log(`[POLLING_TIMEOUT] Max polling attempts (${maxAttempts}) reached. Stopping poll.`);
             clearInterval(intervalId);
@@ -79,7 +111,7 @@ export function useBoard(boardId: number) {
           console.log(`[POLLING_CONTINUE] Suggestion status is undefined or still processing. Polling again soon...`);
         }
       } catch (error) {
-        console.error(`[POLLING_ERROR] Error during polling attempt ${attempts}:`, error);
+        console.error(`[POLLING_ERROR] Error during polling attempt ${attemptCount}:`, error);
         clearInterval(intervalId);
         setPollingState(prev => prev ? { ...prev, active: false } : null);
       }
