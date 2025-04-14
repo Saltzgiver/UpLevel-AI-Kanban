@@ -194,11 +194,11 @@ RATIONALE: No improvements needed because [your reasoning]
       };
 
       const response = await apiRequest('POST', '/api/test-prompt-suggestion', testData);
-      setTestResult(response);
+      setTestResult(response as any);
       
       toast({
         title: 'Test Complete',
-        description: response.suggestion ? 'Suggestion generated successfully.' : 'No suggestion was generated.',
+        description: response && response.result ? 'Suggestion generated successfully.' : 'No suggestion was generated.',
       });
     } catch (error) {
       console.error('Error testing prompt template:', error);
@@ -428,15 +428,15 @@ RATIONALE: No improvements needed because [your reasoning]
               {testResult && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-md">
                   <h3 className="text-sm font-medium mb-2">Result:</h3>
-                  {testResult.suggestion ? (
+                  {testResult.result ? (
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-sm font-medium">Rationale:</h4>
-                        <p className="text-sm">{testResult.suggestion.rationale}</p>
+                        <p className="text-sm">{testResult.result.rationale}</p>
                       </div>
                       <div>
                         <h4 className="text-sm font-medium">Suggested Instructions:</h4>
-                        <p className="text-sm whitespace-pre-wrap">{testResult.suggestion.suggestedInstructions}</p>
+                        <p className="text-sm whitespace-pre-wrap">{testResult.result.suggestedInstructions}</p>
                       </div>
                     </div>
                   ) : (

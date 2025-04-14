@@ -1393,6 +1393,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Prompt Analyzer Template API Routes
+  app.get("/api/prompt-analyzer/template", (req, res) => {
+    try {
+      const { getTemplate } = require('./promptAnalyzerTemplate');
+      const template = getTemplate();
+      res.json({ template });
+    } catch (error) {
+      console.error("Error fetching prompt analyzer template:", error);
+      res.status(500).json({ message: "Error fetching template", error: String(error) });
+    }
+  });
+
+  app.post("/api/prompt-analyzer/template", (req, res) => {
+    try {
+      const { saveTemplate } = require('./promptAnalyzerTemplate');
+      const template = req.body;
+      
+      // Basic validation
+      if (!template || !template.context || !template.analysisGuidelines || 
+          !template.columnSpecificGuidance || !template.responseFormat) {
+        return res.status(400).json({ message: "Invalid template format" });
+      }
+      
+      const success = saveTemplate(template);
+      
+      if (success) {
+        res.json({ message: "Template saved successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to save template" });
+      }
+    } catch (error) {
+      console.error("Error saving prompt analyzer template:", error);
+      res.status(500).json({ message: "Error saving template", error: String(error) });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
