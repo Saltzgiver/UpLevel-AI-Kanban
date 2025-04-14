@@ -90,6 +90,19 @@ export default function DirectToastTestPage() {
       const result = await createResponse.json();
       console.log('Suggestion created:', result);
       
+      // Verify the suggestion was created
+      try {
+        const checkResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/check/${cardId}`);
+        const checkResult = await checkResponse.json();
+        console.log('Suggestion check after creation:', checkResult);
+        
+        if (!checkResult.hasSuggestion) {
+          console.log('Warning: Suggestion check failed after creation');
+        }
+      } catch (error) {
+        console.error('Error verifying suggestion:', error);
+      }
+      
       // Then show the toast
       console.log(`Triggering toast with modal action for column ${columnId}, card ${cardId}`);
       toast({
@@ -100,7 +113,16 @@ export default function DirectToastTestPage() {
             altText="View suggestion" 
             onClick={() => {
               console.log(`View button clicked for column ${columnId}, card ${cardId}`);
+              
+              // Enhanced debugging for modal opening
+              console.log('Modal state before opening:', { columnId, cardId, isSuggestionMode: true });
               openInSuggestionMode(columnId, cardId);
+              
+              // Log modal status
+              setTimeout(() => {
+                const modalState = document.querySelector('.fixed.inset-0.bg-black\\/40');
+                console.log('Modal visible in DOM after toast action:', !!modalState);
+              }, 500);
             }}
           >
             View
@@ -148,7 +170,20 @@ export default function DirectToastTestPage() {
           </div>
           
           <div>
-            <Button onClick={() => openInSuggestionMode(9, 47)} variant="outline" className="w-full mb-2">
+            <Button 
+              onClick={() => {
+                console.log('Directly opening modal in suggestion mode for column 9, card 47');
+                openInSuggestionMode(9, 47);
+                
+                // Log the modal state after a slight delay to ensure state has updated
+                setTimeout(() => {
+                  const modalState = document.querySelector('.fixed.inset-0.bg-black\\/40');
+                  console.log('Modal visible in DOM:', !!modalState);
+                }, 500);
+              }} 
+              variant="outline" 
+              className="w-full mb-2"
+            >
               Open GPT Modal Directly
             </Button>
             <p className="text-xs text-muted-foreground">Opens the GPT modal directly in suggestion mode for column 9, card 47</p>

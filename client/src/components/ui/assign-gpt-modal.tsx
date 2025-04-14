@@ -110,6 +110,13 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   useEffect(() => {
     if (!isOpen) return;
     
+    console.log(`[AssignGPTModal] Modal opened with state:`, { 
+      isSuggestionMode: modalState.isSuggestionMode,
+      columnId: modalState.columnId,
+      cardId: modalState.cardId,
+      currentColumnId: column.id 
+    });
+    
     setGptName(column.gptName || "GPT Assistant");
     setInstructions(column.gptInstructions || "");
     setAutoTrigger(column.autoTrigger !== false);
@@ -117,6 +124,11 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     // Check if we're in suggestion mode and fetch suggestion
     if (modalState.isSuggestionMode && modalState.columnId === column.id && modalState.cardId) {
       console.log(`[AssignGPTModal] In suggestion mode for column ${column.id}, card ${modalState.cardId}`);
+      
+      // Always ensure showing suggestion is true in suggestion mode
+      setShowingSuggestion(true);
+      console.log(`[AssignGPTModal] Initial showingSuggestion set to true`);
+      
       const fetchSuggestion = async () => {
         try {
           setIsSubmitting(true);
@@ -137,10 +149,17 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
           if (data && data.suggestion) {
             console.log(`[AssignGPTModal] Setting suggestion:`, data.suggestion);
             setSuggestion(data.suggestion);
+            
+            // Ensure state is set to showing
             setShowingSuggestion(true);
-            console.log(`[AssignGPTModal] showingSuggestion set to true`);
+            console.log(`[AssignGPTModal] showingSuggestion confirmed to be true`);
           } else {
             console.log(`[AssignGPTModal] No suggestion data found in response`);
+            toast({
+              title: "Error",
+              description: "No suggestion data available",
+              variant: "destructive"
+            });
           }
         } catch (error) {
           console.error("Failed to fetch suggestion:", error);
@@ -157,6 +176,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
       fetchSuggestion();
     } else {
       // Reset suggestion state when not in suggestion mode
+      console.log(`[AssignGPTModal] Not in suggestion mode, resetting state`);
       setSuggestion(null);
       setShowingSuggestion(false);
     }
