@@ -456,9 +456,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Include some debug info to help troubleshoot
         debug: {
           cacheHit: status !== undefined,
-          checkTime: new Date().toISOString()
+          checkTime: new Date().toISOString(),
+          suggestionType: status?.suggestion ? typeof status.suggestion : null,
+          hasContent: status?.suggestion !== null && status?.suggestion !== undefined
         }
       };
+      
+      // Add extra logging for cache misses - this can help diagnose when suggestions aren't properly stored
+      if (!status || !status.hasSuggestion) {
+        console.log(`[PROMPT_STATUS_${requestId}] ℹ️ No suggestion available at this time for column ${columnId}, card ${cardId}`);
+      }
       
       console.log(`[PROMPT_STATUS_${requestId}] ✅ Sending response:`, JSON.stringify(responseData));
       return res.status(200).json(responseData);
@@ -758,25 +765,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If the card is moved from one GPT column to another, analyze for prompt improvement suggestions
       if (sourceColumn && sourceColumn.gptAssigned) {
+        // Generate a unique ID for tracking this suggestion generation process
+        const requestId = `sugg-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        console.log(`[SUGGESTION_INIT_${requestId}] 🚀 Starting prompt suggestion analysis for card ${cardId} from column ${sourceColumn.id} (${sourceColumn.name})`);
+        
         // Run this analysis asynchronously so it doesn't block the main flow
         setTimeout(async () => {
           try {
+            // First, mark that we're working on a suggestion - store a placeholder
+            storeSuggestion(sourceColumn.id, cardId, null);
+            
+            console.log(`[SUGGESTION_${requestId}] 📋 Getting card details for analysis...`);
+            
             // Get the card details for analysis
             const cardWithDetails = await storage.getCardById(cardId);
-            if (!cardWithDetails) return;
+            if (!cardWithDetails) {
+              console.error(`[SUGGESTION_${requestId}] ❌ Card ${cardId} not found in database. Cannot generate suggestion.`);
+              return;
+            }
+            
+            console.log(`[SUGGESTION_${requestId}] 📋 Getting chat history for card...`);
             
             // Get the chats from the card while it was in the source column
             const chats = await storage.getChatsByCardId(cardId);
             if (!chats || chats.length === 0) {
-              // No chats to analyze, store no suggestion available in cache
-              storeSuggestion(sourceColumn.id, cardId, null);
+              console.log(`[SUGGESTION_${requestId}] ℹ️ No chats available for card ${cardId}. Skipping suggestion generation.`);
+              // No chats to analyze, keep the placeholder in cache to indicate we checked but found nothing
               return;
             }
             
+            console.log(`[SUGGESTION_${requestId}] ✓ Found ${chats.length} chat messages for card ${cardId}`);
+            
             // Create card context object for analysis
             const cardContext = {
-              title: cardWithDetails.title,
-              description: cardWithDetails.description,
+              title: cardWithDetails.title || "Untitled Card",
+              description: cardWithDetails.description || "",
               attachments: cardWithDetails.attachments || []
             };
             
@@ -792,29 +815,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             // Log the API key usage mode without exposing the actual key
-            console.log(`Using API key for prompt suggestion: ${sourceColumn.apiKey === "from_env" ? "from environment variable" : (sourceColumn.apiKey ? "from column settings" : "from environment variable")}`);
+            console.log(`[SUGGESTION_${requestId}] 🔑 Using API key for prompt suggestion: ${sourceColumn.apiKey === "from_env" ? "from environment variable" : (sourceColumn.apiKey ? "from column settings" : "from environment variable")}`);
+            
+            // Only proceed if we have the necessary source column instructions
+            if (!sourceColumn.gptInstructions) {
+              console.log(`[SUGGESTION_${requestId}] ⚠️ Source column ${sourceColumn.id} has no instructions. Skipping suggestion generation.`);
+              return;
+            }
+            
+            console.log(`[SUGGESTION_${requestId}] 🤖 Generating prompt suggestion via GPT...`);
             
             // Get prompt improvement suggestion
             const promptSuggestion = await getPromptSuggestion(
-              sourceColumn.gptInstructions || "", 
+              sourceColumn.gptInstructions, 
               cardContext,
               chats,
               apiKeyToUse
             );
             
-            // Store the suggestion in the cache
-            storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
-            
-            console.log(`Prompt suggestion for column ${sourceColumn.id}: ${promptSuggestion ? 'Available' : 'None available'}`);
-            if (promptSuggestion) {
+            // Validate the suggestion to ensure it has the needed fields
+            if (
+              promptSuggestion && 
+              promptSuggestion.suggestedInstructions && 
+              promptSuggestion.rationale
+            ) {
+              console.log(`[SUGGESTION_${requestId}] ✅ Successfully generated suggestion for column ${sourceColumn.id}`);
+              
+              // Store the valid suggestion in the cache
+              storeSuggestion(sourceColumn.id, cardId, promptSuggestion);
+              
               // Log a preview of the suggestion content
-              const suggestedInstructions = promptSuggestion.suggestedInstructions;
-              console.log(`Suggestion content: ${suggestedInstructions.substring(0, 100)}${suggestedInstructions.length > 100 ? '...' : ''}`);
+              console.log(`[SUGGESTION_${requestId}] 📝 Suggested instructions (preview): "${promptSuggestion.suggestedInstructions.substring(0, 100)}${promptSuggestion.suggestedInstructions.length > 100 ? '...' : ''}"`);
+              console.log(`[SUGGESTION_${requestId}] 📝 Rationale (preview): "${promptSuggestion.rationale.substring(0, 100)}${promptSuggestion.rationale.length > 100 ? '...' : ''}"`);
+            } else {
+              console.log(`[SUGGESTION_${requestId}] ⚠️ GPT did not return a valid suggestion format. No improvement needed or available.`);
+              // Keep the null placeholder to indicate we checked but found no improvements
             }
           } catch (error) {
-            console.error("Error generating prompt suggestion:", error);
-            // Store no suggestion available in case of error
-            storeSuggestion(sourceColumn.id, cardId, null);
+            console.error(`[SUGGESTION_${requestId}] ❌ Error generating prompt suggestion:`, error);
+            // Keep the null placeholder in case of error, don't change it
           }
         }, 200);
       }
