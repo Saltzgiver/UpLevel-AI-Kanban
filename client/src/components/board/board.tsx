@@ -546,6 +546,34 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
     // Manually start polling for 10 seconds
     boardHook.startPollingForSuggestion(colId, cardId, column.name);
   };
+  
+  // Test function to directly trigger toast
+  const handleTestToast = () => {
+    console.log('[DEBUG_TOAST] Manually triggering toast notification directly');
+    
+    // Try direct toast
+    try {
+      toast({
+        title: "Test Toast Notification",
+        description: "This is a test toast to verify the notification system works.",
+        duration: 60000
+      });
+      console.log('[DEBUG_TOAST] Direct toast triggered successfully');
+      
+      // Also show a more urgent one after a delay
+      setTimeout(() => {
+        toast({
+          title: "Secondary Test Toast",
+          description: "This is a secondary test toast with variant.",
+          variant: "destructive",
+          duration: 60000
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('[DEBUG_TOAST] Direct toast failed:', error);
+      alert('Toast creation failed: ' + error);
+    }
+  };
 
   return (
     <div className="w-full">
@@ -574,6 +602,13 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
               className="text-xs"
             >
               Test Suggestion
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleTestToast}
+              className="text-xs bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              Test Toast
             </Button>
           </div>
           <div className="text-xs text-gray-500">
