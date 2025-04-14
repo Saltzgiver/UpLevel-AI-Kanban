@@ -85,12 +85,27 @@ export function useBoard(boardId: number) {
   const checkSuggestion = useCallback(async (columnId: number, cardId: number) => {
     try {
       console.log(`[MANUAL_CHECK] Checking suggestion for column ${columnId}, card ${cardId}`);
+      
+      // Use the specific endpoint for prompt suggestions, not card processing
       const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${cardId}`;
-      const response = await fetch(statusUrl);
+      console.log(`[MANUAL_CHECK] Fetching URL: ${statusUrl}`);
+      
+      const response = await fetch(statusUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${await response.text()}`);
+      }
+      
       const data = await response.json();
       console.log(`[MANUAL_CHECK] Response:`, data);
       
       if (data.hasSuggestion) {
+        console.log(`[MANUAL_CHECK] Suggestion found, showing toast notification`);
         // Show toast using helper function
         showSuggestionToast(columnId, cardId);
       }
@@ -120,13 +135,38 @@ export function useBoard(boardId: number) {
       attemptCount++;
       
       try {
-        // Check if a suggestion is available
-        const response = await fetch(statusUrl);
-        const data = await response.json();
+        // Check if a suggestion is available with proper headers
+        const response = await fetch(statusUrl, {
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
         
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[POLLING_FETCH_ERROR] Server returned ${response.status}: ${errorText}`);
+          
+          // If the card or column doesn't exist, stop polling
+          if (response.status === 404) {
+            console.log(`[POLLING_STOP] Received 404, stopping polling for column ${columnId}, card ${cardId}`);
+            clearInterval(intervalId);
+            setPollingState(prev => prev ? { ...prev, active: false } : null);
+            return;
+          }
+          
+          throw new Error(`Server returned ${response.status}: ${errorText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn(`[POLLING_WARNING] Response is not JSON (${contentType})`);
+        }
+        
+        const data = await response.json();
         console.log(`[POLLING_ATTEMPT] Received status response:`, data);
         
-        if (data.hasSuggestion) {
+        if (data.hasSuggestion === true) { // Explicit check for true
           // Stop polling and show toast
           console.log(`[POLLING_SUCCESS] Suggestion found! Calling toast notification.`);
           clearInterval(intervalId);
@@ -134,7 +174,22 @@ export function useBoard(boardId: number) {
           
           // Use helper function for toast
           showSuggestionToast(columnId, cardId, sourceColumnName);
-        } else if (data.hasSuggestion === false) {
+          
+          // Also try direct suggestion retrieval to verify data exists
+          try {
+            const contentUrl = `/api/columns/${columnId}/prompt-suggestion`;
+            console.log(`[POLLING_VERIFICATION] Fetching suggestion content from ${contentUrl}`);
+            const contentResponse = await fetch(contentUrl);
+            if (contentResponse.ok) {
+              const contentData = await contentResponse.json();
+              console.log(`[POLLING_VERIFICATION] Suggestion content retrieved successfully, length: ${
+                JSON.stringify(contentData).length
+              } chars`);
+            }
+          } catch (contentError) {
+            console.error(`[POLLING_VERIFICATION] Error verifying suggestion content:`, contentError);
+          }
+        } else if (data.hasSuggestion === false) { // Explicit check for false
           console.log(`[POLLING_NO_SUGGESTION] Backend confirmed no suggestion available.`);
           
           if (attemptCount >= maxAttempts) {
@@ -148,8 +203,12 @@ export function useBoard(boardId: number) {
         }
       } catch (error) {
         console.error(`[POLLING_ERROR] Error during polling attempt ${attemptCount}:`, error);
-        clearInterval(intervalId);
-        setPollingState(prev => prev ? { ...prev, active: false } : null);
+        
+        // Only stop on the last attempt or on serious errors to avoid stopping due to temporary network issues
+        if (attemptCount >= maxAttempts - 2) {
+          clearInterval(intervalId);
+          setPollingState(prev => prev ? { ...prev, active: false } : null);
+        }
       }
     }, 2000);
     

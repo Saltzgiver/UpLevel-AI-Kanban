@@ -343,6 +343,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.cardId);
       console.log(`[PROMPT_ASSISTANT_STATUS] Checking suggestion status for column ${columnId} and card ${cardId}`);
       
+      // Set content type headers early
+      res.setHeader('Content-Type', 'application/json');
+      
+      // Check for valid input
+      if (isNaN(columnId) || isNaN(cardId)) {
+        console.log(`[PROMPT_ASSISTANT_STATUS] Invalid input: columnId=${columnId}, cardId=${cardId}`);
+        return res.status(400).json({ 
+          message: "Invalid column or card ID",
+          hasSuggestion: false
+        });
+      }
+      
       // Check column existence first
       const column = await storage.getColumnById(columnId);
       if (!column) {
@@ -353,10 +365,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Check if card exists
+      const card = await storage.getCardById(cardId);
+      if (!card) {
+        console.log(`[PROMPT_ASSISTANT_STATUS] Card ${cardId} not found`);
+        return res.status(404).json({ 
+          message: "Card not found",
+          hasSuggestion: false
+        });
+      }
+      
       // Check suggestion in cache
       const status = checkSuggestion(columnId, cardId);
       
-      console.log(`[PROMPT_ASSISTANT_STATUS] Cache status for column ${columnId}: ${status ? 
+      console.log(`[PROMPT_ASSISTANT_STATUS] Cache status for column ${columnId} and card ${cardId}: ${status ? 
         `has suggestion: ${status.hasSuggestion}, content length: ${status.suggestion ? 
           (typeof status.suggestion === 'string' ? 
             status.suggestion.length : 
@@ -364,17 +386,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 0}` 
         : 'no cache entry'}`);
       
-      // Make sure we return a JSON object with a hasSuggestion property (client code checks response.hasSuggestion)
-      // Set CORS headers to ensure the browser can read the response
-      res.setHeader('Content-Type', 'application/json');
-      return res.json({
+      // Return a consistent response, always including hasSuggestion
+      const responseData = {
         hasSuggestion: status?.hasSuggestion || false,
         columnId,
         cardId,
         timestamp: Date.now()
-      });
+      };
+      
+      console.log(`[PROMPT_ASSISTANT_STATUS] Sending response:`, responseData);
+      return res.json(responseData);
     } catch (error) {
       console.error("[PROMPT_ASSISTANT_STATUS] Error checking suggestion status for card:", error);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         message: "Error checking suggestion status for card",
         hasSuggestion: false
