@@ -198,7 +198,7 @@ RATIONALE: No improvements needed because [your reasoning]
       
       toast({
         title: 'Test Complete',
-        description: response && response.result ? 'Suggestion generated successfully.' : 'No suggestion was generated.',
+        description: response && response.suggestion ? 'Suggestion generated successfully.' : 'No suggestion was generated.',
       });
     } catch (error) {
       console.error('Error testing prompt template:', error);
@@ -428,15 +428,15 @@ RATIONALE: No improvements needed because [your reasoning]
               {testResult && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-md">
                   <h3 className="text-sm font-medium mb-2">Result:</h3>
-                  {testResult.result ? (
+                  {testResult.suggestion ? (
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-sm font-medium">Rationale:</h4>
-                        <p className="text-sm">{testResult.result.rationale}</p>
+                        <p className="text-sm">{typeof testResult.suggestion === 'object' && testResult.suggestion?.rationale}</p>
                       </div>
                       <div>
                         <h4 className="text-sm font-medium">Suggested Instructions:</h4>
-                        <p className="text-sm whitespace-pre-wrap">{testResult.result.suggestedInstructions}</p>
+                        <p className="text-sm whitespace-pre-wrap">{typeof testResult.suggestion === 'object' && testResult.suggestion?.suggestedInstructions}</p>
                       </div>
                     </div>
                   ) : (
