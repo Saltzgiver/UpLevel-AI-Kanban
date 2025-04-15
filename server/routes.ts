@@ -864,36 +864,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cards/:id/trigger-gpt", async (req, res) => {
     try {
+      console.log(`=== PROCESSING CARD WITH GPT - START ===`);
       const cardId = parseInt(req.params.id);
+      console.log(`Card ID: ${cardId}`);
+      
       const card = await storage.getCardById(cardId);
       
       if (!card) {
+        console.log(`Card ${cardId} not found`);
         return res.status(404).json({ message: "Card not found" });
       }
       
+      console.log(`Card found: ${card.title} - Getting column ${card.columnId}`);
       const column = await storage.getColumnById(card.columnId);
       
-      if (!column || !column.gptAssigned) {
+      if (!column) {
+        console.log(`Column ${card.columnId} not found`);
+        return res.status(400).json({ message: "Column not found" });
+      }
+      
+      if (!column.gptAssigned) {
+        console.log(`Column ${column.id} (${column.name}) has no GPT assigned`);
         return res.status(400).json({ message: "Column has no GPT assigned" });
       }
       
+      console.log(`Column ${column.id} (${column.name}) has GPT assigned: ${column.gptName}`);
+      console.log(`API Key type: ${column.apiKey === "from_env" ? "Using environment variable" : "Using custom key"}`);
+      
       // Mark card as processing and clear previous output
+      console.log(`Marking card ${cardId} as processing`);
       await storage.updateCard(cardId, { 
         processing: true,
         gptOutput: null
       });
       
       // Return response immediately
+      console.log(`Sending response to client`);
       res.json({ message: "GPT processing triggered" });
       
       // Trigger GPT processing after response is sent
       try {
         // Use setTimeout to allow the transaction to commit fully before starting processing
+        console.log(`Scheduling GPT processing with setTimeout`);
         setTimeout(async () => {
           try {
+            console.log(`=== Executing triggerGPTProcessing for card ${cardId} ===`);
+            console.log(`Environment OPENAI_API_KEY available: ${process.env.OPENAI_API_KEY ? "YES (length: " + process.env.OPENAI_API_KEY.length + ")" : "NO"}`);
             await triggerGPTProcessing(cardId, column);
+            console.log(`=== triggerGPTProcessing for card ${cardId} - COMPLETE ===`);
           } catch (error) {
-            console.error("Error processing card with GPT:", error);
+            console.error(`=== ERROR processing card ${cardId} with GPT ===`, error);
             // Ensure the card is marked as not processing even if there's an error
             await storage.updateCard(cardId, { processing: false });
           }
