@@ -343,75 +343,79 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
           )}
           
           {/* User Profile Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 rounded-full flex items-center">
-                <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-medium border border-violet-200">
-                  <User className="h-4 w-4" />
-                </div>
-                <ChevronDown className="ml-1 h-4 w-4 text-gray-600" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Admin</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    admin@example.com
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <Link href="/" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 rounded-full flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-medium border border-violet-200">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <ChevronDown className="ml-1 h-4 w-4 text-gray-600" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Admin</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      admin@example.com
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5">
+                  <Link href="/" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Layout className="mr-2 h-4 w-4" />
                     <span>Boards</span>
-                  </DropdownMenuItem>
-                </Link>
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
+                  </Link>
+                </div>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </div>
+                </div>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
-                <Link href="/prompt-analyzer-settings" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
+                <div className="px-2 py-1.5">
+                  <Link href="/prompt-analyzer-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />
                     <span>Prompt Analyzer Settings</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/test-upload" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
+                  </Link>
+                </div>
+                <div className="px-2 py-1.5">
+                  <Link href="/test-upload" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     <span>Test Upload</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/test-suggestion" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
+                  </Link>
+                </div>
+                <div className="px-2 py-1.5">
+                  <Link href="/test-suggestion" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Test Suggestion</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/direct-toast-test" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
+                  </Link>
+                </div>
+                <div className="px-2 py-1.5">
+                  <Link href="/direct-toast-test" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Direct Toast Test</span>
-                  </DropdownMenuItem>
-                </Link>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  </Link>
+                </div>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                    <span>Log out</span>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

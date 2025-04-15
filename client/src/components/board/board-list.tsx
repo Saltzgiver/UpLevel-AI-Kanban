@@ -71,7 +71,17 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
       setTimeout(() => {
         const fetchBoards = async () => {
           try {
-            const boards = await apiRequest("GET", "/api/boards", {}) as any[];
+            const response = await apiRequest("GET", "/api/boards", {});
+            
+            // If the response is not an array, something went wrong
+            if (!Array.isArray(response)) {
+              console.error("Expected array response but got", typeof response);
+              return;
+            }
+            
+            // Now we know it's an array
+            const boards = response;
+            
             // Find the board with the matching name we just created
             const newBoard = boards.find(b => b.name === newBoardName);
             if (newBoard && newBoard.id) {
