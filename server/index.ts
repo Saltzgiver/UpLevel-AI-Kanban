@@ -2,6 +2,13 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Add OpenAI API key verification
+if (process.env.OPENAI_API_KEY) {
+  console.log('ENVIRONMENT: OpenAI API key found in environment, length:', process.env.OPENAI_API_KEY.length);
+} else {
+  console.log('ENVIRONMENT: No OpenAI API key found in environment! API calls may fail.');
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
