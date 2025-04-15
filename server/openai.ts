@@ -10,12 +10,20 @@ const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities bui
 // Initialize OpenAI client
 const getOpenAIClient = (apiKey?: string) => {
   // Special handling for "from_env" value or undefined apiKey
+  console.log(`getOpenAIClient called with apiKey param: ${apiKey ? (apiKey === "from_env" ? "from_env" : "custom key provided") : "undefined"}`);
+  
   let key = process.env.OPENAI_API_KEY;
+  console.log(`Environment OPENAI_API_KEY available: ${key ? "YES (length: " + key.length + ")" : "NO"}`);
+  
   if (apiKey && apiKey !== "from_env") {
     key = apiKey;
+    console.log("Using custom API key from column settings instead of environment variable");
+  } else {
+    console.log("Using environment variable for OpenAI API key");
   }
   
   if (!key) {
+    console.error("No valid OpenAI API key found. Environment key exists:", !!process.env.OPENAI_API_KEY);
     throw new Error("No OpenAI API key provided");
   }
   
