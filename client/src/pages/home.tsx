@@ -36,7 +36,7 @@ export default function Home() {
       const createDefaultBoard = async () => {
         try {
           await apiRequest("POST", "/api/boards", { 
-            name: "GPT-Enabled Kanban Board",
+            name: "UpLevel AI Task Management",
             userId: null // No user ID required
           });
           toast({

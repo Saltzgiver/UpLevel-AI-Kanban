@@ -77,7 +77,7 @@ AI: I've updated the recipe with instructions for a thicker, juicier patty.`
 
   // Load default template if we can't fetch the current one
   const loadDefaultTemplate = () => {
-    setContextSection(`You are a specialized AI designed to analyze card interactions and suggest improvements to column prompts in a Kanban board application. Your goal is to make AI interactions more efficient by improving the initial instructions.`);
+    setContextSection(`You are a specialized AI designed to analyze card interactions and suggest improvements to column prompts in the UpLevel AI Task Management application. Your goal is to make AI interactions more efficient by improving the initial instructions.`);
     
     setAnalysisGuidelinesSection(
 `1. Identify patterns in the conversation that suggest the initial prompt could be improved
