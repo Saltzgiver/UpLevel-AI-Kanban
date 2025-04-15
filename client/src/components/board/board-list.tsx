@@ -144,8 +144,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">My Boards</h2>
+      <div className="flex items-center justify-end">
         <Button
           size="sm"
           onClick={() => setIsCreateDialogOpen(true)}

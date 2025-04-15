@@ -232,21 +232,7 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                 <Plus className="h-4 w-4 mr-2" /> 
                 Create New Board
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={onBoardListClick} 
-                className="cursor-pointer"
-              >
-                {viewMode === "board" ? (
-                  <>
-                    <List className="h-4 w-4 mr-2" /> View All Boards
-                  </>
-                ) : (
-                  <>
-                    <LayoutGrid className="h-4 w-4 mr-2" /> Return to Board
-                  </>
-                )}
-              </DropdownMenuItem>
+
             </DropdownMenuContent>
           </DropdownMenu>
           
