@@ -13,39 +13,30 @@ const getOpenAIClient = (apiKey?: string) => {
   console.log(`getOpenAIClient called with apiKey param: ${apiKey ? (apiKey === "from_env" ? "from_env" : "custom key provided") : "undefined"}`);
   
   try {
-    // Make sure we're accessing the environment properly
-    console.log("Process env keys:", Object.keys(process.env).filter(k => !k.includes('SECRET')).join(', '));
-    console.log(`Direct env var exists check: ${process.env.hasOwnProperty('OPENAI_API_KEY') ? 'YES' : 'NO'}`);
-    
-    // First try to get key from the environment variable
-    let key = process.env.OPENAI_API_KEY;
-    console.log(`Environment OPENAI_API_KEY available: ${key ? "YES (length: " + key.length + ")" : "NO"}`);
-    
-    // If a column-specific key was provided (other than "from_env"), use that
+    // First, try to use a directly provided API key
     if (apiKey && apiKey !== "from_env") {
-      key = apiKey;
-      console.log("Using custom API key from column settings instead of environment variable");
-    } else {
-      console.log("Using environment variable for OpenAI API key");
-      
-      // If we're supposed to use the environment variable but it's not available,
-      // let's try to load it directly again (sometimes process.env can be inconsistent)
-      if (!key) {
-        console.log("Attempting to load API key directly from environment...");
-        key = process.env.OPENAI_API_KEY || '';
-        console.log(`After direct access: ${key ? "YES (length: " + key.length + ")" : "NO"}`);
-      }
+      console.log("Using custom API key from column settings");
+      return new OpenAI({ apiKey: apiKey });
     }
     
-    // If we still don't have a key, we can't proceed
-    if (!key) {
-      console.error("No valid OpenAI API key found. Environment key exists:", !!process.env.OPENAI_API_KEY);
-      console.error("Please make sure the OPENAI_API_KEY environment variable is set correctly.");
-      throw new Error("No OpenAI API key provided");
+    // Otherwise, use the environment variable
+    console.log("Using environment variable for OpenAI API key");
+    
+    // Directly check if the environment variable is accessible
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY environment variable is not defined or empty");
+      throw new Error("OpenAI API key not found in environment variables");
     }
     
+    console.log(`Environment OPENAI_API_KEY available with length: ${process.env.OPENAI_API_KEY.length}`);
+    
+    // Create the client directly with the environment variable
     console.log("Creating new OpenAI client, using model: " + OPENAI_MODEL);
-    return new OpenAI({ apiKey: key });
+    
+    // Use the direct approach that works in our test script
+    return new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY
+    });
   } catch (error) {
     console.error("Error creating OpenAI client:", error);
     throw error;
