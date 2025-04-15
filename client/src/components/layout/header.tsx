@@ -232,17 +232,6 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                 <Plus className="h-4 w-4 mr-2" /> 
                 Create New Board
               </DropdownMenuItem>
-              {viewMode === "board" && boards && boards.length > 1 && (
-                <DropdownMenuItem 
-                  className="text-destructive cursor-pointer"
-                  onClick={() => {
-                    setBoardToDelete(board);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                >
-                  Delete Current Board
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={onBoardListClick} 
