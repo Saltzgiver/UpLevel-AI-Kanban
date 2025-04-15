@@ -7,7 +7,7 @@ import {
   List, 
   ChevronDown, 
   ChevronUp, 
-  KanbanSquare,
+  LayoutList,
   Settings,
   Layout,
   FileText,
@@ -191,7 +191,7 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center text-gray-700">
-                <KanbanSquare className="h-4 w-4 mr-2" />
+                <LayoutList className="h-4 w-4 mr-2" />
                 <span className="mr-1">{viewMode === "board" ? "Boards" : "All Boards"}</span>
                 <ChevronDown className="h-3.5 w-3.5 ml-1" />
               </Button>

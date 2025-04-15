@@ -13,7 +13,7 @@ import {
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
-import { LayoutDashboard, KanbanSquare } from "lucide-react";
+import { LayoutDashboard, LayoutList } from "lucide-react";
 
 export default function Home() {
   const { toast } = useToast();
