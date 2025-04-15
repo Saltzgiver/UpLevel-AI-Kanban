@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logoPath from "@/assets/logo.png";
 
 interface NavigationBarProps {
   className?: string;
@@ -32,22 +33,14 @@ export function NavigationBar({ className }: NavigationBarProps) {
         <div className="flex items-center space-x-5">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <div className="w-8 h-8 rounded bg-primary/90 flex items-center justify-center text-white mr-2">
-              <svg 
-                viewBox="0 0 24 24" 
-                className="w-5 h-5" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path 
-                  d="M4 12H20M12 4V20" 
-                  stroke="currentColor" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
-                />
-              </svg>
+            <div className="w-8 h-8 rounded overflow-hidden mr-2">
+              <img 
+                src={logoPath}
+                alt="UpLevel Logo" 
+                className="w-full h-full object-cover"
+              />
             </div>
-            <span className="font-semibold text-gray-900">Kanban</span>
+            <span className="font-semibold text-gray-900">UpLevel</span>
           </Link>
         </div>
         
