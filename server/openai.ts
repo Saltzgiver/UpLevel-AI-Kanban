@@ -43,6 +43,17 @@ const getOpenAIClient = (apiKey?: string) => {
   }
 };
 
+// Helper function to get the global prompt from settings
+const getGlobalPrompt = async (): Promise<string> => {
+  try {
+    const setting = await storage.getSetting('global_prompt');
+    return setting?.value || '';
+  } catch (error) {
+    console.error("Error fetching global prompt:", error);
+    return ''; // Return empty string if there's an error
+  }
+};
+
 // Helper function to convert base64 image to data URL for OpenAI vision API
 const base64ToDataURL = (base64: string, mimeType: string): string => {
   // Remove any existing 'data:' prefixes if they exist
@@ -122,9 +133,18 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     // Initialize OpenAI client with column's API key if available
     const openai = getOpenAIClient(column.apiKey || undefined);
 
+    // Get global prompt if available
+    const globalPrompt = await getGlobalPrompt();
+    
     // Build the prompt for GPT
     let prompt = `You are ${column.gptName || "an AI assistant"}. `;
     
+    // Add global prompt first if available
+    if (globalPrompt) {
+      prompt += `${globalPrompt}\n\n`;
+    }
+    
+    // Then add column-specific instructions
     if (column.gptInstructions) {
       prompt += `${column.gptInstructions}\n\n`;
     } else {
@@ -365,10 +385,23 @@ export async function processChat(cardId: number, userMessage: string, column: C
     // Initialize OpenAI client with column's API key if available
     const openai = getOpenAIClient(column.apiKey || undefined);
 
+    // Get global prompt if available
+    const globalPrompt = await getGlobalPrompt();
+
     // Build conversation history
     // Create system message with context about the card, including attachments
-    let systemContent = `You are ${column.gptName || "an AI assistant"}. ${column.gptInstructions || ""}\n\n` +
-      `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
+    let systemContent = `You are ${column.gptName || "an AI assistant"}. `;
+    
+    // Add global prompt first if available
+    if (globalPrompt) {
+      systemContent += `${globalPrompt}\n\n`;
+    }
+    
+    // Then add column-specific instructions
+    systemContent += `${column.gptInstructions || ""}\n\n`;
+    
+    // Add card-specific context
+    systemContent += `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
       `${card.gptTags ? `This card has the following tags: ${card.gptTags}\n\n` : ""}` +
       `${card.gptOutput ? `Previous GPT output for this card: ${card.gptOutput}\n\n` : ""}`;
     
