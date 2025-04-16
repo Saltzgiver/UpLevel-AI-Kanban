@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { triggerGPTProcessing, processChat, generateImage, getPromptSuggestion } from "./openai";
-import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema, insertAppSettingSchema } from "@shared/schema";
+import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import multer from "multer";
@@ -1448,97 +1448,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving prompt analyzer template:", error);
       res.status(500).json({ message: "Error saving template", error: String(error) });
-    }
-  });
-
-  // APP SETTINGS ROUTES
-  // Get all settings
-  app.get("/api/app-settings", async (req, res) => {
-    try {
-      const settings = await storage.getAllSettings();
-      return res.json(settings);
-    } catch (error) {
-      console.error("Error fetching app settings:", error);
-      return res.status(500).json({ message: "Error fetching app settings" });
-    }
-  });
-
-  // Get a specific setting
-  app.get("/api/app-settings/:key", async (req, res) => {
-    try {
-      const key = req.params.key;
-      const setting = await storage.getSetting(key);
-      
-      if (!setting) {
-        return res.status(404).json({ message: "Setting not found" });
-      }
-      
-      return res.json(setting);
-    } catch (error) {
-      console.error("Error fetching app setting:", error);
-      return res.status(500).json({ message: "Error fetching app setting" });
-    }
-  });
-
-  // Create or update a setting
-  app.post("/api/app-settings", async (req, res) => {
-    try {
-      const { key, value } = req.body;
-      
-      if (!key || value === undefined) {
-        return res.status(400).json({ message: "Key and value are required" });
-      }
-      
-      const setting = await storage.saveSetting(key, value);
-      return res.status(200).json(setting);
-    } catch (error) {
-      console.error("Error saving app setting:", error);
-      return res.status(500).json({ message: "Error saving app setting" });
-    }
-  });
-
-  // Delete a setting
-  app.delete("/api/app-settings/:key", async (req, res) => {
-    try {
-      const key = req.params.key;
-      await storage.deleteSetting(key);
-      return res.json({ message: "Setting deleted" });
-    } catch (error) {
-      console.error("Error deleting app setting:", error);
-      return res.status(500).json({ message: "Error deleting app setting" });
-    }
-  });
-
-  // Get global prompt
-  app.get("/api/global-prompt", async (req, res) => {
-    try {
-      const setting = await storage.getSetting('global_prompt');
-      return res.json({ 
-        prompt: setting ? setting.value : '' 
-      });
-    } catch (error) {
-      console.error("Error fetching global prompt:", error);
-      return res.status(500).json({ message: "Error fetching global prompt" });
-    }
-  });
-
-  // Update global prompt
-  app.post("/api/global-prompt", async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      
-      if (prompt === undefined) {
-        return res.status(400).json({ message: "Prompt is required" });
-      }
-      
-      const setting = await storage.saveSetting('global_prompt', prompt);
-      return res.status(200).json({ 
-        message: "Global prompt updated successfully",
-        prompt: setting.value
-      });
-    } catch (error) {
-      console.error("Error updating global prompt:", error);
-      return res.status(500).json({ message: "Error updating global prompt" });
     }
   });
 

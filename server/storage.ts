@@ -5,14 +5,12 @@ import {
   User, InsertUser,
   Chat, InsertChat,
   Attachment, InsertAttachment,
-  AppSetting, InsertAppSetting,
   boards,
   columns,
   cards,
   users,
   chats,
-  attachments,
-  appSettings
+  attachments
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
@@ -20,12 +18,6 @@ import { alias } from "drizzle-orm/pg-core";
 
 // Interface for storage operations
 export interface IStorage {
-  // App settings operations
-  getSetting(key: string): Promise<AppSetting | undefined>;
-  getAllSettings(): Promise<AppSetting[]>;
-  saveSetting(key: string, value: string): Promise<AppSetting>;
-  deleteSetting(key: string): Promise<void>;
-  
   // Board operations
   getBoards(): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] })[]>;
   getBoardById(id: number): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] }) | undefined>;
@@ -64,58 +56,6 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // App Settings Methods
-  async getSetting(key: string): Promise<AppSetting | undefined> {
-    const [setting] = await db
-      .select()
-      .from(appSettings)
-      .where(eq(appSettings.key, key));
-    
-    return setting;
-  }
-  
-  async getAllSettings(): Promise<AppSetting[]> {
-    return db
-      .select()
-      .from(appSettings)
-      .orderBy(asc(appSettings.key));
-  }
-  
-  async saveSetting(key: string, value: string): Promise<AppSetting> {
-    // Check if the setting already exists
-    const existingSetting = await this.getSetting(key);
-    
-    if (existingSetting) {
-      // Update existing setting
-      const [updatedSetting] = await db
-        .update(appSettings)
-        .set({ 
-          value, 
-          updatedAt: new Date() 
-        })
-        .where(eq(appSettings.key, key))
-        .returning();
-      
-      return updatedSetting;
-    } else {
-      // Create new setting
-      const [newSetting] = await db
-        .insert(appSettings)
-        .values({
-          key,
-          value
-        })
-        .returning();
-      
-      return newSetting;
-    }
-  }
-  
-  async deleteSetting(key: string): Promise<void> {
-    await db
-      .delete(appSettings)
-      .where(eq(appSettings.key, key));
-  }
   // Board Methods
   async getBoards(): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] })[]> {
     const boardList = await db.select().from(boards).orderBy(asc(boards.id));

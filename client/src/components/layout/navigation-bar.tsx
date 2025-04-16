@@ -94,12 +94,6 @@ export function NavigationBar({ className }: NavigationBarProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
-                <Link href="/global-prompt-settings" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Global Prompt Settings</span>
-                  </DropdownMenuItem>
-                </Link>
                 <Link href="/prompt-analyzer-settings" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />

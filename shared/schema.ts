@@ -2,20 +2,6 @@ import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// App settings table
-export const appSettings = pgTable("app_settings", {
-  id: serial("id").primaryKey(),
-  key: text("key").notNull().unique(),
-  value: text("value"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const insertAppSettingSchema = createInsertSchema(appSettings).pick({
-  key: true,
-  value: true,
-});
-
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -132,9 +118,6 @@ export const insertAttachmentSchema = createInsertSchema(attachments).pick({
 });
 
 // Type definitions based on the tables
-export type AppSetting = typeof appSettings.$inferSelect;
-export type InsertAppSetting = z.infer<typeof insertAppSettingSchema>;
-
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
