@@ -360,8 +360,8 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                 </div>
                 {/* Global Prompt Settings moved to Developer Tools section */}
                 <div className="px-2 py-1.5">
-                  <Link href="/global-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm bg-violet-50 text-violet-900 hover:bg-violet-100 hover:text-violet-900 cursor-pointer font-medium">
-                    <Globe className="mr-2 h-4 w-4 text-violet-600" />
+                  <Link href="/global-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                    <Globe className="mr-2 h-4 w-4" />
                     <span>Global Prompt Settings</span>
                   </Link>
                 </div>

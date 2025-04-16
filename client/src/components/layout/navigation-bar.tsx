@@ -107,9 +107,9 @@ export function NavigationBar({ className }: NavigationBarProps) {
               </Link>
               {/* Global Prompt Settings moved to Developer Tools section */}
               <Link href="/global-settings" className="w-full">
-                <DropdownMenuItem className="cursor-pointer bg-violet-50 hover:bg-violet-100">
-                  <Globe className="mr-2 h-4 w-4 text-violet-600" />
-                  <span className="font-medium">Global Prompt Settings</span>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Globe className="mr-2 h-4 w-4" />
+                  <span>Global Prompt Settings</span>
                 </DropdownMenuItem>
               </Link>
               <Link href="/test-upload" className="w-full">
