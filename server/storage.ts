@@ -64,12 +64,17 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // Settings Methods
   async getSetting(key: string): Promise<Settings | undefined> {
-    const [setting] = await db
-      .select()
-      .from(settings)
-      .where(eq(settings.key, key));
-    
-    return setting;
+    try {
+      const results = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.key, key));
+      
+      return results[0];
+    } catch (error) {
+      console.error(`Error getting setting with key "${key}":`, error);
+      return undefined;
+    }
   }
   
   async createOrUpdateSetting(key: string, value: string): Promise<Settings> {
