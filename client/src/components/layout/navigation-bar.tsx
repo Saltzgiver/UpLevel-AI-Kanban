@@ -93,39 +93,39 @@ export function NavigationBar({ className }: NavigationBarProps) {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
-                <Link href="/global-settings" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Globe className="mr-2 h-4 w-4" />
-                    <span>Global Prompt Settings</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/prompt-analyzer-settings" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Wrench className="mr-2 h-4 w-4" />
-                    <span>Prompt Analyzer Settings</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/test-upload" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Upload className="mr-2 h-4 w-4" />
-                    <span>Test Upload</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/test-suggestion" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Bell className="mr-2 h-4 w-4" />
-                    <span>Test Suggestion</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/direct-toast-test" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Direct Toast Test</span>
-                  </DropdownMenuItem>
-                </Link>
-              </DropdownMenuGroup>
+              {/* Global Prompt Settings as a main item */}
+              <Link href="/global-settings" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Globe className="mr-2 h-4 w-4" />
+                  <span>Global Prompt Settings</span>
+                </DropdownMenuItem>
+              </Link>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
+              <Link href="/prompt-analyzer-settings" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Wrench className="mr-2 h-4 w-4" />
+                  <span>Prompt Analyzer Settings</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/test-upload" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" />
+                  <span>Test Upload</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/test-suggestion" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Bell className="mr-2 h-4 w-4" />
+                  <span>Test Suggestion</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/direct-toast-test" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>Direct Toast Test</span>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer">
                 <span>Log out</span>
