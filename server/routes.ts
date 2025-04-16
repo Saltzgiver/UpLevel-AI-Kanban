@@ -78,7 +78,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const data = { key, value };
       const validatedData = insertSettingsSchema.parse(data);
-      const setting = await storage.createOrUpdateSetting(validatedData.key, validatedData.value);
+      // Ensure value is a string with fallback to empty string if validation somehow passes null/undefined
+      const setting = await storage.createOrUpdateSetting(
+        validatedData.key, 
+        validatedData.value || ""
+      );
       
       return res.status(201).json(setting);
     } catch (error) {

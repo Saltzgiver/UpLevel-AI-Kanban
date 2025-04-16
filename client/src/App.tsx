@@ -38,6 +38,7 @@ function Router() {
       <CustomRoute path="/test-suggestion" component={TestSuggestionPage} />
       <CustomRoute path="/direct-toast-test" component={DirectToastTestPage} />
       <CustomRoute path="/prompt-analyzer-settings" component={PromptAnalyzerSettings} />
+      <CustomRoute path="/global-settings" component={GlobalSettings} />
       <CustomRoute component={NotFound} />
     </Switch>
   );
