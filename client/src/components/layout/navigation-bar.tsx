@@ -99,17 +99,17 @@ export function NavigationBar({ className }: NavigationBarProps) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
+              <Link href="/prompt-analyzer-settings" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Wrench className="mr-2 h-4 w-4" />
+                  <span>Prompt Analyzer Settings</span>
+                </DropdownMenuItem>
+              </Link>
               {/* Global Prompt Settings moved to Developer Tools section */}
               <Link href="/global-settings" className="w-full">
                 <DropdownMenuItem className="cursor-pointer bg-violet-50 hover:bg-violet-100">
                   <Globe className="mr-2 h-4 w-4 text-violet-600" />
                   <span className="font-medium">Global Prompt Settings</span>
-                </DropdownMenuItem>
-              </Link>
-              <Link href="/prompt-analyzer-settings" className="w-full">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Wrench className="mr-2 h-4 w-4" />
-                  <span>Prompt Analyzer Settings</span>
                 </DropdownMenuItem>
               </Link>
               <Link href="/test-upload" className="w-full">
