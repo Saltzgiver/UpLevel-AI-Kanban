@@ -96,8 +96,10 @@ export function NavigationBar({ className }: NavigationBarProps) {
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
                 <Link href="/global-prompt-settings" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Global Prompt Settings</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4 text-fuchsia-500">
+                      <path d="M12 2v8M2 10h20M12 18v4M4 10v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4v-8" />
+                    </svg>
+                    <span>Global Prompt Settings ⚙️</span>
                   </DropdownMenuItem>
                 </Link>
                 <Link href="/prompt-analyzer-settings" className="w-full">
