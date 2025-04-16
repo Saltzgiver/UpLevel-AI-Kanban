@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { triggerGPTProcessing, processChat, generateImage, getPromptSuggestion } from "./openai";
-import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema } from "@shared/schema";
+import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema, insertSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import multer from "multer";
@@ -49,6 +49,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
     next(err);
+  });
+
+  // SETTINGS ROUTES
+  app.get("/api/settings/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      const setting = await storage.getSetting(key);
+      
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      
+      return res.json(setting);
+    } catch (error) {
+      console.error("Error fetching setting:", error);
+      return res.status(500).json({ message: "Error fetching setting" });
+    }
+  });
+
+  app.post("/api/settings", async (req, res) => {
+    try {
+      const { key, value } = req.body;
+      
+      if (!key || typeof value !== 'string') {
+        return res.status(400).json({ message: "Key and value are required. Value must be a string." });
+      }
+      
+      const data = { key, value };
+      const validatedData = insertSettingsSchema.parse(data);
+      const setting = await storage.createOrUpdateSetting(validatedData.key, validatedData.value);
+      
+      return res.status(201).json(setting);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: fromZodError(error).details 
+        });
+      }
+      console.error("Error creating or updating setting:", error);
+      return res.status(500).json({ message: "Error creating or updating setting" });
+    }
   });
 
   // BOARD ROUTES

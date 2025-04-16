@@ -7,7 +7,8 @@ import {
   FileText,
   Wrench,
   Bell,
-  Upload
+  Upload,
+  Globe
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -94,6 +95,12 @@ export function NavigationBar({ className }: NavigationBarProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
+                <Link href="/global-settings" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Globe className="mr-2 h-4 w-4" />
+                    <span>Global Prompt Settings</span>
+                  </DropdownMenuItem>
+                </Link>
                 <Link href="/prompt-analyzer-settings" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />
