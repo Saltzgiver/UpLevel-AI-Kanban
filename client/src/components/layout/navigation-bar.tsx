@@ -7,8 +7,7 @@ import {
   FileText,
   Wrench,
   Bell,
-  Upload,
-  Globe
+  Upload
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -95,31 +94,31 @@ export function NavigationBar({ className }: NavigationBarProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
-                <Link href="/global-prompt-settings">
+                <Link href="/global-prompt-settings" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
-                    <Globe className="mr-2 h-4 w-4 text-purple-500" />
+                    <Settings className="mr-2 h-4 w-4" />
                     <span>Global Prompt Settings</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/prompt-analyzer-settings">
+                <Link href="/prompt-analyzer-settings" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />
                     <span>Prompt Analyzer Settings</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/test-upload">
+                <Link href="/test-upload" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     <span>Test Upload</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/test-suggestion">
+                <Link href="/test-suggestion" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Test Suggestion</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/direct-toast-test">
+                <Link href="/direct-toast-test" className="w-full">
                   <DropdownMenuItem className="cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Direct Toast Test</span>
