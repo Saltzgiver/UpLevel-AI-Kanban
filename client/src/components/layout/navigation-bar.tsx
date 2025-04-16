@@ -100,8 +100,8 @@ export function NavigationBar({ className }: NavigationBarProps) {
               <DropdownMenuSeparator />
               {/* Global Prompt Settings as a main item with highlight */}
               <Link href="/global-settings" className="w-full">
-                <DropdownMenuItem className="cursor-pointer bg-primary-50 hover:bg-primary-100">
-                  <Globe className="mr-2 h-4 w-4 text-primary" />
+                <DropdownMenuItem className="cursor-pointer bg-violet-50 hover:bg-violet-100">
+                  <Globe className="mr-2 h-4 w-4 text-violet-600" />
                   <span className="font-medium">Global Prompt Settings</span>
                 </DropdownMenuItem>
               </Link>

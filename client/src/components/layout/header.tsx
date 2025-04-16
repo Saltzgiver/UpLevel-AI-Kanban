@@ -13,7 +13,8 @@ import {
   FileText,
   Wrench,
   Bell,
-  Upload
+  Upload,
+  Globe
 } from "lucide-react";
 import logoPath from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -348,6 +349,14 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </div>
+                </div>
+                <DropdownMenuSeparator />
+                {/* Global Prompt Settings */}
+                <div className="px-2 py-1.5">
+                  <Link href="/global-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm bg-violet-50 text-violet-900 hover:bg-violet-100 hover:text-violet-900 cursor-pointer font-medium">
+                    <Globe className="mr-2 h-4 w-4 text-violet-600" />
+                    <span>Global Prompt Settings</span>
+                  </Link>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
