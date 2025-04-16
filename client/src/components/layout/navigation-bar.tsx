@@ -8,7 +8,8 @@ import {
   Wrench,
   Bell,
   Upload,
-  Globe
+  Globe,
+  LogOut
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -83,21 +84,25 @@ export function NavigationBar({ className }: NavigationBarProps) {
                     <span>Boards</span>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
+                <Link href="/profile" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/settings" className="w-full">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                </Link>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              {/* Global Prompt Settings as a main item */}
+              {/* Global Prompt Settings as a main item with highlight */}
               <Link href="/global-settings" className="w-full">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Globe className="mr-2 h-4 w-4" />
-                  <span>Global Prompt Settings</span>
+                <DropdownMenuItem className="cursor-pointer bg-primary-50 hover:bg-primary-100">
+                  <Globe className="mr-2 h-4 w-4 text-primary" />
+                  <span className="font-medium">Global Prompt Settings</span>
                 </DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />
@@ -128,6 +133,7 @@ export function NavigationBar({ className }: NavigationBarProps) {
               </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
