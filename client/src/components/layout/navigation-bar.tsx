@@ -7,7 +7,8 @@ import {
   FileText,
   Wrench,
   Bell,
-  Upload
+  Upload,
+  Globe
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -94,33 +95,31 @@ export function NavigationBar({ className }: NavigationBarProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
-                <Link href="/global-prompt-settings" className="w-full">
+                <Link href="/global-prompt-settings">
                   <DropdownMenuItem className="cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4 text-fuchsia-500">
-                      <path d="M12 2v8M2 10h20M12 18v4M4 10v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4v-8" />
-                    </svg>
-                    <span>Global Prompt Settings ⚙️</span>
+                    <Globe className="mr-2 h-4 w-4 text-purple-500" />
+                    <span>Global Prompt Settings</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/prompt-analyzer-settings" className="w-full">
+                <Link href="/prompt-analyzer-settings">
                   <DropdownMenuItem className="cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />
                     <span>Prompt Analyzer Settings</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/test-upload" className="w-full">
+                <Link href="/test-upload">
                   <DropdownMenuItem className="cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     <span>Test Upload</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/test-suggestion" className="w-full">
+                <Link href="/test-suggestion">
                   <DropdownMenuItem className="cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Test Suggestion</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/direct-toast-test" className="w-full">
+                <Link href="/direct-toast-test">
                   <DropdownMenuItem className="cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Direct Toast Test</span>
