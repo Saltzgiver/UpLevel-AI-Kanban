@@ -20,6 +20,10 @@ import { alias } from "drizzle-orm/pg-core";
 
 // Interface for storage operations
 export interface IStorage {
+  // Settings operations
+  getSetting(key: string): Promise<Settings | undefined>;
+  createOrUpdateSetting(key: string, value: string): Promise<Settings>;
+  
   // Board operations
   getBoards(): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] })[]>;
   getBoardById(id: number): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] }) | undefined>;
@@ -58,6 +62,46 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Settings Methods
+  async getSetting(key: string): Promise<Settings | undefined> {
+    const [setting] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, key));
+    
+    return setting;
+  }
+  
+  async createOrUpdateSetting(key: string, value: string): Promise<Settings> {
+    // Check if setting exists
+    const existingSetting = await this.getSetting(key);
+    
+    if (existingSetting) {
+      // Update existing setting
+      const [updatedSetting] = await db
+        .update(settings)
+        .set({ 
+          value,
+          updatedAt: new Date()
+        })
+        .where(eq(settings.key, key))
+        .returning();
+      
+      return updatedSetting;
+    } else {
+      // Create new setting
+      const [newSetting] = await db
+        .insert(settings)
+        .values({
+          key,
+          value
+        })
+        .returning();
+      
+      return newSetting;
+    }
+  }
+  
   // Board Methods
   async getBoards(): Promise<(Board & { columns: (Column & { cards: (Card & { chats?: Chat[], attachments?: Attachment[] })[] })[] })[]> {
     const boardList = await db.select().from(boards).orderBy(asc(boards.id));

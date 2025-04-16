@@ -4,6 +4,24 @@ import { storage } from "./storage";
 import { Column, Attachment, Chat } from "@shared/schema";
 import { extractCSVContent, createCSVAttachmentFromText } from './csv-helper';
 
+// Global settings key for the global prompt
+const GLOBAL_PROMPT_SETTING_KEY = "global_prompt";
+
+/**
+ * Get the global prompt from settings
+ */
+async function getGlobalPrompt(): Promise<string> {
+  try {
+    const setting = await storage.getSetting(GLOBAL_PROMPT_SETTING_KEY);
+    if (setting && setting.value) {
+      return setting.value.trim();
+    }
+  } catch (error) {
+    console.error("Error fetching global prompt:", error);
+  }
+  return ""; // Return empty string if no global prompt is set
+}
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities built in
 
@@ -124,6 +142,12 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
 
     // Build the prompt for GPT
     let prompt = `You are ${column.gptName || "an AI assistant"}. `;
+    
+    // Add global prompt if available
+    const globalPrompt = await getGlobalPrompt();
+    if (globalPrompt) {
+      prompt += `${globalPrompt}\n\n`;
+    }
     
     if (column.gptInstructions) {
       prompt += `${column.gptInstructions}\n\n`;
@@ -367,7 +391,22 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     // Build conversation history
     // Create system message with context about the card, including attachments
-    let systemContent = `You are ${column.gptName || "an AI assistant"}. ${column.gptInstructions || ""}\n\n` +
+    
+    // Get global prompt if available
+    const globalPrompt = await getGlobalPrompt();
+    let systemContent = `You are ${column.gptName || "an AI assistant"}. `;
+    
+    // Add global prompt if available
+    if (globalPrompt) {
+      systemContent += `${globalPrompt}\n\n`;
+    }
+    
+    // Add column-specific instructions if available
+    if (column.gptInstructions) {
+      systemContent += `${column.gptInstructions}\n\n`;
+    }
+    
+    systemContent += 
       `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
       `${card.gptTags ? `This card has the following tags: ${card.gptTags}\n\n` : ""}` +
       `${card.gptOutput ? `Previous GPT output for this card: ${card.gptOutput}\n\n` : ""}`;
