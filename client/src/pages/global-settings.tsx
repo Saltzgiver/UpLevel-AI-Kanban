@@ -16,12 +16,57 @@ export default function GlobalSettingsPage() {
     const fetchGlobalPrompt = async () => {
       setIsLoading(true);
       try {
+        // First try to get the existing setting
         const response = await fetch(`/api/settings/global_prompt`);
+        
         if (response.ok) {
           const data = await response.json();
           setGlobalPrompt(data.value || "");
-        } else if (response.status !== 404) { // It's okay if the setting doesn't exist yet
+        } else if (response.status === 404) {
+          // If setting doesn't exist, create it with an empty value
+          console.log("Global prompt setting not found, initializing with empty value");
+          
+          try {
+            // Create the setting with an empty value
+            const initResponse = await fetch("/api/settings", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                key: "global_prompt",
+                value: "",
+              }),
+            });
+            
+            if (initResponse.ok) {
+              console.log("Successfully initialized global prompt setting");
+              setGlobalPrompt("");
+            } else {
+              console.error("Failed to initialize global prompt setting:", await initResponse.text());
+              toast({
+                title: "Initialization Error",
+                description: "Failed to create global prompt setting. Please try again.",
+                variant: "destructive",
+              });
+            }
+          } catch (initError) {
+            console.error("Error initializing global prompt setting:", initError);
+            toast({
+              title: "Initialization Error",
+              description: "Failed to create global prompt setting. Please try again.",
+              variant: "destructive",
+            });
+          }
+        } else {
           console.error("Error fetching global prompt", response.statusText);
+          // Try to show more helpful error information
+          try {
+            const errorText = await response.text();
+            console.error("Server response:", errorText);
+          } catch (e) {
+            console.error("Could not read error response");
+          }
           toast({
             title: "Error",
             description: "Failed to load the global prompt. Please try again.",

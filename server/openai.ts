@@ -9,15 +9,27 @@ const GLOBAL_PROMPT_SETTING_KEY = "global_prompt";
 
 /**
  * Get the global prompt from settings
+ * If it doesn't exist, initialize an empty one
  */
 async function getGlobalPrompt(): Promise<string> {
   try {
     const setting = await storage.getSetting(GLOBAL_PROMPT_SETTING_KEY);
     if (setting && setting.value) {
       return setting.value.trim();
+    } else {
+      // Initialize the setting if it doesn't exist to prevent future errors
+      await storage.createOrUpdateSetting(GLOBAL_PROMPT_SETTING_KEY, "");
+      console.log("Initialized empty global prompt setting");
     }
   } catch (error) {
     console.error("Error fetching global prompt:", error);
+    // Try to initialize the setting if an error occurred
+    try {
+      await storage.createOrUpdateSetting(GLOBAL_PROMPT_SETTING_KEY, "");
+      console.log("Created empty global prompt setting after error");
+    } catch (initError) {
+      console.error("Failed to initialize global prompt setting:", initError);
+    }
   }
   return ""; // Return empty string if no global prompt is set
 }
