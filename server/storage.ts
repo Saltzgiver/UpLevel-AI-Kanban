@@ -5,12 +5,14 @@ import {
   User, InsertUser,
   Chat, InsertChat,
   Attachment, InsertAttachment,
+  Settings, InsertSettings,
   boards,
   columns,
   cards,
   users,
   chats,
-  attachments
+  attachments,
+  settings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
