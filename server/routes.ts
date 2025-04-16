@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { triggerGPTProcessing, processChat, generateImage, getPromptSuggestion } from "./openai";
-import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema } from "@shared/schema";
+import { insertBoardSchema, insertColumnSchema, insertCardSchema, insertChatSchema, insertAppSettingSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import multer from "multer";
