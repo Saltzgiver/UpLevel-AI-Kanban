@@ -78,32 +78,57 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createOrUpdateSetting(key: string, value: string): Promise<Settings> {
-    // Check if setting exists
-    const existingSetting = await this.getSetting(key);
-    
-    if (existingSetting) {
-      // Update existing setting
-      const [updatedSetting] = await db
-        .update(settings)
-        .set({ 
-          value,
-          updatedAt: new Date()
-        })
-        .where(eq(settings.key, key))
-        .returning();
+    try {
+      // Check if setting exists
+      const existingSetting = await this.getSetting(key);
       
-      return updatedSetting;
-    } else {
-      // Create new setting
-      const [newSetting] = await db
-        .insert(settings)
-        .values({
-          key,
-          value
-        })
-        .returning();
-      
-      return newSetting;
+      if (existingSetting) {
+        try {
+          // Update existing setting
+          console.log(`Updating existing setting for key "${key}"`);
+          const [updatedSetting] = await db
+            .update(settings)
+            .set({ 
+              value,
+              updatedAt: new Date()
+            })
+            .where(eq(settings.key, key))
+            .returning();
+          
+          if (!updatedSetting) {
+            throw new Error(`Failed to update setting with key "${key}"`);
+          }
+          
+          return updatedSetting;
+        } catch (updateError) {
+          console.error(`Error updating setting with key "${key}":`, updateError);
+          throw new Error(`Failed to update setting: ${updateError.message}`);
+        }
+      } else {
+        try {
+          // Create new setting
+          console.log(`Creating new setting for key "${key}"`);
+          const [newSetting] = await db
+            .insert(settings)
+            .values({
+              key,
+              value: value || "" // Ensure value is never null or undefined
+            })
+            .returning();
+          
+          if (!newSetting) {
+            throw new Error(`Failed to create setting with key "${key}"`);
+          }
+          
+          return newSetting;
+        } catch (insertError) {
+          console.error(`Error creating setting with key "${key}":`, insertError);
+          throw new Error(`Failed to create setting: ${insertError.message}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error in createOrUpdateSetting for key "${key}":`, error);
+      throw error;
     }
   }
   
