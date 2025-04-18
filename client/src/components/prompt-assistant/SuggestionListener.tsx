@@ -4,6 +4,82 @@ import { ToastAction } from '@/components/ui/toast';
 import { useModalContext } from '@/contexts/ModalContext';
 import { parseInstructions } from '@/components/ui/assign-gpt-modal';
 
+// ExpandableList component to handle its own state
+function ExpandableList({ 
+  items, 
+  title, 
+  titleColor, 
+  onView,
+  onAccept
+}: { 
+  items: {text: string}[]; 
+  title: string; 
+  titleColor: string;
+  onView: () => void;
+  onAccept: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  
+  const toggleExpanded = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(!expanded);
+    console.log(`Toggling ${title} expand state to ${!expanded}`);
+  };
+  
+  return (
+    <div>
+      <div className="mb-2">
+        <div className={`font-semibold ${titleColor} mb-1`}>{title}</div>
+        <ul className="pl-2">
+          {/* Always show first 2 items */}
+          {items.slice(0, 2).map((item, index) => (
+            <li key={`item-${index}`} className="text-sm mb-1">• {item.text}</li>
+          ))}
+          
+          {/* Show additional items when expanded */}
+          {expanded && items.slice(2).map((item, index) => (
+            <li key={`item-extra-${index}`} className="text-sm mb-1">• {item.text}</li>
+          ))}
+          
+          {/* Show expand/collapse link if there are more than 2 items */}
+          {items.length > 2 && (
+            <li 
+              className="text-xs text-muted-foreground cursor-pointer hover:underline" 
+              onClick={toggleExpanded}
+            >
+              {expanded ? "Show less" : `Show ${items.length - 2} more`}
+            </li>
+          )}
+        </ul>
+      </div>
+      
+      {/* Only show buttons in the first section */}
+      {title === "Do's:" && (
+        <div className="flex gap-2 justify-start items-center mt-3 mb-2">
+          <button
+            className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAccept();
+            }}
+          >
+            Accept
+          </button>
+          <button
+            className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView();
+            }}
+          >
+            View
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Interface for the suggestion response
  */
@@ -106,10 +182,6 @@ export function SuggestionListener() {
     }
   };
 
-  // States for expanded view
-  const [expandedDos, setExpandedDos] = useState(false);
-  const [expandedDonts, setExpandedDonts] = useState(false);
-  
   useEffect(() => {
     console.log('[SuggestionListener] Component mounted');
     
@@ -117,10 +189,6 @@ export function SuggestionListener() {
     const handleSuggestionEvent = async (e: Event) => {
       const event = e as CustomEvent<{ columnId: number; cardId: number; columnName: string }>;
       const { columnId, cardId, columnName } = event.detail;
-      
-      // Reset expanded states for a new toast
-      setExpandedDos(false);
-      setExpandedDonts(false);
       
       console.log(`[SuggestionListener] Received suggestion event for column ${columnId}, card ${cardId}, name ${columnName}`);
       
@@ -141,97 +209,43 @@ export function SuggestionListener() {
         // Parse the instructions to extract do's and don'ts
         const { dos, donts } = parseInstructions(suggestion.suggestedInstructions);
         
-        // Show a toast notification with both View and Accept buttons
+        // Show a toast notification with self-contained ExpandableList components
         console.log('[SuggestionListener] Showing enhanced toast notification with View and Accept buttons');
         toast({
           title: `Prompt Suggestion for "${columnName}"`,
           description: (
-            <div>
-              {/* Do's Section */}
+            <div className="space-y-2">
               {dos.length > 0 && (
-                <div className="mb-2">
-                  <div className="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
-                  <ul className="pl-2">
-                    {/* Always show first 2 items */}
-                    {dos.slice(0, 2).map((item, index) => (
-                      <li key={`do-${index}`} className="text-sm mb-1">• {item.text}</li>
-                    ))}
-                    
-                    {/* Show additional items when expanded */}
-                    {expandedDos && dos.slice(2).map((item, index) => (
-                      <li key={`do-extra-${index}`} className="text-sm mb-1">• {item.text}</li>
-                    ))}
-                    
-                    {/* Show expand/collapse link if there are more than 2 items */}
-                    {dos.length > 2 && (
-                      <li 
-                        className="text-xs text-muted-foreground cursor-pointer hover:underline" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log(`[SuggestionListener] Toggling Do's expanded state from ${expandedDos} to ${!expandedDos}`);
-                          setExpandedDos(!expandedDos);
-                        }}
-                      >
-                        {expandedDos ? "Show less" : `Show ${dos.length - 2} more`}
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Don'ts Section */}
-              {donts.length > 0 && (
-                <div>
-                  <div className="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
-                  <ul className="pl-2">
-                    {/* Always show first 2 items */}
-                    {donts.slice(0, 2).map((item, index) => (
-                      <li key={`dont-${index}`} className="text-sm mb-1">• {item.text}</li>
-                    ))}
-                    
-                    {/* Show additional items when expanded */}
-                    {expandedDonts && donts.slice(2).map((item, index) => (
-                      <li key={`dont-extra-${index}`} className="text-sm mb-1">• {item.text}</li>
-                    ))}
-                    
-                    {/* Show expand/collapse link if there are more than 2 items */}
-                    {donts.length > 2 && (
-                      <li 
-                        className="text-xs text-muted-foreground cursor-pointer hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log(`[SuggestionListener] Toggling Don'ts expanded state from ${expandedDonts} to ${!expandedDonts}`);
-                          setExpandedDonts(!expandedDonts);
-                        }}
-                      >
-                        {expandedDonts ? "Show less" : `Show ${donts.length - 2} more`}
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Action Buttons */}
-              <div className="flex gap-2 justify-start items-center mt-3">
-                <button
-                  className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
-                  onClick={() => {
+                <ExpandableList 
+                  items={dos} 
+                  title="Do's:" 
+                  titleColor="text-emerald-500 dark:text-emerald-400"
+                  onAccept={() => {
                     console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
                     applySuggestion(columnId, cardId, suggestion);
                   }}
-                >
-                  Accept
-                </button>
-                <button
-                  className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
-                  onClick={() => {
+                  onView={() => {
                     console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
                     openInSuggestionMode(columnId, cardId);
                   }}
-                >
-                  View
-                </button>
-              </div>
+                />
+              )}
+              
+              {donts.length > 0 && (
+                <ExpandableList 
+                  items={donts} 
+                  title="Don'ts:" 
+                  titleColor="text-rose-500 dark:text-rose-400"
+                  onAccept={() => {
+                    console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
+                    applySuggestion(columnId, cardId, suggestion);
+                  }}
+                  onView={() => {
+                    console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
+                    openInSuggestionMode(columnId, cardId);
+                  }}
+                />
+              )}
             </div>
           ),
           action: undefined as any,
@@ -299,7 +313,7 @@ export function SuggestionListener() {
       window.removeEventListener('test', handleTestEvent);
       window.removeEventListener('invalidateQueries', handleInvalidateQueries);
     };
-  }, [toast, openInSuggestionMode, expandedDos, expandedDonts]);
+  }, [toast, openInSuggestionMode]);
 
   // This component doesn't render anything
   return null;
