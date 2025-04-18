@@ -133,38 +133,52 @@ export function SuggestionListener() {
         // Parse the instructions to extract do's and don'ts
         const { dos, donts } = parseInstructions(suggestion.suggestedInstructions);
         
-        // Create a more descriptive message for the toast
-        let descriptionContent = `${suggestion.rationale}\n\n`;
+        // Create a more descriptive message for the toast - without the rationale
+        let descriptionContent = "";
         
         // Add a few key do's (max 2)
         if (dos.length > 0) {
-          descriptionContent += "Do's:\n";
+          descriptionContent += `<div class="mb-2">
+            <div class="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
+            <ul class="pl-2">`;
+          
           const doItems = dos.slice(0, 2); // Get at most 2 items
           doItems.forEach(item => {
-            descriptionContent += `• ${item.text}\n`;
+            descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
           });
+          
           if (dos.length > 2) {
-            descriptionContent += `(+ ${dos.length - 2} more)\n`;
+            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${dos.length - 2} more)</li>`;
           }
+          
+          descriptionContent += `</ul></div>`;
         }
         
         // Add a few key don'ts (max 2)
         if (donts.length > 0) {
-          descriptionContent += "\nDon'ts:\n";
+          descriptionContent += `<div>
+            <div class="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
+            <ul class="pl-2">`;
+            
           const dontItems = donts.slice(0, 2); // Get at most 2 items
           dontItems.forEach(item => {
-            descriptionContent += `• ${item.text}\n`;
+            descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
           });
+          
           if (donts.length > 2) {
-            descriptionContent += `(+ ${donts.length - 2} more)\n`;
+            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${donts.length - 2} more)</li>`;
           }
+          
+          descriptionContent += `</ul></div>`;
         }
         
         // Show a toast notification with both View and Accept buttons
         console.log('[SuggestionListener] Showing enhanced toast notification with View and Accept buttons');
         toast({
           title: `Prompt Suggestion for "${columnName}"`,
-          description: descriptionContent,
+          description: (
+            <div dangerouslySetInnerHTML={{ __html: descriptionContent }} />
+          ),
           action: (
             <div className="flex gap-2 justify-start items-center">
               <button
