@@ -148,7 +148,6 @@ export function SuggestionListener() {
       toast({
         title: `${column.name} AI Updated`,
         description: "The new AI instructions have been applied successfully.",
-        variant: "ai",
       });
       
     } catch (error) {
@@ -229,7 +228,7 @@ export function SuggestionListener() {
               {/* Action Buttons at the bottom */}
               <div className="flex gap-2 justify-start items-center mt-3">
                 <button
-                  className="bg-purple-600 hover:bg-purple-700 text-white rounded px-3 py-1 text-xs font-medium"
+                  className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
@@ -239,17 +238,11 @@ export function SuggestionListener() {
                   Accept
                 </button>
                 <button
-                  className="bg-purple-200 hover:bg-purple-300 text-purple-900 rounded px-3 py-1 text-xs font-medium"
+                  className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                    // First dismiss all toasts
-                    const toastEvent = new CustomEvent('toast-dismiss-all');
-                    window.dispatchEvent(toastEvent);
-                    // Then open the modal
-                    setTimeout(() => {
-                      openInSuggestionMode(columnId, cardId);
-                    }, 100);
+                    openInSuggestionMode(columnId, cardId);
                   }}
                 >
                   View
@@ -257,7 +250,6 @@ export function SuggestionListener() {
               </div>
             </div>
           ),
-          variant: "ai",
           action: undefined as any,
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
@@ -270,21 +262,13 @@ export function SuggestionListener() {
         toast({
           title: `Update ${columnName} AI`,
           description: `We have suggestions to improve the "${columnName}" column's instructions based on recent card activity.`,
-          variant: "ai",
           action: (
             <ToastAction 
               altText="View suggestion" 
               onClick={() => {
                 console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                // First dismiss all toasts
-                const toastEvent = new CustomEvent('toast-dismiss-all');
-                window.dispatchEvent(toastEvent);
-                // Then open the modal
-                setTimeout(() => {
-                  openInSuggestionMode(columnId, cardId);
-                }, 100);
+                openInSuggestionMode(columnId, cardId);
               }}
-              className="bg-purple-200 hover:bg-purple-300 text-purple-900"
             >
               View
             </ToastAction>
