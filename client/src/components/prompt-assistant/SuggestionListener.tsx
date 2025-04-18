@@ -146,8 +146,8 @@ export function SuggestionListener() {
       
       // Show success toast
       toast({
-        title: "Suggestion Applied",
-        description: "The new prompt instructions have been applied successfully.",
+        title: `${column.name} AI Updated`,
+        description: "The new AI instructions have been applied successfully.",
       });
       
     } catch (error) {
@@ -190,7 +190,7 @@ export function SuggestionListener() {
         // Show a toast notification with self-contained ExpandableList components
         console.log('[SuggestionListener] Showing enhanced toast notification with View and Accept buttons');
         toast({
-          title: `Prompt Suggestion for "${columnName}"`,
+          title: `Update ${columnName} AI`,
           description: (
             <div className="space-y-2">
               {dos.length > 0 && (
@@ -260,7 +260,7 @@ export function SuggestionListener() {
         
         // Fallback to basic toast if we can't fetch details
         toast({
-          title: "Prompt Assistant",
+          title: `Update ${columnName} AI`,
           description: `We have suggestions to improve the "${columnName}" column's instructions based on recent card activity.`,
           action: (
             <ToastAction 
