@@ -45,13 +45,13 @@ export default function DirectToastTestPage() {
   };
   
   const triggerModalToast = () => {
-    const columnId = 9; // "image test" column
-    const cardId = 47; // "Image Generation Test" card
+    const columnId = 21; // "Image" column
+    const cardId = 86; // "sheet test" card
     
     console.log(`Triggering toast with modal action for column ${columnId}, card ${cardId}`);
     toast({
       title: "Prompt Assistant",
-      description: `We have suggestions to improve the "Test Column" column's instructions based on recent card activity.`,
+      description: `We have suggestions to improve the "Image Column" column's instructions based on recent card activity.`,
       action: (
         <ToastAction 
           altText="View suggestion" 
@@ -296,12 +296,12 @@ export default function DirectToastTestPage() {
           <div>
             <Button
               onClick={async () => {
-                const columnId = 9; // "image test" column
-                const cardId = 47; // "Image Generation Test" card
+                const columnId = 21; // "Image" column
+                const cardId = 86; // "sheet test" card
                 
                 try {
                   // Create a test suggestion with do's and don'ts structured format
-                  console.log('Creating test suggestion with structured do\'s and don\'ts');
+                  console.log(`Creating test suggestion with structured do's and don'ts for column ${columnId}, card ${cardId}`);
                   const structuredInstructions = `DO'S:
 - Use clear, vibrant colors in all image generations
 - Maintain consistent lighting across the entire image
@@ -326,7 +326,9 @@ DON'TS:
                   });
                   
                   if (!createResponse.ok) {
-                    throw new Error('Failed to create test suggestion with structured format');
+                    const errorText = await createResponse.text();
+                    console.error(`Server responded with status ${createResponse.status}:`, errorText);
+                    throw new Error(`Failed to create test suggestion with structured format: ${createResponse.status} ${createResponse.statusText}`);
                   }
                   
                   // Log success and trigger the custom event to test the enhanced toast
@@ -337,7 +339,7 @@ DON'TS:
                     detail: { 
                       columnId: columnId, 
                       cardId: cardId,
-                      columnName: 'Image Test Column' 
+                      columnName: 'Image Column' 
                     } 
                   });
                   
@@ -364,8 +366,8 @@ DON'TS:
           <div>
             <Button 
               onClick={async () => {
-                const columnId = 9; // "image test" column
-                const cardId = 47; // "Image Generation Test" card
+                const columnId = 21; // "Image" column
+                const cardId = 86; // "sheet test" card
                 
                 try {
                   console.log(`Checking suggestion for column ${columnId}, card ${cardId}`);
