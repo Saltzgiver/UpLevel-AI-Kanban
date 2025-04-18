@@ -166,27 +166,27 @@ export function SuggestionListener() {
           title: `Prompt Suggestion for "${columnName}"`,
           description: descriptionContent,
           action: (
-            <div className="flex space-x-2">
-              <ToastAction 
-                altText="Accept suggestion" 
-                onClick={() => {
-                  console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
-                  applySuggestion(columnId, cardId, suggestion);
-                }}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                Accept
-              </ToastAction>
-              <ToastAction 
-                altText="View suggestion" 
-                onClick={() => {
-                  console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                  openInSuggestionMode(columnId, cardId);
-                }}
-              >
-                View
-              </ToastAction>
-            </div>
+            <ToastAction 
+              altText="Accept suggestion" 
+              onClick={() => {
+                console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
+                applySuggestion(columnId, cardId, suggestion);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white mr-2"
+            >
+              Accept
+            </ToastAction>
+          ),
+          altAction: (
+            <ToastAction 
+              altText="View suggestion" 
+              onClick={() => {
+                console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
+                openInSuggestionMode(columnId, cardId);
+              }}
+            >
+              View
+            </ToastAction>
           ),
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
