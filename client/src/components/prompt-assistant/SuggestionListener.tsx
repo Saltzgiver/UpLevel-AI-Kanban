@@ -243,7 +243,13 @@ export function SuggestionListener() {
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                    openInSuggestionMode(columnId, cardId);
+                    // First dismiss all toasts
+                    const toastEvent = new CustomEvent('toast-dismiss-all');
+                    window.dispatchEvent(toastEvent);
+                    // Then open the modal
+                    setTimeout(() => {
+                      openInSuggestionMode(columnId, cardId);
+                    }, 100);
                   }}
                 >
                   View
@@ -270,7 +276,13 @@ export function SuggestionListener() {
               altText="View suggestion" 
               onClick={() => {
                 console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                openInSuggestionMode(columnId, cardId);
+                // First dismiss all toasts
+                const toastEvent = new CustomEvent('toast-dismiss-all');
+                window.dispatchEvent(toastEvent);
+                // Then open the modal
+                setTimeout(() => {
+                  openInSuggestionMode(columnId, cardId);
+                }, 100);
               }}
               className="bg-purple-200 hover:bg-purple-300 text-purple-900"
             >
