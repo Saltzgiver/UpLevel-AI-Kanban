@@ -142,14 +142,10 @@ export function SuggestionListener() {
             <div class="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
             <ul class="pl-2">`;
           
-          const doItems = dos.slice(0, 2); // Get at most 2 items
-          doItems.forEach(item => {
+          // Show all do's without the "more" message
+          dos.forEach(item => {
             descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
           });
-          
-          if (dos.length > 2) {
-            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${dos.length - 2} more)</li>`;
-          }
           
           descriptionContent += `</ul></div>`;
         }
@@ -160,14 +156,10 @@ export function SuggestionListener() {
             <div class="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
             <ul class="pl-2">`;
             
-          const dontItems = donts.slice(0, 2); // Get at most 2 items
-          dontItems.forEach(item => {
+          // Show all don'ts without the "more" message
+          donts.forEach(item => {
             descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
           });
-          
-          if (donts.length > 2) {
-            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${donts.length - 2} more)</li>`;
-          }
           
           descriptionContent += `</ul></div>`;
         }
@@ -201,7 +193,7 @@ export function SuggestionListener() {
               </div>
             </div>
           ),
-          action: null,
+
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
         console.log('[SuggestionListener] Enhanced toast notification triggered');
