@@ -9,12 +9,14 @@ function ExpandableList({
   items, 
   title, 
   titleColor, 
+  showButtons = false,
   onView,
   onAccept
 }: { 
   items: {text: string}[]; 
   title: string; 
   titleColor: string;
+  showButtons?: boolean;
   onView: () => void;
   onAccept: () => void;
 }) {
@@ -52,30 +54,6 @@ function ExpandableList({
           )}
         </ul>
       </div>
-      
-      {/* Only show buttons in the first section */}
-      {title === "Do's:" && (
-        <div className="flex gap-2 justify-start items-center mt-3 mb-2">
-          <button
-            className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAccept();
-            }}
-          >
-            Accept
-          </button>
-          <button
-            className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView();
-            }}
-          >
-            View
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -246,6 +224,30 @@ export function SuggestionListener() {
                   }}
                 />
               )}
+              
+              {/* Action Buttons at the bottom */}
+              <div className="flex gap-2 justify-start items-center mt-3">
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
+                    applySuggestion(columnId, cardId, suggestion);
+                  }}
+                >
+                  Accept
+                </button>
+                <button
+                  className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
+                    openInSuggestionMode(columnId, cardId);
+                  }}
+                >
+                  View
+                </button>
+              </div>
             </div>
           ),
           action: undefined as any,
