@@ -294,6 +294,74 @@ export default function DirectToastTestPage() {
           </div>
           
           <div>
+            <Button
+              onClick={async () => {
+                const columnId = 9; // "image test" column
+                const cardId = 47; // "Image Generation Test" card
+                
+                try {
+                  // Create a test suggestion with do's and don'ts structured format
+                  console.log('Creating test suggestion with structured do\'s and don\'ts');
+                  const structuredInstructions = `DO'S:
+- Use clear, vibrant colors in all image generations
+- Maintain consistent lighting across the entire image
+- Add detailed textures to create a sense of realism
+- Follow the composition guidelines specified in the request
+
+DON'TS:
+- Generate images with blurry or pixelated elements
+- Create unrealistic lighting or shadow effects
+- Distort human facial features unless specifically requested
+- Ignore specific style instructions in the prompt`;
+                  
+                  const createResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      suggestion: {
+                        rationale: 'Based on the analysis of recent image generation requests, we\'ve identified specific areas where prompt instructions can be improved to ensure consistent, high-quality outputs.',
+                        suggestedInstructions: structuredInstructions,
+                      },
+                    }),
+                  });
+                  
+                  if (!createResponse.ok) {
+                    throw new Error('Failed to create test suggestion with structured format');
+                  }
+                  
+                  // Log success and trigger the custom event to test the enhanced toast
+                  console.log('Successfully created structured suggestion, triggering custom event');
+                  
+                  // Create and dispatch the custom event
+                  const event = new CustomEvent('promptAssistantSuggestion', { 
+                    detail: { 
+                      columnId: columnId, 
+                      cardId: cardId,
+                      columnName: 'Image Test Column' 
+                    } 
+                  });
+                  
+                  window.dispatchEvent(event);
+                  console.log('Custom event dispatched to test enhanced toast');
+                  
+                } catch (error) {
+                  console.error('Test for enhanced toast failed:', error);
+                  toast({
+                    title: "Enhanced Toast Test Failed",
+                    description: error instanceof Error ? error.message : "Unknown error",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              variant="default"
+              className="w-full mb-2 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Test Enhanced Toast with Do's & Don'ts
+            </Button>
+            <p className="text-xs text-muted-foreground">Creates a suggestion with structured do's and don'ts and triggers the enhanced toast display</p>
+          </div>
+          
+          <div>
             <Button 
               onClick={async () => {
                 const columnId = 9; // "image test" column
