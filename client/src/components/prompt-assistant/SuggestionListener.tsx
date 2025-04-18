@@ -139,43 +139,35 @@ export function SuggestionListener() {
         // Add a few key do's (max 2)
         if (dos.length > 0) {
           descriptionContent += `<div class="mb-2">
-            <div class="flex items-center gap-1.5 font-semibold text-emerald-500 dark:text-emerald-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
-                <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
-              </svg>
-              <span>Do's:</span>
-            </div>
-            <ul class="pl-2 space-y-1.5">`;
+            <div class="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
+            <ul class="pl-2">`;
           
-          // Show all do's without the "more" message
-          dos.forEach(item => {
-            descriptionContent += `<li class="text-sm flex items-start">
-              <span class="text-emerald-400 mr-1.5">•</span>
-              <span>${item.text}</span>
-            </li>`;
+          const doItems = dos.slice(0, 2); // Get at most 2 items
+          doItems.forEach(item => {
+            descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
           });
+          
+          if (dos.length > 2) {
+            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${dos.length - 2} more)</li>`;
+          }
           
           descriptionContent += `</ul></div>`;
         }
         
-        // Add all don'ts
+        // Add a few key don'ts (max 2)
         if (donts.length > 0) {
           descriptionContent += `<div>
-            <div class="flex items-center gap-1.5 font-semibold text-rose-500 dark:text-rose-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
-                <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clip-rule="evenodd" />
-              </svg>
-              <span>Don'ts:</span>
-            </div>
-            <ul class="pl-2 space-y-1.5">`;
+            <div class="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
+            <ul class="pl-2">`;
             
-          // Show all don'ts without the "more" message
-          donts.forEach(item => {
-            descriptionContent += `<li class="text-sm flex items-start">
-              <span class="text-rose-400 mr-1.5">•</span>
-              <span>${item.text}</span>
-            </li>`;
+          const dontItems = donts.slice(0, 2); // Get at most 2 items
+          dontItems.forEach(item => {
+            descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
           });
+          
+          if (donts.length > 2) {
+            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${donts.length - 2} more)</li>`;
+          }
           
           descriptionContent += `</ul></div>`;
         }
@@ -183,21 +175,13 @@ export function SuggestionListener() {
         // Show a toast notification with both View and Accept buttons
         console.log('[SuggestionListener] Showing enhanced toast notification with View and Accept buttons');
         toast({
-          title: (
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center animate-pulse">
-                <span className="text-white text-xs">AI</span>
-              </div>
-              <span>AI Prompt Suggestion</span>
-            </div>
-          ),
+          title: `Prompt Suggestion for "${columnName}"`,
           description: (
-            <div className="rounded-md border border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 p-3 shadow-inner">
-              <div className="text-xs text-blue-500 dark:text-blue-400 mb-2 font-semibold">For "{columnName}" column:</div>
-              <div dangerouslySetInnerHTML={{ __html: descriptionContent }} className="pl-1" />
-              <div className="flex gap-2 justify-start items-center mt-4 border-t border-blue-100 dark:border-blue-800 pt-3">
+            <div>
+              <div dangerouslySetInnerHTML={{ __html: descriptionContent }} />
+              <div className="flex gap-2 justify-start items-center mt-3">
                 <button
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-md px-4 py-1.5 text-xs font-medium shadow-sm transition-all"
+                  className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
                   onClick={() => {
                     console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
                     applySuggestion(columnId, cardId, suggestion);
@@ -206,18 +190,18 @@ export function SuggestionListener() {
                   Accept
                 </button>
                 <button
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-md px-4 py-1.5 text-xs font-medium shadow-sm transition-all"
+                  className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
                   onClick={() => {
                     console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
                     openInSuggestionMode(columnId, cardId);
                   }}
                 >
-                  View Details
+                  View
                 </button>
               </div>
             </div>
           ),
-
+          action: null,
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
         console.log('[SuggestionListener] Enhanced toast notification triggered');
@@ -225,33 +209,20 @@ export function SuggestionListener() {
       } catch (error) {
         console.error('[SuggestionListener] Error fetching suggestion details:', error);
         
-        // Fallback to basic toast if we can't fetch details, but still with AI styling
+        // Fallback to basic toast if we can't fetch details
         toast({
-          title: (
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center animate-pulse">
-                <span className="text-white text-xs">AI</span>
-              </div>
-              <span>AI Prompt Suggestion</span>
-            </div>
-          ),
-          description: (
-            <div className="rounded-md border border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 p-3 shadow-inner">
-              <div className="text-sm mb-3">
-                We have suggestions to improve the "{columnName}" column's instructions based on recent card activity.
-              </div>
-              <div className="flex gap-2 justify-start items-center mt-3 border-t border-blue-100 dark:border-blue-800 pt-3">
-                <button
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-md px-4 py-1.5 text-xs font-medium shadow-sm transition-all"
-                  onClick={() => {
-                    console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                    openInSuggestionMode(columnId, cardId);
-                  }}
-                >
-                  View Suggestions
-                </button>
-              </div>
-            </div>
+          title: "Prompt Assistant",
+          description: `We have suggestions to improve the "${columnName}" column's instructions based on recent card activity.`,
+          action: (
+            <ToastAction 
+              altText="View suggestion" 
+              onClick={() => {
+                console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
+                openInSuggestionMode(columnId, cardId);
+              }}
+            >
+              View
+            </ToastAction>
           ),
           duration: 10000, // 10 seconds
         });
