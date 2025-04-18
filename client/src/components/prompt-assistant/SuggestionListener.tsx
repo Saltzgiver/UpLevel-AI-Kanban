@@ -166,27 +166,26 @@ export function SuggestionListener() {
           title: `Prompt Suggestion for "${columnName}"`,
           description: descriptionContent,
           action: (
-            <ToastAction 
-              altText="Accept suggestion" 
-              onClick={() => {
-                console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
-                applySuggestion(columnId, cardId, suggestion);
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white mr-2"
-            >
-              Accept
-            </ToastAction>
-          ),
-          altAction: (
-            <ToastAction 
-              altText="View suggestion" 
-              onClick={() => {
-                console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                openInSuggestionMode(columnId, cardId);
-              }}
-            >
-              View
-            </ToastAction>
+            <div className="flex gap-2 justify-start items-center">
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
+                onClick={() => {
+                  console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
+                  applySuggestion(columnId, cardId, suggestion);
+                }}
+              >
+                Accept
+              </button>
+              <button
+                className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
+                onClick={() => {
+                  console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
+                  openInSuggestionMode(columnId, cardId);
+                }}
+              >
+                View
+              </button>
+            </div>
           ),
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
