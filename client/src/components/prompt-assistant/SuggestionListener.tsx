@@ -152,11 +152,26 @@ export function SuggestionListener() {
                 <div className="mb-2">
                   <div className="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
                   <ul className="pl-2">
-                    {(expandedDos ? dos : dos.slice(0, 2)).map((item, index) => (
+                    {/* Always show first 2 items */}
+                    {dos.slice(0, 2).map((item, index) => (
                       <li key={`do-${index}`} className="text-sm mb-1">• {item.text}</li>
                     ))}
+                    
+                    {/* Show additional items when expanded */}
+                    {expandedDos && dos.slice(2).map((item, index) => (
+                      <li key={`do-extra-${index}`} className="text-sm mb-1">• {item.text}</li>
+                    ))}
+                    
+                    {/* Show expand/collapse link if there are more than 2 items */}
                     {dos.length > 2 && (
-                      <li className="text-xs text-muted-foreground cursor-pointer" onClick={() => setExpandedDos(!expandedDos)}>
+                      <li 
+                        className="text-xs text-muted-foreground cursor-pointer hover:underline" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log(`[SuggestionListener] Toggling Do's expanded state from ${expandedDos} to ${!expandedDos}`);
+                          setExpandedDos(!expandedDos);
+                        }}
+                      >
                         {expandedDos ? "Show less" : `Show ${dos.length - 2} more`}
                       </li>
                     )}
@@ -169,11 +184,26 @@ export function SuggestionListener() {
                 <div>
                   <div className="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
                   <ul className="pl-2">
-                    {(expandedDonts ? donts : donts.slice(0, 2)).map((item, index) => (
+                    {/* Always show first 2 items */}
+                    {donts.slice(0, 2).map((item, index) => (
                       <li key={`dont-${index}`} className="text-sm mb-1">• {item.text}</li>
                     ))}
+                    
+                    {/* Show additional items when expanded */}
+                    {expandedDonts && donts.slice(2).map((item, index) => (
+                      <li key={`dont-extra-${index}`} className="text-sm mb-1">• {item.text}</li>
+                    ))}
+                    
+                    {/* Show expand/collapse link if there are more than 2 items */}
                     {donts.length > 2 && (
-                      <li className="text-xs text-muted-foreground cursor-pointer" onClick={() => setExpandedDonts(!expandedDonts)}>
+                      <li 
+                        className="text-xs text-muted-foreground cursor-pointer hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log(`[SuggestionListener] Toggling Don'ts expanded state from ${expandedDonts} to ${!expandedDonts}`);
+                          setExpandedDonts(!expandedDonts);
+                        }}
+                      >
                         {expandedDonts ? "Show less" : `Show ${donts.length - 2} more`}
                       </li>
                     )}
@@ -269,7 +299,7 @@ export function SuggestionListener() {
       window.removeEventListener('test', handleTestEvent);
       window.removeEventListener('invalidateQueries', handleInvalidateQueries);
     };
-  }, [toast, openInSuggestionMode]);
+  }, [toast, openInSuggestionMode, expandedDos, expandedDonts]);
 
   // This component doesn't render anything
   return null;
