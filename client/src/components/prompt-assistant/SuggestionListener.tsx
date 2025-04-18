@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useModalContext } from '@/contexts/ModalContext';
@@ -106,6 +106,10 @@ export function SuggestionListener() {
     }
   };
 
+  // States for expanded view
+  const [expandedDos, setExpandedDos] = useState(false);
+  const [expandedDonts, setExpandedDonts] = useState(false);
+  
   useEffect(() => {
     console.log('[SuggestionListener] Component mounted');
     
@@ -113,6 +117,10 @@ export function SuggestionListener() {
     const handleSuggestionEvent = async (e: Event) => {
       const event = e as CustomEvent<{ columnId: number; cardId: number; columnName: string }>;
       const { columnId, cardId, columnName } = event.detail;
+      
+      // Reset expanded states for a new toast
+      setExpandedDos(false);
+      setExpandedDonts(false);
       
       console.log(`[SuggestionListener] Received suggestion event for column ${columnId}, card ${cardId}, name ${columnName}`);
       
@@ -133,52 +141,47 @@ export function SuggestionListener() {
         // Parse the instructions to extract do's and don'ts
         const { dos, donts } = parseInstructions(suggestion.suggestedInstructions);
         
-        // Create a more descriptive message for the toast - without the rationale
-        let descriptionContent = "";
-        
-        // Add a few key do's (max 2)
-        if (dos.length > 0) {
-          descriptionContent += `<div class="mb-2">
-            <div class="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
-            <ul class="pl-2">`;
-          
-          const doItems = dos.slice(0, 2); // Get at most 2 items
-          doItems.forEach(item => {
-            descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
-          });
-          
-          if (dos.length > 2) {
-            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${dos.length - 2} more)</li>`;
-          }
-          
-          descriptionContent += `</ul></div>`;
-        }
-        
-        // Add a few key don'ts (max 2)
-        if (donts.length > 0) {
-          descriptionContent += `<div>
-            <div class="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
-            <ul class="pl-2">`;
-            
-          const dontItems = donts.slice(0, 2); // Get at most 2 items
-          dontItems.forEach(item => {
-            descriptionContent += `<li class="text-sm mb-1">• ${item.text}</li>`;
-          });
-          
-          if (donts.length > 2) {
-            descriptionContent += `<li class="text-xs text-muted-foreground">(+ ${donts.length - 2} more)</li>`;
-          }
-          
-          descriptionContent += `</ul></div>`;
-        }
-        
         // Show a toast notification with both View and Accept buttons
         console.log('[SuggestionListener] Showing enhanced toast notification with View and Accept buttons');
         toast({
           title: `Prompt Suggestion for "${columnName}"`,
           description: (
             <div>
-              <div dangerouslySetInnerHTML={{ __html: descriptionContent }} />
+              {/* Do's Section */}
+              {dos.length > 0 && (
+                <div className="mb-2">
+                  <div className="font-semibold text-emerald-500 dark:text-emerald-400 mb-1">Do's:</div>
+                  <ul className="pl-2">
+                    {(expandedDos ? dos : dos.slice(0, 2)).map((item, index) => (
+                      <li key={`do-${index}`} className="text-sm mb-1">• {item.text}</li>
+                    ))}
+                    {dos.length > 2 && (
+                      <li className="text-xs text-muted-foreground cursor-pointer" onClick={() => setExpandedDos(!expandedDos)}>
+                        {expandedDos ? "Show less" : `Show ${dos.length - 2} more`}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Don'ts Section */}
+              {donts.length > 0 && (
+                <div>
+                  <div className="font-semibold text-rose-500 dark:text-rose-400 mb-1">Don'ts:</div>
+                  <ul className="pl-2">
+                    {(expandedDonts ? donts : donts.slice(0, 2)).map((item, index) => (
+                      <li key={`dont-${index}`} className="text-sm mb-1">• {item.text}</li>
+                    ))}
+                    {donts.length > 2 && (
+                      <li className="text-xs text-muted-foreground cursor-pointer" onClick={() => setExpandedDonts(!expandedDonts)}>
+                        {expandedDonts ? "Show less" : `Show ${donts.length - 2} more`}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
               <div className="flex gap-2 justify-start items-center mt-3">
                 <button
                   className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
@@ -201,7 +204,7 @@ export function SuggestionListener() {
               </div>
             </div>
           ),
-          action: null,
+          action: undefined as any,
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
         console.log('[SuggestionListener] Enhanced toast notification triggered');
@@ -223,7 +226,7 @@ export function SuggestionListener() {
             >
               View
             </ToastAction>
-          ),
+          ) as any,
           duration: 10000, // 10 seconds
         });
       }
