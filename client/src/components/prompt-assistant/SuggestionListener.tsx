@@ -177,30 +177,31 @@ export function SuggestionListener() {
         toast({
           title: `Prompt Suggestion for "${columnName}"`,
           description: (
-            <div dangerouslySetInnerHTML={{ __html: descriptionContent }} />
-          ),
-          action: (
-            <div className="flex gap-2 justify-start items-center">
-              <button
-                className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
-                onClick={() => {
-                  console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
-                  applySuggestion(columnId, cardId, suggestion);
-                }}
-              >
-                Accept
-              </button>
-              <button
-                className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
-                onClick={() => {
-                  console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
-                  openInSuggestionMode(columnId, cardId);
-                }}
-              >
-                View
-              </button>
+            <div>
+              <div dangerouslySetInnerHTML={{ __html: descriptionContent }} />
+              <div className="flex gap-2 justify-start items-center mt-3">
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1 text-xs font-medium"
+                  onClick={() => {
+                    console.log(`[SuggestionListener] Accept button clicked for column ${columnId}, card ${cardId}`);
+                    applySuggestion(columnId, cardId, suggestion);
+                  }}
+                >
+                  Accept
+                </button>
+                <button
+                  className="bg-secondary hover:bg-secondary/80 rounded px-3 py-1 text-xs font-medium"
+                  onClick={() => {
+                    console.log(`[SuggestionListener] View button clicked for column ${columnId}, card ${cardId}`);
+                    openInSuggestionMode(columnId, cardId);
+                  }}
+                >
+                  View
+                </button>
+              </div>
             </div>
           ),
+          action: null,
           duration: 15000, // 15 seconds to give more time to read the enhanced content
         });
         console.log('[SuggestionListener] Enhanced toast notification triggered');
