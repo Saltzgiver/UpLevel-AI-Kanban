@@ -562,7 +562,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                           placeholder="No current instructions"
                           value={column.gptInstructions || ""}
                           readOnly
-                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm min-h-[160px] max-h-[320px] overflow-y-auto"
+                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm min-h-[160px] max-h-[640px] overflow-y-auto"
                           style={{ height: 'auto' }}
                         />
                       </div>
@@ -576,7 +576,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                           placeholder="Suggested instructions..."
                           value={suggestion.suggestedInstructions}
                           readOnly
-                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900 min-h-[160px] max-h-[320px] overflow-y-auto"
+                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900 min-h-[160px] max-h-[640px] overflow-y-auto"
                           style={{ height: 'auto' }}
                         />
                       </div>
