@@ -555,7 +555,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
                 <div className="mb-4">
                   <div className="mb-2">
-                    <h3 className="text-sm font-medium mb-2">Compare Instructions</h3>
+                    <h3 className="text-sm font-medium mb-2">Instruction Update</h3>
                     <div className="grid grid-cols-2 gap-4">
                       {/* Left side: Current Instructions */}
                       <div className="space-y-1">
