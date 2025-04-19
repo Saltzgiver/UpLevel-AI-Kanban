@@ -41,24 +41,35 @@ export class McpClient {
    */
   async invoke(params: { action: string; action_params: McpActionParams }): Promise<McpResponse> {
     try {
-      if (!this.endpoint || !this.apiKey) {
-        throw new Error('MCP configuration missing: endpoint or API key not set');
+      if (!this.endpoint) {
+        throw new Error('MCP configuration missing: endpoint not set');
       }
 
-      const url = `${this.endpoint}/actions/${params.action}`;
+      // For Zapier webhook integrations, the action is often part of the URL or ignored
+      // Just use the main endpoint URL as provided
+      const url = this.endpoint;
       
-      // Create signature for the request
-      const payload = JSON.stringify(params.action_params);
-      const signature = this.createSignature(payload);
+      const payload = JSON.stringify({
+        ...params.action_params,
+        action: params.action  // Include action name in the payload for Zapier to route
+      });
+      
+      // Headers setup - only add auth headers if API key is provided
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add auth headers if API key is provided and not the placeholder
+      if (this.apiKey && this.apiKey !== 'no-key-required') {
+        const signature = this.createSignature(payload);
+        headers['X-MCP-Key'] = this.apiKey;
+        headers['X-MCP-Signature'] = signature;
+      }
       
       // Make the request
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-MCP-Key': this.apiKey,
-          'X-MCP-Signature': signature
-        },
+        headers,
         body: payload
       });
       
@@ -90,7 +101,7 @@ export class McpClient {
  */
 export function getMcpClient(): McpClient {
   const endpoint = process.env.ZAPIER_MCP_ENDPOINT || '';
-  const apiKey = process.env.ZAPIER_MCP_KEY || '';
+  const apiKey = process.env.ZAPIER_MCP_KEY || 'no-key-required';
   
   return new McpClient({ endpoint, apiKey });
 }

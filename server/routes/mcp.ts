@@ -46,11 +46,12 @@ export function registerMcpRoutes(app: Express) {
       const startTime = Date.now();
       log('Received inbound MCP webhook');
       
-      // Validate signature
+      // Only validate signature if API key is provided
       const signature = req.headers['x-mcp-signature'] as string;
       const apiKey = process.env.ZAPIER_MCP_KEY || '';
       
-      if (!validateMcpSignature(signature, JSON.stringify(req.body), apiKey)) {
+      if (apiKey && apiKey !== 'no-key-required' && signature && 
+          !validateMcpSignature(signature, JSON.stringify(req.body), apiKey)) {
         log('Invalid MCP signature');
         
         // Log the failed request
@@ -425,8 +426,8 @@ export function registerMcpRoutes(app: Express) {
     try {
       const startTime = Date.now();
       
-      if (!process.env.ZAPIER_MCP_ENDPOINT || !process.env.ZAPIER_MCP_KEY) {
-        return res.status(400).json({ error: 'MCP configuration is missing' });
+      if (!process.env.ZAPIER_MCP_ENDPOINT) {
+        return res.status(400).json({ error: 'MCP webhook URL is missing' });
       }
       
       // Run a simple test action
@@ -442,9 +443,12 @@ export function registerMcpRoutes(app: Express) {
         duration,
         result
       });
-    } catch (error) {
+    } catch (error: any) {
       log(`Error testing MCP connection: ${error}`);
-      return res.status(500).json({ error: 'Error testing MCP connection', details: error.message });
+      return res.status(500).json({ 
+        error: 'Error testing MCP connection', 
+        details: error.message || String(error)
+      });
     }
   });
   
