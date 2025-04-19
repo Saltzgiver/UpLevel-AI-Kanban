@@ -573,21 +573,6 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-2">
           <div className="space-y-5">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="gpt-name" className="text-sm font-medium">Assistant Name</Label>
-              <Input 
-                id="gpt-name" 
-                placeholder="GPT Assistant" 
-                value={gptName}
-                onChange={(e) => setGptName(e.target.value)}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                This name will appear in chats and outputs
-              </p>
-            </div>
-            
             {/* Instructions */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -664,6 +649,26 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                   <Separator className="my-4" />
                 </div>
               ) : null}
+            </div>
+            
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="gpt-name" className="text-sm font-medium">Assistant Name</Label>
+              <Input 
+                id="gpt-name" 
+                placeholder="GPT Assistant" 
+                value={gptName}
+                onChange={(e) => setGptName(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                This name will appear in chats and outputs
+              </p>
+            </div>
+            
+            {/* Instructions */}
+            <div className="space-y-2">
+              <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
               
               {/* Structured Do's and Don'ts Lists */}
               <div className="grid grid-cols-1 gap-4 mt-3">
