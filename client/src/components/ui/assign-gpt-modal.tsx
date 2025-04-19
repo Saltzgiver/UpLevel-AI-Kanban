@@ -513,7 +513,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                 <div className="flex items-center">
                   <Diff className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
                   <p className="text-sm font-medium text-amber-700">
-                    AI Prompt Improvement Suggestion
+                    AI Improvement Suggestion
                   </p>
                 </div>
                 <div className="flex items-center text-amber-600">
