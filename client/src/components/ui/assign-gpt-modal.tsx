@@ -15,7 +15,7 @@ import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown, Plus, ListChecks, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown, Plus, ListChecks, XCircle, ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 import { useModalContext } from "@/contexts/ModalContext";
 
 interface AssignGPTModalProps {
@@ -185,6 +185,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   const [suggestion, setSuggestion] = useState<{ rationale: string; suggestedInstructions: string } | null>(null);
   const [showingSuggestion, setShowingSuggestion] = useState<boolean>(!!isSuggestionMode);
   const [isRationaleExpanded, setIsRationaleExpanded] = useState<boolean>(false);
+  const [showFullRationale, setShowFullRationale] = useState<boolean>(false);
   const { toast } = useToast();
   const modalRef = useRef<HTMLDivElement>(null);
   const { modalState } = useModalContext();
@@ -523,10 +524,29 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
             </CollapsibleTrigger>
             
             <CollapsibleContent className="mt-2 px-6">
-              {/* Rationale section */}
-              <div className="bg-white border border-amber-200 rounded-md p-3 mb-3">
+              {/* Rationale section - without border and with Show More button */}
+              <div className="mb-3">
                 <h3 className="text-sm font-medium text-amber-800 mb-2">Suggestion Rationale:</h3>
-                <p className="text-sm text-gray-700">{suggestion.rationale}</p>
+                {suggestion.rationale && (
+                  <div className="text-sm text-gray-700">
+                    {showFullRationale 
+                      ? suggestion.rationale 
+                      : `${suggestion.rationale.substring(0, 100)}${suggestion.rationale.length > 100 ? '...' : ''}`
+                    }
+                    {suggestion.rationale.length > 100 && (
+                      <button 
+                        className="ml-1 text-amber-600 hover:text-amber-700 inline-flex items-center"
+                        onClick={() => setShowFullRationale(!showFullRationale)}
+                      >
+                        {showFullRationale ? 'Show less' : 'Show more'}
+                        {showFullRationale 
+                          ? <ChevronUp className="h-3 w-3 ml-1" /> 
+                          : <MoreHorizontal className="h-3 w-3 ml-1" />
+                        }
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* Side-by-Side Prompt Suggestion View */}
