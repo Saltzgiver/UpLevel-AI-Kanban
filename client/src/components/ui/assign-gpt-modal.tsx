@@ -436,9 +436,6 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         description: "The suggested instructions have been applied",
         variant: "default"
       });
-      
-      // Hide the comparison view
-      setShowingSuggestion(false);
     }
   };
   
@@ -525,10 +522,67 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               </div>
             </CollapsibleTrigger>
             
-            <CollapsibleContent className="mt-2">
-              <div className="bg-white border border-amber-200 rounded-md p-3 mb-1">
+            <CollapsibleContent className="mt-2 px-6">
+              {/* Rationale section */}
+              <div className="bg-white border border-amber-200 rounded-md p-3 mb-3">
                 <h3 className="text-sm font-medium text-amber-800 mb-2">Suggestion Rationale:</h3>
                 <p className="text-sm text-gray-700">{suggestion.rationale}</p>
+              </div>
+              
+              {/* Side-by-Side Prompt Suggestion View */}
+              <div className="mb-4">
+                <div className="mb-2">
+                  <h3 className="text-sm font-medium mb-2">Instruction Update</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Left side: Current Instructions */}
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500">Current Instructions</Label>
+                      <div className="border border-gray-200 rounded-md bg-gray-50 p-3">
+                        <Textarea
+                          placeholder="No current instructions"
+                          rows={6}
+                          value={column.gptInstructions || ""}
+                          readOnly
+                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Right side: Suggested Instructions */}
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-amber-600">Suggested Instructions</Label>
+                      <div className="border border-amber-200 rounded-md bg-amber-50 p-3">
+                        <Textarea
+                          placeholder="Suggested instructions..."
+                          rows={6}
+                          value={suggestion.suggestedInstructions}
+                          readOnly
+                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-gray-600 hover:bg-gray-100"
+                      onClick={handleDismissSuggestion}
+                    >
+                      <ThumbsDown className="mr-2 h-4 w-4" />
+                      Reject Suggestion
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                      onClick={handleApplySuggestion}
+                    >
+                      <ThumbsUp className="mr-2 h-4 w-4" />
+                      Use Suggestion
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -537,80 +591,6 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-2">
           <div className="space-y-5">
-            {/* Suggestions section - Moved above the assistant name */}
-            <div className="space-y-2">
-              <div className="flex justify-end items-center">
-                {modalState.isSuggestionMode && suggestion && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs py-0.5 px-2 bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100"
-                    onClick={() => setShowingSuggestion(!showingSuggestion)}
-                  >
-                    {showingSuggestion ? "Hide Suggestion" : "Show Suggestion"}
-                  </Badge>
-                )}
-              </div>
-              
-              {/* Side-by-Side Prompt Suggestion View */}
-              {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
-                <div className="mb-4">
-                  <div className="mb-2">
-                    <h3 className="text-sm font-medium mb-2">Instruction Update</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Left side: Current Instructions */}
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-500">Current Instructions</Label>
-                        <div className="border border-gray-200 rounded-md bg-gray-50 p-3">
-                          <Textarea
-                            placeholder="No current instructions"
-                            rows={6}
-                            value={column.gptInstructions || ""}
-                            readOnly
-                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Right side: Suggested Instructions */}
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-amber-600">Suggested Instructions</Label>
-                        <div className="border border-amber-200 rounded-md bg-amber-50 p-3">
-                          <Textarea
-                            placeholder="Suggested instructions..."
-                            rows={6}
-                            value={suggestion.suggestedInstructions}
-                            readOnly
-                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 hover:bg-gray-100"
-                        onClick={handleDismissSuggestion}
-                      >
-                        <ThumbsDown className="mr-2 h-4 w-4" />
-                        Reject Suggestion
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
-                        onClick={handleApplySuggestion}
-                      >
-                        <ThumbsUp className="mr-2 h-4 w-4" />
-                        Use Suggestion
-                      </Button>
-                    </div>
-                  </div>
-                  <Separator className="my-4" />
-                </div>
-              ) : null}
-            </div>
-            
             {/* Name - Now appears after the suggestions section */}
             <div className="space-y-2">
               <Label htmlFor="gpt-name" className="text-sm font-medium">Assistant Name</Label>
@@ -787,7 +767,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         {/* Footer with actions */}
         <div className="px-6 py-4 border-t border-gray-100 flex justify-between">
           <div>
-            {modalState.isSuggestionMode && suggestion && showingSuggestion && (
+            {modalState.isSuggestionMode && suggestion && isRationaleExpanded && (
               <Button 
                 variant="outline"
                 onClick={handleApplySuggestion}
