@@ -183,6 +183,9 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   const modalRef = useRef<HTMLDivElement>(null);
   const { modalState } = useModalContext();
   
+  // State for storing parsed suggestion items separately
+  const [parsedSuggestions, setParsedSuggestions] = useState<BulletPoint[]>([]);
+
   // Get the next color automatically when the modal opens for a new GPT configuration
   useEffect(() => {
     if (isOpen && !column.gptAssigned) {
@@ -197,6 +200,33 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     }
   }, [isOpen, column.gptAssigned, column.gptColor]);
   
+  // Function to parse suggestions into individual selectable items
+  const parseSuggestionIntoItems = (suggestionText: string): BulletPoint[] => {
+    // First, try to parse using the standard parseInstructions
+    const { dos, donts } = parseInstructions(suggestionText);
+    
+    // Combine dos and donts into a single array of bullet points
+    const combined: BulletPoint[] = [
+      ...dos.map(item => ({ ...item, category: 'do' as const })),
+      ...donts.map(item => ({ ...item, category: 'dont' as const }))
+    ];
+    
+    // If we have structured content, return it
+    if (combined.length > 0) {
+      return combined;
+    }
+    
+    // Otherwise, split by lines and create a bullet point for each line
+    return suggestionText
+      .split('\n')
+      .filter(line => line.trim().length > 0)
+      .map(line => ({
+        id: crypto.randomUUID(),
+        text: line.trim(),
+        category: 'general' as const
+      }));
+  };
+
   // Reset form state when modal opens and fetch suggestion if in suggestion mode
   useEffect(() => {
     if (!isOpen) return;
@@ -227,6 +257,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
       setShowingSuggestion(true);
       // Initially set suggestion to null until we fetch the actual suggestion
       setSuggestion(null);
+      setParsedSuggestions([]);
       console.log(`[AssignGPTModal] Initial state set, waiting for suggestion data`);
       
       const fetchSuggestion = async () => {
@@ -280,6 +311,11 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
           if (data && data.suggestion) {
             console.log(`[AssignGPTModal] Setting suggestion:`, data.suggestion);
             setSuggestion(data.suggestion);
+            
+            // Parse the suggestion into individual items for selective application
+            const parsedItems = parseSuggestionIntoItems(data.suggestion.suggestedInstructions);
+            setParsedSuggestions(parsedItems);
+            console.log(`[AssignGPTModal] Parsed suggestion into ${parsedItems.length} items`);
             
             // Ensure state is set to showing
             setShowingSuggestion(true);
