@@ -383,7 +383,8 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     if (newDontPoint.trim()) {
       const newPoint: BulletPoint = {
         id: crypto.randomUUID(),
-        text: newDontPoint.trim()
+        text: newDontPoint.trim(),
+        category: 'dont'
       };
       setDontsList([...dontsList, newPoint]);
       setNewDontPoint('');
