@@ -27,7 +27,8 @@ import { validateMcpSignature, logMcpRequest, runMcpAction } from '../mcpClient'
 // Environment variables are already loaded by the main application
 
 // Feature flag to enable/disable MCP integration
-const MCP_ENABLED = process.env.MCP_ENABLED === 'true';
+// Force enable for testing
+const MCP_ENABLED = true; // process.env.MCP_ENABLED === 'true';
 
 /**
  * Register all MCP-related routes

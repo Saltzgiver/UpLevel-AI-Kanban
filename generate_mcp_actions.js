@@ -5,7 +5,8 @@
  * for common publishing platforms like LinkedIn, Twitter, etc.
  */
 
-import { Pool } from 'pg';
+import pkg from 'pg';
+const { Pool } = pkg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 
 // Example MCP actions to create
