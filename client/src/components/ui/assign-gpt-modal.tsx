@@ -558,15 +558,9 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-gray-500">Current Instructions</Label>
                       <div className="border border-gray-200 rounded-md bg-gray-50 p-3">
-                        <div className="max-h-[400px] overflow-y-auto">
-                          <Textarea
-                            placeholder="No current instructions"
-                            value={column.gptInstructions || ""}
-                            readOnly
-                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
-                            style={{ height: 'auto' }}
-                          />
-                        </div>
+                        <pre className="whitespace-pre-wrap text-sm font-sans">
+                          {column.gptInstructions || "No current instructions"}
+                        </pre>
                       </div>
                     </div>
                     
@@ -574,15 +568,9 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-amber-600">Suggested Instructions</Label>
                       <div className="border border-amber-200 rounded-md bg-amber-50 p-3">
-                        <div className="max-h-[400px] overflow-y-auto">
-                          <Textarea
-                            placeholder="Suggested instructions..."
-                            value={suggestion.suggestedInstructions}
-                            readOnly
-                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900"
-                            style={{ height: 'auto' }}
-                          />
-                        </div>
+                        <pre className="whitespace-pre-wrap text-sm font-sans text-amber-900">
+                          {suggestion.suggestedInstructions || "Suggested instructions..."}
+                        </pre>
                       </div>
                     </div>
                   </div>
