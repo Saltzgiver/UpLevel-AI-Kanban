@@ -560,10 +560,10 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                       <div className="border border-gray-200 rounded-md bg-gray-50 p-3">
                         <Textarea
                           placeholder="No current instructions"
-                          rows={8}
                           value={column.gptInstructions || ""}
                           readOnly
-                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
+                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm min-h-[160px] max-h-[320px] overflow-y-auto"
+                          style={{ height: 'auto' }}
                         />
                       </div>
                     </div>
@@ -574,10 +574,10 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                       <div className="border border-amber-200 rounded-md bg-amber-50 p-3">
                         <Textarea
                           placeholder="Suggested instructions..."
-                          rows={8}
                           value={suggestion.suggestedInstructions}
                           readOnly
-                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900"
+                          className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900 min-h-[160px] max-h-[320px] overflow-y-auto"
+                          style={{ height: 'auto' }}
                         />
                       </div>
                     </div>
