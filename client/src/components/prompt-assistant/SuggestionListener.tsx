@@ -109,7 +109,7 @@ export function SuggestionListener() {
   // Function to apply the suggestion directly
   const applySuggestion = async (columnId: number, cardId: number, suggestion: PromptSuggestion) => {
     try {
-      console.log(`[SuggestionListener] Applying suggestion for column ${columnId}`);
+      console.log(`[SuggestionListener] Applying suggestion for column ${columnId}, card ${cardId}`);
       
       // Fetch current column data first
       const columnResponse = await fetch(`/api/columns/${columnId}`);
@@ -119,8 +119,8 @@ export function SuggestionListener() {
       
       const column = await columnResponse.json();
       
-      // Apply the suggestion by updating the column
-      const response = await fetch(`/api/columns/${columnId}/assign-gpt`, {
+      // Step 1: Apply the suggestion by updating the column
+      const updateResponse = await fetch(`/api/columns/${columnId}/assign-gpt`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -134,8 +134,22 @@ export function SuggestionListener() {
         }),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to apply suggestion');
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update column with suggestion');
+      }
+      
+      // Step 2: Explicitly mark the suggestion as accepted in the cache
+      const acceptResponse = await fetch(`/api/columns/${columnId}/prompt-suggestion/accept/${cardId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!acceptResponse.ok) {
+        console.warn(`[SuggestionListener] Warning: Updated column but failed to mark suggestion as accepted: ${acceptResponse.status}`);
+      } else {
+        console.log(`[SuggestionListener] Successfully marked suggestion as accepted in cache`);
       }
       
       // Invalidate cache (the same way assign-gpt-modal does)
