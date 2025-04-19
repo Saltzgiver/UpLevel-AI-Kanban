@@ -6,11 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Column } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown, Plus, ListChecks, XCircle } from "lucide-react";
+import { Check, X, Sparkles, AlertCircle, Diff, Loader2, ArrowRight, ThumbsUp, ThumbsDown, Plus, ListChecks, XCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useModalContext } from "@/contexts/ModalContext";
 
 interface AssignGPTModalProps {
@@ -179,6 +184,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [suggestion, setSuggestion] = useState<{ rationale: string; suggestedInstructions: string } | null>(null);
   const [showingSuggestion, setShowingSuggestion] = useState<boolean>(!!isSuggestionMode);
+  const [isRationaleExpanded, setIsRationaleExpanded] = useState<boolean>(false);
   const { toast } = useToast();
   const modalRef = useRef<HTMLDivElement>(null);
   const { modalState } = useModalContext();
@@ -533,19 +539,35 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         
         {/* Suggestion explanation if in suggestion mode */}
         {modalState.isSuggestionMode && suggestion && (
-          <div className="px-6 py-3 bg-amber-50 border-y border-amber-100">
-            <div className="flex items-start mb-2">
-              <Diff className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-amber-700">
-                The system has analyzed past interactions with this column and suggests improvements to the prompt.
-              </p>
-            </div>
+          <Collapsible 
+            open={isRationaleExpanded} 
+            onOpenChange={setIsRationaleExpanded} 
+            className="px-6 py-3 bg-amber-50 border-y border-amber-100"
+          >
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between cursor-pointer hover:bg-amber-100/50 rounded px-2 py-1 -mx-2 transition-colors">
+                <div className="flex items-start">
+                  <Diff className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm font-medium text-amber-700">
+                    AI Prompt Improvement Suggestion
+                  </p>
+                </div>
+                <div className="flex items-center text-amber-600">
+                  {isRationaleExpanded ? 
+                    <ChevronUp className="h-4 w-4" /> : 
+                    <ChevronDown className="h-4 w-4" />
+                  }
+                </div>
+              </div>
+            </CollapsibleTrigger>
             
-            <div className="bg-white border border-amber-200 rounded-md p-3 mb-3">
-              <h3 className="text-sm font-medium text-amber-800 mb-2">Suggestion Rationale:</h3>
-              <p className="text-sm text-gray-700">{suggestion.rationale}</p>
-            </div>
-          </div>
+            <CollapsibleContent className="mt-2">
+              <div className="bg-white border border-amber-200 rounded-md p-3 mb-1">
+                <h3 className="text-sm font-medium text-amber-800 mb-2">Suggestion Rationale:</h3>
+                <p className="text-sm text-gray-700">{suggestion.rationale}</p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
         
         {/* Scrollable content */}
