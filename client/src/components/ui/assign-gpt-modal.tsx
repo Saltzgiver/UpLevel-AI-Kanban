@@ -419,6 +419,53 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     }
   };
 
+  // Additional handlers for suggestion mode
+  const handleApplySuggestion = () => {
+    if (suggestion && suggestion.suggestedInstructions) {
+      // Update the instructions with the suggestion
+      const suggestedText = suggestion.suggestedInstructions;
+      setInstructions(suggestedText);
+      
+      // Parse the suggestion into dos and donts
+      const { dos, donts } = parseInstructions(suggestedText);
+      setDosList(dos);
+      setDontsList(donts);
+      
+      toast({
+        title: "Suggestion Applied",
+        description: "The suggested instructions have been applied",
+        variant: "default"
+      });
+      
+      // Hide the comparison view
+      setShowingSuggestion(false);
+    }
+  };
+  
+  const handleDismissSuggestion = () => {
+    // If this is specifically from the suggestion modal, respond to dismissal
+    if (modalState.isSuggestionMode) {
+      // Send API request to record suggestion dismissal
+      const recordDismissal = async () => {
+        try {
+          if (modalState.columnId && modalState.cardId) {
+            await apiRequest("DELETE", `/api/columns/${modalState.columnId}/prompt-suggestion/${modalState.cardId}`);
+          }
+        } catch (error) {
+          console.error("Failed to record suggestion dismissal:", error);
+        }
+      };
+      
+      recordDismissal();
+      
+      // Close the modal when in suggestion mode
+      onClose();
+    } else {
+      // Just hide the suggestion in normal edit mode
+      setShowingSuggestion(false);
+    }
+  };
+  
   // useEffect for click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -438,115 +485,32 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
 
   if (!isOpen) return null;
 
-  // Additional handlers for suggestion mode
-  const handleApplySuggestion = () => {
-    if (suggestion && suggestion.suggestedInstructions) {
-      // Update the instructions with the suggestion
-      const suggestedText = suggestion.suggestedInstructions;
-      setInstructions(suggestedText);
-      
-      // Parse the suggestion into dos and donts
-      const { dos, donts } = parseInstructions(suggestedText);
-      setDosList(dos);
-      setDontsList(donts);
-      
-      // Hide the suggestion UI
-      setShowingSuggestion(false);
-      
-      // Show a toast notification
-      toast({
-        title: "Suggestion Applied",
-        description: "The suggested instructions have been applied. Review and save to confirm."
-      });
-      
-      // Remove suggestion from UI but keep modal open for review/editing
-      setSuggestion(null);
-      
-      // Also clear suggestion from server based on whether we're in card-specific mode
-      if (modalState.columnId) {
-        const endpoint = modalState.cardId 
-          ? `/api/columns/${modalState.columnId}/prompt-suggestion/accept/${modalState.cardId}`
-          : `/api/columns/${modalState.columnId}/prompt-suggestion/accept`;
-        
-        apiRequest("POST", endpoint, {})
-          .catch(error => {
-            console.error("Failed to accept suggestion:", error);
-          });
-      }
-    }
-  };
-  
-  const handleDismissSuggestion = () => {
-    // Close the modal
-    onClose();
-    
-    // Clear suggestion from server based on whether we're in card-specific mode
-    if (modalState.columnId) {
-      const endpoint = modalState.cardId 
-        ? `/api/columns/${modalState.columnId}/prompt-suggestion/reject/${modalState.cardId}`
-        : `/api/columns/${modalState.columnId}/prompt-suggestion/reject`;
-      
-      apiRequest("POST", endpoint, {})
-        .catch(error => {
-          console.error("Failed to reject suggestion:", error);
-        });
-    }
-    
-    // Show toast to confirm
-    toast({
-      title: "Suggestion Rejected",
-      description: "The prompt suggestion has been dismissed."
-    });
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div 
         ref={modalRef}
-        className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
+        className="bg-white rounded-lg shadow-xl flex flex-col w-full max-w-3xl max-h-[90vh] overflow-hidden"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-          <div className="flex-1 flex items-center">
-            <div className="flex items-center gap-2">
-              {modalState.isSuggestionMode ? (
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-              ) : (
-                <Sparkles className="h-5 w-5 text-primary" />
-              )}
-              <h2 className="text-xl font-medium">
-                {modalState.isSuggestionMode ? "Review Prompt Suggestion" : "Configure AI Assistant"}
-              </h2>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
-            <X className="h-5 w-5" />
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-xl font-semibold">
+            {modalState.isSuggestionMode ? "AI Prompt Suggestion" : "Configure AI Assistant"}
+          </h2>
+          <Button 
+            variant="ghost" 
+            className="h-8 w-8 p-0" 
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
           </Button>
         </div>
         
-        {/* Column name display */}
-        <div className="px-6 pt-4 pb-2 flex items-center">
-          <Badge variant="outline" className="text-sm py-1 bg-gray-50">
-            {column.name}
-          </Badge>
-          
-          {modalState.isSuggestionMode && suggestion && (
-            <Badge variant="outline" className="text-sm ml-2 py-1 bg-amber-50 text-amber-700 border-amber-200">
-              Suggestion Available
-            </Badge>
-          )}
-        </div>
-        
-        {/* Suggestion explanation if in suggestion mode */}
+        {/* Suggestion banner - appears at the top when in suggestion mode */}
         {modalState.isSuggestionMode && suggestion && (
-          <Collapsible 
-            open={isRationaleExpanded} 
-            onOpenChange={setIsRationaleExpanded} 
-            className="px-6 py-3 bg-amber-50 border-y border-amber-100"
-          >
-            <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between cursor-pointer hover:bg-amber-100/50 rounded px-2 py-1 -mx-2 transition-colors">
-                <div className="flex items-start">
+          <Collapsible defaultOpen={false} open={isRationaleExpanded} onOpenChange={setIsRationaleExpanded}>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex justify-between items-center px-6 py-3 bg-amber-50 border-b border-amber-200">
+                <div className="flex items-center">
                   <Diff className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
                   <p className="text-sm font-medium text-amber-700">
                     AI Prompt Improvement Suggestion
@@ -573,7 +537,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-2">
           <div className="space-y-5">
-            {/* Instructions */}
+            {/* Suggestions section - Moved above the assistant name */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
@@ -590,8 +554,6 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               </div>
               
               {/* Side-by-Side Prompt Suggestion View */}
-              {/* Debugging output for rendering conditions */}
-              {/* {modalState.isSuggestionMode && <div>{JSON.stringify({suggestion: !!suggestion, showing: showingSuggestion})}</div>} */}
               {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
                 <div className="mb-4">
                   <div className="mb-2">
@@ -651,7 +613,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               ) : null}
             </div>
             
-            {/* Name */}
+            {/* Name - Now appears after the suggestions section */}
             <div className="space-y-2">
               <Label htmlFor="gpt-name" className="text-sm font-medium">Assistant Name</Label>
               <Input 
@@ -666,11 +628,9 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
               </p>
             </div>
             
-            {/* Instructions */}
+            {/* Structured Do's and Don'ts Lists */}
             <div className="space-y-2">
               <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
-              
-              {/* Structured Do's and Don'ts Lists */}
               <div className="grid grid-cols-1 gap-4 mt-3">
                 {/* Do's Section */}
                 <div className="border rounded-md p-3 bg-green-50 border-green-200">
