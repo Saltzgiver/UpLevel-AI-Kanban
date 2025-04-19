@@ -10,6 +10,7 @@ import fs from "fs";
 import path from "path";
 import { fromZodError } from "zod-validation-error";
 import { storeSuggestion, checkSuggestion, clearSuggestion, dumpCache } from "./suggestionCache";
+import { registerMcpRoutes } from "./routes/mcp";
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
@@ -213,6 +214,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating column:", error);
       return res.status(500).json({ message: "Error updating column" });
+    }
+  });
+  
+  // Enable/disable MCP for a column
+  app.patch("/api/columns/:id/mcp-settings", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { mcpEnabled, mcpAutoTrigger } = req.body;
+      
+      // Get the column first to check if it exists
+      const existingColumn = await storage.getColumnById(id);
+      if (!existingColumn) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Update only the MCP-related settings
+      const column = await storage.updateColumn(id, { 
+        mcpEnabled: mcpEnabled !== undefined ? mcpEnabled : existingColumn.mcpEnabled,
+        mcpAutoTrigger: mcpAutoTrigger !== undefined ? mcpAutoTrigger : existingColumn.mcpAutoTrigger
+      });
+      
+      return res.json({
+        message: "MCP settings updated successfully",
+        column
+      });
+    } catch (error) {
+      console.error("Error updating MCP settings:", error);
+      return res.status(500).json({ message: "Error updating MCP settings" });
     }
   });
   
@@ -1497,6 +1526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register Zapier MCP routes
+  registerMcpRoutes(app);
+  
   const httpServer = createServer(app);
 
   return httpServer;

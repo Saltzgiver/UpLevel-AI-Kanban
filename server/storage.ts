@@ -12,10 +12,13 @@ import {
   users,
   chats,
   attachments,
-  settings
+  settings,
+  columnMcpActions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
+import { log } from "./vite";
+import { runMcpAction, logMcpRequest } from "./mcpClient";
 import { alias } from "drizzle-orm/pg-core";
 
 // Interface for storage operations
@@ -496,6 +499,107 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(cards.id, cardId))
         .returning();
+    }
+    
+    try {
+      // Check if destination column has MCP enabled
+      const destinationColumn = await this.getColumnById(destinationColumnId);
+      
+      if (destinationColumn?.mcpEnabled === true) {
+        log(`Card ${cardId} moved to MCP-enabled column ${destinationColumnId}`);
+        
+        // If auto-trigger is enabled or not specified (default to true for backward compatibility)
+        if (destinationColumn.mcpAutoTrigger !== false) {
+          log(`MCP auto-trigger is enabled for column ${destinationColumnId}, processing card ${cardId}`);
+          
+          // Get the MCP actions associated with this column
+          const mcpActions = await db
+            .select()
+            .from(columnMcpActions)
+            .where(and(
+              eq(columnMcpActions.columnId, destinationColumnId),
+              eq(columnMcpActions.enabled, true)
+            ));
+          
+          if (mcpActions.length > 0) {
+            // Get the full card details with attachments
+            const fullCard = await this.getCardById(cardId);
+            
+            if (fullCard) {
+              // Track whether the card has been published
+              let cardUpdated = false;
+              
+              for (const action of mcpActions) {
+                try {
+                  log(`Running MCP action ${action.actionName} for card ${cardId}`);
+                  
+                  // Prepare the card data for MCP
+                  const mcpData = {
+                    title: fullCard.title,
+                    body: fullCard.description || '',
+                    // Include additional metadata
+                    column: destinationColumn.name,
+                    column_id: destinationColumnId,
+                    board_id: destinationColumn.boardId,
+                    url: `${process.env.APP_URL || ''}/card/${cardId}`,
+                    // Add attachments if they exist
+                    attachments: fullCard.attachments?.map(att => ({
+                      filename: att.filename,
+                      type: att.fileType,
+                      content: att.content || ''
+                    })) || []
+                  };
+                  
+                  // Run the MCP action
+                  const result = await runMcpAction(
+                    action.actionName, 
+                    mcpData,
+                    cardId,
+                    destinationColumnId
+                  );
+                  
+                  log(`MCP action ${action.actionName} completed for card ${cardId} with result: ${JSON.stringify(result)}`);
+                  
+                  // Update the card with external ID if provided in the result
+                  if (result?.external_id && !cardUpdated) {
+                    await db
+                      .update(cards)
+                      .set({ 
+                        externalId: result.external_id.toString(),
+                        externalUrl: result.external_url || null
+                      })
+                      .where(eq(cards.id, cardId));
+                    
+                    cardUpdated = true;
+                  }
+                } catch (mcpError: any) {
+                  log(`Error running MCP action ${action.actionName} for card ${cardId}: ${mcpError.message}`);
+                  
+                  // Log the error
+                  await logMcpRequest(
+                    'outbound',
+                    `/api/mcp/actions/${action.actionName}`,
+                    null,
+                    JSON.stringify(fullCard),
+                    JSON.stringify({ error: mcpError.message }),
+                    500,
+                    0,
+                    mcpError.message,
+                    cardId,
+                    destinationColumnId
+                  );
+                }
+              }
+            }
+          } else {
+            log(`No MCP actions enabled for column ${destinationColumnId}`);
+          }
+        } else {
+          log(`MCP auto-trigger is disabled for column ${destinationColumnId}, skipping automatic processing`);
+        }
+      }
+    } catch (error: any) {
+      log(`Error in MCP processing for card ${cardId}: ${error.message}`);
     }
     
     return updatedCard;

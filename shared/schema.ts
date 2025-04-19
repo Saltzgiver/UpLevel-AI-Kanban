@@ -52,6 +52,9 @@ export const columns = pgTable("columns", {
   gptColor: text("gpt_color"),
   autoTrigger: boolean("auto_trigger").default(true),
   apiKey: text("api_key"),
+  // Zapier MCP related fields
+  mcpEnabled: boolean("mcp_enabled").default(false),
+  mcpAutoTrigger: boolean("mcp_auto_trigger").default(true),
 });
 
 export const insertColumnSchema = createInsertSchema(columns).pick({
@@ -64,6 +67,8 @@ export const insertColumnSchema = createInsertSchema(columns).pick({
   gptColor: true,
   autoTrigger: true,
   apiKey: true,
+  mcpEnabled: true,
+  mcpAutoTrigger: true,
 });
 
 // Cards table
@@ -78,6 +83,10 @@ export const cards = pgTable("cards", {
   processing: boolean("processing").default(false),
   includeChatHistory: boolean("include_chat_history").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Zapier MCP related fields
+  externalId: text("external_id"), // For tracking external event IDs (idempotency)
+  externalUrl: text("external_url"), // URL to the external content (e.g., LinkedIn post)
+  source: text("source"), // To identify which integration created the card
 });
 
 export const insertCardSchema = createInsertSchema(cards).pick({
@@ -86,6 +95,9 @@ export const insertCardSchema = createInsertSchema(cards).pick({
   columnId: true,
   order: true,
   includeChatHistory: true,
+  externalId: true,
+  externalUrl: true,
+  source: true,
 });
 
 // Chats table for GPT conversations
@@ -151,3 +163,76 @@ export type InsertChat = z.infer<typeof insertChatSchema>;
 
 export type Attachment = typeof attachments.$inferSelect;
 export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
+
+// Zapier MCP integration tables
+
+// MCP Actions table for storing actions that can be triggered from lanes
+export const mcpActions = pgTable("mcp_actions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMcpActionSchema = createInsertSchema(mcpActions).pick({
+  name: true,
+  displayName: true,
+  description: true,
+  enabled: true,
+});
+
+// Lane to MCP action mapping
+export const columnMcpActions = pgTable("column_mcp_actions", {
+  id: serial("id").primaryKey(),
+  columnId: integer("column_id").references(() => columns.id).notNull(),
+  actionName: text("action_name").notNull(),
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertColumnMcpActionSchema = createInsertSchema(columnMcpActions).pick({
+  columnId: true,
+  actionName: true,
+  enabled: true,
+});
+
+// Table for tracking MCP requests and responses for debugging
+export const mcpLogs = pgTable("mcp_logs", {
+  id: serial("id").primaryKey(),
+  direction: text("direction").notNull(), // 'inbound' or 'outbound'
+  endpoint: text("endpoint").notNull(),
+  requestId: text("request_id"),
+  requestBody: text("request_body"),
+  responseBody: text("response_body"),
+  statusCode: integer("status_code"),
+  duration: integer("duration"),
+  error: text("error"),
+  cardId: integer("card_id").references(() => cards.id),
+  columnId: integer("column_id").references(() => columns.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMcpLogSchema = createInsertSchema(mcpLogs).pick({
+  direction: true,
+  endpoint: true,
+  requestId: true,
+  requestBody: true,
+  responseBody: true,
+  statusCode: true,
+  duration: true,
+  error: true,
+  cardId: true,
+  columnId: true,
+});
+
+// Type definitions for MCP tables
+export type McpAction = typeof mcpActions.$inferSelect;
+export type InsertMcpAction = z.infer<typeof insertMcpActionSchema>;
+
+export type ColumnMcpAction = typeof columnMcpActions.$inferSelect;
+export type InsertColumnMcpAction = z.infer<typeof insertColumnMcpActionSchema>;
+
+export type McpLog = typeof mcpLogs.$inferSelect;
+export type InsertMcpLog = z.infer<typeof insertMcpLogSchema>;
