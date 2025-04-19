@@ -6,7 +6,7 @@
  * doesn't properly start the application.
  */
 
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 console.log('🚀 Starting application cleanup and restart...');
 
