@@ -84,6 +84,8 @@ const getNextColorInRotation = async (): Promise<string> => {
 export interface BulletPoint {
   id: string;
   text: string;
+  category?: 'do' | 'dont' | 'general';
+  excluded?: boolean;
 }
 
 // Parse instructions text to extract do's and don'ts
@@ -107,7 +109,8 @@ export const parseInstructions = (text: string): { dos: BulletPoint[]; donts: Bu
         .filter(line => line.startsWith('- ') || line.startsWith('• '))
         .map(line => ({
           id: crypto.randomUUID(),
-          text: line.replace(/^[-•]\s+/, '')
+          text: line.replace(/^[-•]\s+/, ''),
+          category: 'do' as const
         }));
       result.dos = doPoints;
     }
@@ -119,7 +122,8 @@ export const parseInstructions = (text: string): { dos: BulletPoint[]; donts: Bu
         .filter(line => line.startsWith('- ') || line.startsWith('• '))
         .map(line => ({
           id: crypto.randomUUID(),
-          text: line.replace(/^[-•]\s+/, '')
+          text: line.replace(/^[-•]\s+/, ''),
+          category: 'dont' as const
         }));
       result.donts = dontPoints;
     }
@@ -132,7 +136,8 @@ export const parseInstructions = (text: string): { dos: BulletPoint[]; donts: Bu
         id: crypto.randomUUID(),
         text: line.startsWith('- ') || line.startsWith('• ') 
           ? line.replace(/^[-•]\s+/, '') 
-          : line
+          : line,
+        category: 'do' as const
       }));
     result.dos = lines;
   }
@@ -362,7 +367,8 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     if (newDoPoint.trim()) {
       const newPoint: BulletPoint = {
         id: crypto.randomUUID(),
-        text: newDoPoint.trim()
+        text: newDoPoint.trim(),
+        category: 'do'
       };
       setDosList([...dosList, newPoint]);
       setNewDoPoint('');
@@ -471,7 +477,10 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   // Additional handlers for suggestion mode
   const handleApplySuggestion = () => {
     if (suggestion && suggestion.suggestedInstructions) {
-      // Update the instructions with the suggestion
+      // Apply all suggestions (equivalent to the old behavior)
+      // This is kept for backward compatibility, but the new UI uses the inline handler
+      
+      // Update the instructions with the complete suggestion
       const suggestedText = suggestion.suggestedInstructions;
       setInstructions(suggestedText);
       
@@ -485,12 +494,13 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
       
       // Show a toast notification
       toast({
-        title: "Suggestion Applied",
-        description: "The suggested instructions have been applied. Review and save to confirm."
+        title: "All Suggestions Applied",
+        description: "All suggested instructions have been applied. Review and save to confirm."
       });
       
       // Remove suggestion from UI but keep modal open for review/editing
       setSuggestion(null);
+      setParsedSuggestions([]);
       
       // Also clear suggestion from server based on whether we're in card-specific mode
       if (modalState.columnId) {
@@ -618,21 +628,22 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                 )}
               </div>
               
-              {/* Side-by-Side Prompt Suggestion View */}
+              {/* Individually Selectable Suggestion Items */}
               {/* Debugging output for rendering conditions */}
               {/* {modalState.isSuggestionMode && <div>{JSON.stringify({suggestion: !!suggestion, showing: showingSuggestion})}</div>} */}
               {modalState.isSuggestionMode && suggestion && showingSuggestion ? (
                 <div className="mb-4">
                   <div className="mb-2">
-                    <h3 className="text-sm font-medium mb-2">Compare Instructions</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Left side: Current Instructions */}
+                    <h3 className="text-sm font-medium mb-2">Suggested Improvements</h3>
+                    
+                    <div className="space-y-3">
+                      {/* Current Instructions View */}
                       <div className="space-y-1">
                         <Label className="text-xs font-medium text-gray-500">Current Instructions</Label>
-                        <div className="border border-gray-200 rounded-md bg-gray-50 p-3">
+                        <div className="border border-gray-200 rounded-md bg-gray-50 p-3 mb-3">
                           <Textarea
                             placeholder="No current instructions"
-                            rows={6}
+                            rows={3}
                             value={column.gptInstructions || ""}
                             readOnly
                             className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm"
@@ -640,21 +651,80 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                         </div>
                       </div>
                       
-                      {/* Right side: Suggested Instructions */}
+                      {/* Suggested Items - Selectable */}
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-amber-600">Suggested Instructions</Label>
-                        <div className="border border-amber-200 rounded-md bg-amber-50 p-3">
-                          <Textarea
-                            placeholder="Suggested instructions..."
-                            rows={6}
-                            value={suggestion.suggestedInstructions}
-                            readOnly
-                            className="w-full resize-none border-0 bg-transparent p-0 focus-visible:ring-0 text-sm text-amber-900"
-                          />
+                        <div className="flex justify-between items-center">
+                          <Label className="text-xs font-medium text-amber-600">Suggestions (Select which to apply)</Label>
+                          <Badge variant="outline" className="text-xs py-0.5 px-2">
+                            {parsedSuggestions.length} item{parsedSuggestions.length !== 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                        
+                        <div className="border border-amber-200 rounded-md">
+                          <div className="divide-y divide-amber-100">
+                            {parsedSuggestions.map((item) => (
+                              <div 
+                                key={item.id} 
+                                className="flex items-start p-3 bg-amber-50 hover:bg-amber-100 group gap-2"
+                              >
+                                <Checkbox 
+                                  id={`suggestion-${item.id}`}
+                                  className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600" 
+                                  defaultChecked={true}
+                                  onCheckedChange={(checked) => {
+                                    // Mark item for inclusion/exclusion
+                                    setParsedSuggestions(prev => 
+                                      prev.map(s => s.id === item.id ? {...s, excluded: !checked} : s)
+                                    );
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <label 
+                                    htmlFor={`suggestion-${item.id}`}
+                                    className="text-sm text-amber-900 block cursor-pointer"
+                                  >
+                                    {item.text}
+                                  </label>
+                                  {item.category && item.category !== 'general' && (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`mt-1 text-xs py-0.5 px-1.5 ${
+                                        item.category === 'do' 
+                                          ? 'bg-green-50 text-green-700 border-green-200' 
+                                          : 'bg-red-50 text-red-700 border-red-200'
+                                      }`}
+                                    >
+                                      {item.category === 'do' ? 'Do' : "Don't"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                                  onClick={() => {
+                                    // Remove item completely
+                                    setParsedSuggestions(prev => 
+                                      prev.filter(s => s.id !== item.id)
+                                    );
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            
+                            {parsedSuggestions.length === 0 && (
+                              <div className="p-3 text-sm text-gray-500 text-center">
+                                No suggestions available or all have been removed
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-between mt-2">
+                    <div className="flex justify-between mt-4">
                       <Button
                         variant="outline"
                         size="sm"
@@ -662,16 +732,90 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
                         onClick={handleDismissSuggestion}
                       >
                         <ThumbsDown className="mr-2 h-4 w-4" />
-                        Reject Suggestion
+                        Reject All
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
-                        onClick={handleApplySuggestion}
+                        onClick={() => {
+                          // Apply only the selected suggestions
+                          const selectedSuggestions = parsedSuggestions
+                            .filter(item => !item.excluded)
+                            .map(item => item.text);
+                            
+                          if (selectedSuggestions.length === 0) {
+                            toast({
+                              title: "No Suggestions Selected",
+                              description: "Please select at least one suggestion to apply",
+                            });
+                            return;
+                          }
+                          
+                          // Format selected suggestions based on categories
+                          const doItems = parsedSuggestions
+                            .filter(item => !item.excluded && item.category === 'do')
+                            .map(item => ({ id: item.id, text: item.text }));
+                            
+                          const dontItems = parsedSuggestions
+                            .filter(item => !item.excluded && item.category === 'dont')
+                            .map(item => ({ id: item.id, text: item.text }));
+                            
+                          const generalItems = parsedSuggestions
+                            .filter(item => !item.excluded && (!item.category || item.category === 'general'))
+                            .map(item => ({ id: item.id, text: item.text }));
+                            
+                          // Prioritize categorized items, fall back to general if needed
+                          if (doItems.length > 0 || dontItems.length > 0) {
+                            // We have categorized items, use them
+                            setDosList(prev => [...prev, ...doItems]);
+                            setDontsList(prev => [...prev, ...dontItems]);
+                            
+                            // Update instructions using the formatInstructions function
+                            const updatedInstructions = formatInstructions(
+                              [...dosList, ...doItems], 
+                              [...dontsList, ...dontItems]
+                            );
+                            setInstructions(updatedInstructions);
+                          } else {
+                            // Just use general items as a block of text
+                            const newText = generalItems.map(item => item.text).join('\n');
+                            setInstructions(prev => prev ? `${prev}\n\n${newText}` : newText);
+                            
+                            // Also parse this text to update the do's and don'ts lists
+                            const { dos, donts } = parseInstructions(newText);
+                            setDosList(prev => [...prev, ...dos]);
+                            setDontsList(prev => [...prev, ...donts]);
+                          }
+                          
+                          // Hide the suggestion UI
+                          setShowingSuggestion(false);
+                          
+                          // Show a success toast
+                          toast({
+                            title: "Selected Suggestions Applied",
+                            description: `${selectedSuggestions.length} suggestion(s) have been applied. Review and save to confirm.`,
+                          });
+                          
+                          // Clear suggestion from UI
+                          setSuggestion(null);
+                          setParsedSuggestions([]);
+                          
+                          // Mark suggestion as handled on the server
+                          if (modalState.columnId) {
+                            const endpoint = modalState.cardId 
+                              ? `/api/columns/${modalState.columnId}/prompt-suggestion/accept/${modalState.cardId}`
+                              : `/api/columns/${modalState.columnId}/prompt-suggestion/accept`;
+                            
+                            apiRequest("POST", endpoint, {})
+                              .catch(error => {
+                                console.error("Failed to accept suggestion:", error);
+                              });
+                          }
+                        }}
                       >
                         <ThumbsUp className="mr-2 h-4 w-4" />
-                        Use Suggestion
+                        Apply Selected
                       </Button>
                     </div>
                   </div>
