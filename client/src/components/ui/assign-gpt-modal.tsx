@@ -539,9 +539,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
           <div className="space-y-5">
             {/* Suggestions section - Moved above the assistant name */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="instructions" className="text-sm font-medium">Instructions <span className="text-red-500">*</span></Label>
-                
+              <div className="flex justify-end items-center">
                 {modalState.isSuggestionMode && suggestion && (
                   <Badge
                     variant="outline"
