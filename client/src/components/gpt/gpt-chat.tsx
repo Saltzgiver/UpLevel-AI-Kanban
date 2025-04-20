@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { TypingIndicator } from "./typing-indicator";
+import { CSVViewer } from "./csv-viewer";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,38 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+
+// Helper function to detect if content is likely CSV
+const isCSVContent = (content: string): boolean => {
+  if (!content || typeof content !== 'string') return false;
+  
+  // Trim the content to work with clean data
+  const trimmedContent = content.trim();
+  
+  // Check if this is obviously a CSV file (at least a couple of lines with consistent delimiters)
+  const lines = trimmedContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+  
+  // Need at least 2 lines for a proper CSV (header + data)
+  if (lines.length < 2) return false;
+  
+  // Check for consistent delimiters
+  const checkDelimiter = (delimiter: string): boolean => {
+    const firstLineCount = (lines[0].match(new RegExp(delimiter, 'g')) || []).length;
+    const secondLineCount = (lines[1].match(new RegExp(delimiter, 'g')) || []).length;
+    
+    // For a CSV, both lines should have the same number of delimiters
+    // And there should be at least one delimiter
+    return firstLineCount > 0 && firstLineCount === secondLineCount;
+  };
+  
+  // Check different delimiter types commonly used in CSV data
+  const isCommaDelimited = checkDelimiter(',');
+  const isSemicolonDelimited = checkDelimiter(';');
+  const isTabDelimited = checkDelimiter('\\t');
+  
+  // If any of the delimiter checks pass, this is likely CSV data
+  return isCommaDelimited || isSemicolonDelimited || isTabDelimited;
+};
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
