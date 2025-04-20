@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { TypingIndicator } from "./typing-indicator";
-import { CSVViewer } from "./csv-viewer";
-import { memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,149 +17,6 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-
-// Helper function to detect if content is likely CSV
-const isCSVContent = (content: string): boolean => {
-  if (!content || typeof content !== 'string') {
-    console.log("CSV-DEBUG: Content is not a string or is empty");
-    return false;
-  }
-  
-  // Trim the content to work with clean data
-  const trimmedContent = content.trim();
-  console.log("CSV-DEBUG: Examining content:", trimmedContent.substring(0, 50) + (trimmedContent.length > 50 ? "..." : ""));
-  
-  // First check if it's explicitly marked as CSV in filename or attributes
-  if (trimmedContent.includes('language-csv') || 
-      trimmedContent.match(/file:.*\.csv/i) || 
-      trimmedContent.includes('text/csv') ||
-      trimmedContent.match(/\.csv\b/i)) {
-    console.log("CSV-DEBUG: Content is explicitly marked as CSV");
-    return true;
-  }
-
-  // Exclude content that looks like prose text
-  // If the content has common sentence punctuation, capital letters, and typical prose patterns, it's likely not CSV
-  const hasTypicalSentencePatterns = trimmedContent.match(/[.!?]\s+[A-Z]/g);
-  const hasQuotes = (trimmedContent.match(/"/g) || []).length > 3;
-  const hasCommonWords = /\b(the|and|is|in|to|of|that|this|for|with|was|you|your)\b/i.test(trimmedContent);
-  const hasPunctuationVariety = /[.!?;:"]/.test(trimmedContent);
-  
-  // If the text has typical sentence patterns and common words, it's probably prose, not CSV
-  if ((hasTypicalSentencePatterns || (hasCommonWords && hasPunctuationVariety)) && !hasQuotes) {
-    console.log("CSV-DEBUG: Content appears to be prose text, not CSV");
-    return false;
-  }
-  
-  // Strong positive indicators that this is NOT CSV but regular text
-  if (trimmedContent.length > 100 && 
-      trimmedContent.split(/\s+/).length > 30 && 
-      !trimmedContent.includes(',')) {
-    console.log("CSV-DEBUG: Long text without commas, not CSV");
-    return false;
-  }
-  
-  // Check if this looks like CSV data (at least a couple of lines with consistent delimiters)
-  const lines = trimmedContent.split(/\r?\n/).filter(line => line.trim().length > 0);
-  console.log(`CSV-DEBUG: Found ${lines.length} lines in content`);
-  
-  // For single line data, check if it has multiple commas or semicolons (likely a header line)
-  // But also check that it doesn't look like a regular sentence
-  if (lines.length === 1) {
-    const commaCount = (lines[0].match(/,/g) || []).length;
-    const semicolonCount = (lines[0].match(/;/g) || []).length;
-    const tabCount = (lines[0].match(/\t/g) || []).length;
-    
-    // More strict requirements for single line - must have more delimiters
-    // and they should be evenly distributed (roughly)
-    const hasManyDelimiters = (commaCount >= 4 || semicolonCount >= 4 || tabCount >= 4);
-    
-    // Check if the line is too long to be a CSV header
-    const isTooLong = lines[0].length > 150 && !hasQuotes;
-    
-    // For commas, check if they're roughly evenly distributed which is more likely in CSV
-    let isEvenlyDistributed = false;
-    if (commaCount >= 3) {
-      const positions = [];
-      let pos = -1;
-      while ((pos = lines[0].indexOf(',', pos + 1)) !== -1) {
-        positions.push(pos);
-      }
-      
-      // Calculate average distances between commas
-      let sumDist = 0;
-      let diffCount = 0;
-      for (let i = 1; i < positions.length; i++) {
-        sumDist += (positions[i] - positions[i-1]);
-        diffCount++;
-      }
-      
-      const avgDist = sumDist / diffCount;
-      
-      // Check if the distribution is relatively consistent (standard deviation is less than half the average)
-      let sumVariance = 0;
-      for (let i = 1; i < positions.length; i++) {
-        const diff = positions[i] - positions[i-1];
-        sumVariance += Math.pow(diff - avgDist, 2);
-      }
-      
-      const stdDev = Math.sqrt(sumVariance / diffCount);
-      isEvenlyDistributed = stdDev < (avgDist / 2);
-    }
-    
-    const result = hasManyDelimiters && !isTooLong && (isEvenlyDistributed || hasQuotes);
-    console.log(`CSV-DEBUG: Single line with multiple delimiters check: ${result ? "YES" : "NO"}`);
-    return result;
-  }
-  
-  // For multi-line data, check for consistent delimiters
-  if (lines.length >= 2) {
-    // Log the first two lines for debugging
-    console.log("CSV-DEBUG: First line:", lines[0].substring(0, 50) + (lines[0].length > 50 ? "..." : ""));
-    console.log("CSV-DEBUG: Second line:", lines[1].substring(0, 50) + (lines[1].length > 50 ? "..." : ""));
-    
-    // Check for consistent delimiters
-    const checkDelimiter = (delimiter: string): boolean => {
-      const counts = lines.slice(0, Math.min(5, lines.length)).map(line => 
-        (line.match(new RegExp(delimiter, 'g')) || []).length
-      );
-      
-      // For a CSV, lines should have the same number of delimiters
-      // And there should be at least one delimiter
-      const firstCount = counts[0];
-      const consistent = firstCount > 0 && counts.every(count => count === firstCount);
-      
-      const result = consistent && firstCount >= 2; // Require at least 2 delimiters (3 columns)
-      console.log(`CSV-DEBUG: Delimiter '${delimiter}' check - ${counts.join(', ')} - Match: ${result}`);
-      return result;
-    };
-    
-    // Check different delimiter types commonly used in CSV data
-    const isCommaDelimited = checkDelimiter(',');
-    const isSemicolonDelimited = checkDelimiter(';');
-    const isTabDelimited = checkDelimiter('\\t');
-    
-    // If any of the delimiter checks pass, this is likely CSV data
-    const isCSV = isCommaDelimited || isSemicolonDelimited || isTabDelimited;
-    console.log(`CSV-DEBUG: Final detection result: ${isCSV ? "IS CSV" : "NOT CSV"}`);
-    return isCSV;
-  }
-  
-  return false;
-};
-
-// Enhanced CSV table wrapper component
-const CSVTable = memo(({ content }: { content: string }) => {
-  console.log("CSV-DEBUG: Rendering CSVTable component with content length:", content?.length || 0);
-  
-  // Handle empty content
-  if (!content) {
-    return <div className="text-gray-400 text-xs italic">Empty CSV content</div>;
-  }
-  
-  // Use the CSVViewer component in compact mode for rendering in chat messages
-  return <CSVViewer content={content} maxRows={10} compact={true} />;
-});
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -251,21 +106,6 @@ function ImageDialogModal({
   );
 }
 
-// Create a global markdown cache to prevent jitter during re-renders
-const markdownCache = new Map<string, React.ReactNode>();
-
-// Function to generate a stable hash for cache keys
-function stableHash(content: string): string {
-  let hash = 0;
-  if (content.length === 0) return hash.toString();
-  for (let i = 0; i < content.length; i++) {
-    const char = content.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return hash.toString(36);
-}
-
 export function GPTChat({ 
   cardId, 
   chats, 
@@ -284,9 +124,6 @@ export function GPTChat({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  
-  // Create a markdown rendering cache at the component level
-  const contentCacheRef = useRef<Map<string, React.ReactNode>>(new Map());
 
   // Track if user has manually scrolled up
   const [userHasScrolled, setUserHasScrolled] = useState(false);
@@ -890,20 +727,13 @@ export function GPTChat({
               <div className="flex items-start ml-2">
                 
                 {/* Message bubble - user messages keep light blue bubble, GPT messages vary based on rules */}
-                <div 
-                  className={`text-sm ${
-                    chat.role === 'assistant' 
-                      ? isLastAIMessage
-                        ? `${getColorStyle(chat.gptColor || gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(chat.gptColor || gptColor).border} py-2 px-3 shadow-sm` 
-                        : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
-                      : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
-                  }`}
-                  style={{
-                    minHeight: chat.role === 'assistant' ? '50px' : 'auto',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    transition: 'none', /* Disable any transitions that could cause jittering */
-                  }}>
+                <div className={`text-sm ${
+                  chat.role === 'assistant' 
+                    ? isLastAIMessage
+                      ? `${getColorStyle(chat.gptColor || gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(chat.gptColor || gptColor).border} py-2 px-3 shadow-sm` 
+                      : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
+                    : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
+                }`}>
 
                   {isLastAIMessage && (finalOutput || (!isProcessing && chat.content)) && (
                     <div className="flex items-center mb-2 mt-1">
@@ -913,158 +743,27 @@ export function GPTChat({
                   {chat.role === 'assistant' ? (
                     <>
                       {/* Debug elements removed to fix mobile rendering issues */}
-                      {/* Use cached ReactMarkdown to prevent jittering during re-renders */}
-                      {(() => {
-                        // Create a stable cache key using message content
-                        const cacheKey = `md-${stableHash(chat.content || '')}`;
-                        
-                        // Check if we already have a cached render for this content
-                        if (!markdownCache.has(cacheKey)) {
-                          console.log(`CSV-DEBUG: Creating new cached markdown for key ${cacheKey}`);
-                          
-                          // Create a new cached render if none exists
-                          markdownCache.set(cacheKey, 
-                            <ReactMarkdown
-                              key={cacheKey}
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                          p: memo((props: any) => {
-                            // Check if paragraph might contain CSV content directly
-                            if (props.children && typeof props.children === 'string' && 
-                                (props.className === 'csv' || isCSVContent(props.children))) {
-                              console.log("CSV-DEBUG: Found CSV content in paragraph");
-                              // Create a stable key based on a hash of the content to ensure component identity is preserved
-                              const contentHash = props.children.length > 0 ? 
-                                props.children.substring(0, 50).replace(/\s+/g, '') : 'empty';
-                              return (
-                                <div className="csv-stable-wrapper" key={`csv-${contentHash}`} data-stable-csv="true">
-                                  <CSVTable content={props.children} />
-                                </div>
-                              );
-                            }
-                            
-                            // Default paragraph rendering
-                            return <p className="my-0.5 text-xs" {...props} />;
-                          }),
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
                           ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
                           ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
                           li: (props: any) => <li className="my-0 text-xs" {...props} />,
                           a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
                           blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
-                          code: memo((props: any) => {
-                            console.log("CSV-DEBUG: Code component rendering with:", {
-                              inline: props.inline,
-                              className: props.className,
-                              hasChildren: !!props.children,
-                              childType: typeof props.children,
-                              childLength: typeof props.children === 'string' ? props.children.length : 'N/A'
-                            });
-                            
-                            // Special handling for code blocks with CSV content or marked as CSV
-                            if (!props.inline && props.children && typeof props.children === 'string') {
-                              // Directly check for CSV class or filename indicators
-                              const isCSVByClass = props.className === 'language-csv' || 
-                                                  (props.className && props.className.includes('csv'));
-                              
-                              if (isCSVByClass || isCSVContent(props.children)) {
-                                console.log("CSV-DEBUG: Rendering code block as CSV table");
-                                // Create a stable key based on a hash of the content to ensure component identity is preserved
-                                const contentHash = props.children.length > 0 ? 
-                                  props.children.substring(0, 50).replace(/\s+/g, '') : 'empty';
-                                return (
-                                  <div className="csv-stable-wrapper" key={`csv-code-${contentHash}`} data-stable-csv="true">
-                                    <CSVTable content={props.children} />
-                                  </div>
-                                );
-                              }
-                            }
-                            
-                            return props.inline 
+                          code: (props: any) => 
+                            props.inline 
                               ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
-                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
-                          }),
-                          pre: memo((props: any) => {
-                            console.log("CSV-DEBUG: Pre component rendering with:", {
-                              hasChildren: !!props.children,
-                              childrenCount: props.children ? React.Children.count(props.children) : 0,
-                            });
-                            
-                            // First, let's check if there's any text content directly in the pre tag
-                            let textContent = '';
-                            if (React.Children.count(props.children) === 1) {
-                              const child = React.Children.toArray(props.children)[0];
-                              if (typeof child === 'string') {
-                                textContent = child;
-                              }
-                            }
-                            
-                            // If we have direct text content, check if it's CSV
-                            if (textContent && isCSVContent(textContent)) {
-                              console.log("CSV-DEBUG: Found CSV content directly in pre tag");
-                              // Create a stable key based on a hash of the content
-                              const contentHash = textContent.length > 0 ? 
-                                textContent.substring(0, 50).replace(/\s+/g, '') : 'empty';
-                              return (
-                                <div className="csv-stable-wrapper" key={`csv-pre-${contentHash}`} data-stable-csv="true">
-                                  <CSVTable content={textContent} />
-                                </div>
-                              );
-                            }
-                            
-                            // Otherwise, look for a code element
-                            const codeElement = React.Children.toArray(props.children).find(
-                              (child: any) => child && child.type === 'code'
-                            ) as React.ReactElement | undefined;
-                            
-                            if (codeElement) {
-                              console.log("CSV-DEBUG: Found code element in pre");
-                              
-                              // Extract the content from the code element
-                              const codeContent = codeElement.props?.children;
-                              
-                              // Check if it's string content that could be CSV
-                              if (typeof codeContent === 'string') {
-                                // Check if it's explicitly marked as CSV or looks like CSV
-                                const isCSVByClass = codeElement.props.className === 'language-csv' || 
-                                                    (codeElement.props.className && codeElement.props.className.includes('csv'));
-                                
-                                if (isCSVByClass || isCSVContent(codeContent)) {
-                                  console.log("CSV-DEBUG: Rendering pre>code as CSV table");
-                                  // Create a stable key to prevent unmounting during render
-                                  const contentHash = codeContent.length > 0 ? 
-                                    codeContent.substring(0, 50).replace(/\s+/g, '') : 'empty-code';
-                                  return (
-                                    <div className="csv-stable-wrapper" key={`csv-pre-code-${contentHash}`} data-stable-csv="true">
-                                      <CSVTable content={codeContent} />
-                                    </div>
-                                  );
-                                }
-                              }
-                            }
-                            
-                            // Default pre element rendering
-                            return <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
-                          }),
+                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                          pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
                           strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                           em: (props: any) => <em className="italic text-xs" {...props} />,
                           img: (props: any) => renderImageInMarkdown(props.src, props.alt),
-                          // Add table rendering
-                          table: (props: any) => <div className="overflow-x-auto my-1"><table className="min-w-full text-xs border-collapse" {...props} /></div>,
-                          thead: (props: any) => <thead className="bg-gray-50" {...props} />,
-                          tbody: (props: any) => <tbody className="divide-y divide-gray-200" {...props} />,
-                          tr: (props: any) => <tr className="hover:bg-gray-50" {...props} />,
-                          th: (props: any) => <th className="px-2 py-1 text-left font-medium text-gray-700 uppercase text-[10px]" {...props} />,
-                          td: (props: any) => <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-600" {...props} />,
                         }}
                       >
                         {chat.content}
                       </ReactMarkdown>
-                          )
-                        }
-                        
-                        // Return the cached version
-                        return markdownCache.get(cacheKey);
-                      })()}
                     </>
                   ) : (
                     <div>{chat.content}</div>
