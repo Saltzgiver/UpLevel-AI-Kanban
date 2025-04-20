@@ -756,6 +756,9 @@ export function GPTChat({
             </div>
           );
         })}
+        
+        {/* Add typing indicator at the end of all messages */}
+        {processingIndicator}
       </div>
     );
   };
