@@ -1538,12 +1538,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Store active connections by card ID
   const connections: Map<number, Set<WebSocket>> = new Map();
 
+  // Log WebSocket server status
+  console.log('WebSocket server initialized at path: /ws');
+
   wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    console.log('✅ WebSocket client connected');
     let subscribedCardId: number | null = null;
     
     ws.on('message', (message) => {
       try {
+        console.log('📩 WebSocket message received:', message.toString());
         const data = JSON.parse(message.toString());
         
         // Handle subscription to a specific card
@@ -1556,12 +1560,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             connections.set(cardId, new Set());
           }
           connections.get(cardId)?.add(ws);
-          console.log(`Client subscribed to card ${cardId}`);
+          console.log(`✅ Client subscribed to card ${cardId}`);
+          
+          // Send a confirmation message back
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'subscribed',
+              cardId: cardId,
+              message: 'Successfully subscribed to card updates'
+            }));
+          }
         }
         
         // Handle AI typing indicator updates
         if (data.type === 'typing' && data.cardId) {
           const cardId = parseInt(data.cardId);
+          console.log(`📢 Broadcasting typing status for card ${cardId}:`, data);
           broadcastToCard(cardId, {
             type: 'typing',
             cardId: cardId,
@@ -1590,17 +1604,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Broadcast AI typing status to all clients subscribed to a card
   function broadcastToCard(cardId: number, data: any) {
-    if (!connections.has(cardId)) return;
+    if (!connections.has(cardId)) {
+      console.log(`ℹ️ No active connections for card ${cardId}`);
+      return;
+    }
     
     const cardConnections = connections.get(cardId);
-    if (!cardConnections) return;
+    if (!cardConnections || cardConnections.size === 0) {
+      console.log(`ℹ️ No clients subscribed to card ${cardId}`);
+      return;
+    }
+    
+    console.log(`📣 Broadcasting to ${cardConnections.size} clients for card ${cardId}`);
     
     const message = JSON.stringify(data);
+    let sentCount = 0;
+    
     cardConnections.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
+        try {
+          client.send(message);
+          sentCount++;
+        } catch (error) {
+          console.error(`❌ Error sending message to client:`, error);
+        }
+      } else {
+        console.log(`⚠️ Client connection not open, state: ${client.readyState}`);
       }
     });
+    
+    console.log(`✅ Message sent to ${sentCount}/${cardConnections.size} clients`);
   }
   
   // Function to notify clients about AI typing status

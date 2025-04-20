@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 
 // Define interface for WebSocket payload
@@ -20,60 +20,130 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
   const [aiName, setAiName] = useState<string>('AI');
   const [aiColor, setAiColor] = useState<string | null>(null);
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  
+  // Add a ref to track connection status - preventing unnecessary reconnections
+  const isConnectedRef = useRef(false);
+  // Add a ref to track connection attempts to avoid excessive reconnections
+  const connectionAttemptsRef = useRef(0);
 
-  useEffect(() => {
+  // Function to establish WebSocket connection
+  const connectWebSocket = () => {
+    // Only connect if not already connected
+    if (isConnectedRef.current) return;
+    
+    // Limit reconnection attempts
+    if (connectionAttemptsRef.current > 3) {
+      console.warn('[TypingIndicator] Too many connection attempts, giving up');
+      return;
+    }
+    
+    connectionAttemptsRef.current += 1;
+    
     // Initialize WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     
-    console.log(`[TypingIndicator] Connecting to WebSocket at ${wsUrl}`);
-    const newSocket = new WebSocket(wsUrl);
+    console.log(`🔌 [TypingIndicator] Connecting to WebSocket at ${wsUrl}`);
+    
+    try {
+      const newSocket = new WebSocket(wsUrl);
 
-    newSocket.onopen = () => {
-      console.log(`[TypingIndicator] WebSocket connection established`);
-      // Subscribe to updates for this card
-      newSocket.send(JSON.stringify({
-        type: 'subscribe',
-        cardId: cardId,
-      }));
-    };
-
-    newSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      newSocket.onopen = () => {
+        console.log(`✅ [TypingIndicator] WebSocket connection established`);
+        isConnectedRef.current = true;
         
-        if (data.type === 'typing' && data.cardId === cardId) {
-          console.log(`[TypingIndicator] Received typing update:`, data);
-          setIsTyping(data.isTyping);
-          
-          if (data.gptName) {
-            setAiName(data.gptName);
-          }
-          
-          if (data.gptColor) {
-            setAiColor(data.gptColor);
-          }
+        // Reset reconnection counter on successful connection
+        connectionAttemptsRef.current = 0;
+        
+        // Subscribe to updates for this card
+        try {
+          const subscribePayload = JSON.stringify({
+            type: 'subscribe',
+            cardId: cardId,
+          });
+          console.log(`📤 [TypingIndicator] Sending subscription:`, subscribePayload);
+          newSocket.send(subscribePayload);
+        } catch (sendError) {
+          console.error(`❌ [TypingIndicator] Error sending subscription:`, sendError);
         }
-      } catch (error) {
-        console.error(`[TypingIndicator] Error processing WebSocket message:`, error);
-      }
-    };
+      };
 
-    newSocket.onerror = (error) => {
-      console.error(`[TypingIndicator] WebSocket error:`, error);
-    };
+      newSocket.onmessage = (event) => {
+        try {
+          console.log(`📥 [TypingIndicator] Received message:`, event.data);
+          const data = JSON.parse(event.data);
+          
+          // Handle subscription confirmation
+          if (data.type === 'subscribed' && data.cardId === cardId) {
+            console.log(`✅ [TypingIndicator] Successfully subscribed to card ${cardId}`);
+          }
+          
+          // Handle typing status updates
+          if (data.type === 'typing' && data.cardId === cardId) {
+            console.log(`🔄 [TypingIndicator] Received typing update:`, data);
+            setIsTyping(data.isTyping);
+            
+            if (data.gptName) {
+              setAiName(data.gptName);
+            }
+            
+            if (data.gptColor) {
+              setAiColor(data.gptColor);
+            }
+          }
+        } catch (error) {
+          console.error(`❌ [TypingIndicator] Error processing WebSocket message:`, error);
+        }
+      };
 
-    newSocket.onclose = () => {
-      console.log(`[TypingIndicator] WebSocket connection closed`);
-    };
+      newSocket.onerror = (error) => {
+        console.error(`❌ [TypingIndicator] WebSocket error:`, error);
+        isConnectedRef.current = false;
+      };
 
-    setSocket(newSocket);
+      newSocket.onclose = (event) => {
+        console.log(`🔌 [TypingIndicator] WebSocket connection closed`, event.code, event.reason);
+        isConnectedRef.current = false;
+        
+        // Attempt to reconnect after a short delay if the connection was lost unexpectedly
+        if (event.code !== 1000) { // 1000 is normal closure
+          console.log('🔄 [TypingIndicator] Attempting to reconnect...');
+          setTimeout(connectWebSocket, 3000);
+        }
+      };
+
+      setSocket(newSocket);
+    } catch (error) {
+      console.error(`❌ [TypingIndicator] Error creating WebSocket:`, error);
+      isConnectedRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    // Establish WebSocket connection when component mounts
+    connectWebSocket();
+    
+    // For testing purposes, manually trigger typing status after a short delay
+    const testTimer = setTimeout(() => {
+      console.log(`🧪 [TypingIndicator] Testing indicator by setting to true`);
+      setIsTyping(true);
+      setAiName('Test AI');
+      setAiColor('Mint');
+      
+      // Clear test after a few seconds
+      setTimeout(() => {
+        setIsTyping(false);
+      }, 5000);
+    }, 1000);
 
     // Clean up WebSocket connection when component unmounts
     return () => {
-      if (newSocket.readyState === WebSocket.OPEN) {
-        newSocket.close();
+      clearTimeout(testTimer);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log(`🔌 [TypingIndicator] Closing WebSocket connection`);
+        socket.close();
       }
+      isConnectedRef.current = false;
     };
   }, [cardId]);
 
