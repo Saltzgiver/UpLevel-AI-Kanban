@@ -234,6 +234,19 @@ export function GPTChat({
       setForceShowTyping(false);
     }
   }, [isProcessing, cardId]);
+  
+  // Monitor changes to the chats array - this ensures the typing indicator disappears
+  // immediately when a new message is received, even if the processing state is delayed
+  const chatsLength = useRef(chats.length);
+  useEffect(() => {
+    // If the number of chats has increased (a new message arrived)
+    if (chats.length > chatsLength.current) {
+      console.log(`📨 [GPTChat:${cardId}] New message received - hiding typing indicator immediately`);
+      setForceShowTyping(false);
+    }
+    // Update the reference to the current length
+    chatsLength.current = chats.length;
+  }, [chats, cardId]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
