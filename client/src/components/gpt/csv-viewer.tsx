@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useRef, memo, useMemo } from "react";
 import { Table } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -6,17 +6,41 @@ interface CSVViewerProps {
   content: string;
   maxRows?: number;
   compact?: boolean;
+  stableId?: string; // Added stable identifier to prevent remounting
 }
 
 // Global render counter for debugging
 let renderCount = 0;
 // Track content hash to avoid unnecessary re-renders
 const contentCache = new Map<string, string[][]>();
+// Map to persist component IDs across re-renders
+const stableIdMap = new Map<string, string>();
+
+// Generate a simple hash of the content for caching and stable IDs
+const getContentHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(36);
+};
 
 // Memoized CSV Viewer to prevent re-renders when content hasn't changed
-const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100, compact = true }: CSVViewerProps) {
-  // Track component renders
-  const componentId = useRef(`csv-viewer-${Math.random().toString(36).substring(2, 9)}`);
+const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100, compact = true, stableId }: CSVViewerProps) {
+  // Create or retrieve a stable component ID
+  // This is critical - we don't want new random IDs on each render
+  const contentHashForId = useMemo(() => getContentHash(content.substring(0, 100)), [content.substring(0, 100)]);
+  const idKey = stableId || contentHashForId;
+  
+  // Get existing component ID or create a new one
+  if (!stableIdMap.has(idKey)) {
+    stableIdMap.set(idKey, `csv-viewer-${Math.random().toString(36).substring(2, 9)}`);
+    console.log(`CSV-JITTER-DEBUG: Created new stable ID for content hash ${idKey}`);
+  }
+  
+  const componentId = useRef(stableIdMap.get(idKey)!);
   renderCount++;
   console.log(`CSV-JITTER-DEBUG: [${componentId.current}] Render #${renderCount}`);
   
@@ -26,16 +50,7 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
   const [dimensions, setDimensions] = useState({ rows: 0, cols: 0 });
   const lastUpdateTime = useRef(Date.now());
   
-  // Generate a simple hash of the content for caching
-  const getContentHash = (str: string): string => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash.toString(36);
-  };
+  // We define getContentHash at module level, this function shouldn't be redeclared inside component
   
   useEffect(() => {
     if (!content) return;
@@ -291,21 +306,33 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
   );
 });
 
-// Export a memo-wrapped version to ensure stability during parent re-renders
-export function CSVViewer(props: CSVViewerProps) {
-  // Log CSVViewer render to track jitter
-  console.log("CSV-JITTER-DEBUG: [Main Wrapper] Rendering CSVViewer");
+// Create a fully memo-wrapped component to ensure complete stability
+const StableCSVWrapper = memo(({ content, ...rest }: CSVViewerProps) => {
+  // Generate a stable ID based on content
+  const contentHashForId = useMemo(() => getContentHash(content.substring(0, 100)), [content.substring(0, 100)]);
   
-  // Return memoized component - this won't change references during typing
+  // Log CSVViewer render to track jitter
+  console.log("CSV-JITTER-DEBUG: [Stable Wrapper] Rendering with content hash", contentHashForId);
+  
   return (
-    <div className="csv-viewer-stable-container" style={{ 
-      // Lock dimensions to prevent jitter
-      width: "100%", 
-      position: "relative",
-      // Set explicit min-height to prevent layout shifts when content loads
-      minHeight: props.compact ? "50px" : "200px" 
-    }}>
-      <MemoizedCSVViewer {...props} />
+    <div 
+      className="csv-viewer-stable-container" 
+      style={{ 
+        width: "100%", 
+        position: "relative",
+        minHeight: rest.compact !== false ? "50px" : "200px",
+      }}
+      data-csv-wrapper="true"
+      data-content-hash={contentHashForId}
+    >
+      <MemoizedCSVViewer content={content} stableId={contentHashForId} {...rest} />
     </div>
   );
-}
+});
+
+// Export a stable version that won't change references during re-renders
+export const CSVViewer = memo(function CSVViewerExport(props: CSVViewerProps) {
+  // Log exporter render to track jitter
+  console.log("CSV-JITTER-DEBUG: [Main Wrapper] Rendering CSVViewer");
+  return <StableCSVWrapper {...props} />;
+});

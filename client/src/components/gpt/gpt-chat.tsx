@@ -889,6 +889,7 @@ export function GPTChat({
                     <>
                       {/* Debug elements removed to fix mobile rendering issues */}
                       <ReactMarkdown
+                        key={`md-${index}-${chat.content?.length || 0}`} // Stable key for entire markdown component
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: memo((props: any) => {
