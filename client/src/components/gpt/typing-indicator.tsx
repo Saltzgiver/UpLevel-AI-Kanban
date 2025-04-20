@@ -80,12 +80,46 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
   // Don't render anything if not typing
   if (!isTyping) return null;
 
+  // Handle color styles based on AI color
+  let bgColor = "bg-gray-100";
+  let textColor = "text-gray-600";
+  
+  if (aiColor) {
+    // Apply color classes based on the AI's color theme if available
+    switch (aiColor) {
+      case "Peach":
+        bgColor = "bg-[#FEE9D7]";
+        textColor = "text-[#E25B3D]";
+        break;
+      case "Sky":
+        bgColor = "bg-[#E1F2FE]";
+        textColor = "text-[#2E7EC9]";
+        break;
+      case "Lavender":
+        bgColor = "bg-[#F6E6FF]";
+        textColor = "text-[#C235D1]";
+        break;
+      case "Mint":
+        bgColor = "bg-[#DDFFE7]";
+        textColor = "text-[#1A9E5E]";
+        break;
+      case "Aqua":
+        bgColor = "bg-[#E0F9FF]";
+        textColor = "text-[#3992B0]";
+        break;
+    }
+  }
+
   return (
     <div className={`flex items-start ${className}`}>
-      <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg max-w-[80%]">
-        <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-        <span className="text-sm text-gray-600">
-          {aiName} is typing...
+      <div className={`flex items-center gap-2 p-2.5 ${bgColor} rounded-lg max-w-[80%] animate-pulse-gentle transition-opacity`}>
+        <div className="relative h-4 w-10">
+          <span className={`absolute left-0 w-2 h-2 rounded-full bg-current animate-typing1 opacity-70 ${textColor}`}></span>
+          <span className={`absolute left-3 w-2 h-2 rounded-full bg-current animate-typing2 opacity-70 ${textColor}`}></span>
+          <span className={`absolute left-6 w-2 h-2 rounded-full bg-current animate-typing3 opacity-70 ${textColor}`}></span>
+        </div>
+        <span className={`text-sm font-medium ${textColor}`}>
+          {aiName} is thinking...
         </span>
       </div>
     </div>

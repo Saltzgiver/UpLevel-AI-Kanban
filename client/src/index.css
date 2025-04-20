@@ -22,6 +22,45 @@
   }
 }
 
+/* AI Typing indicator animations */
+@keyframes typing1 {
+  0%, 100% { transform: translateY(0px); opacity: 0.4; }
+  50% { transform: translateY(-2px); opacity: 1; }
+}
+
+@keyframes typing2 {
+  0%, 100% { transform: translateY(0px); opacity: 0.4; }
+  50% { transform: translateY(-2px); opacity: 1; }
+}
+
+@keyframes typing3 {
+  0%, 100% { transform: translateY(0px); opacity: 0.4; }
+  50% { transform: translateY(-2px); opacity: 1; }
+}
+
+@keyframes pulseGentle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@layer utilities {
+  .animate-typing1 {
+    animation: typing1 1s infinite ease-in-out;
+  }
+
+  .animate-typing2 {
+    animation: typing2 1s infinite ease-in-out 0.2s;
+  }
+
+  .animate-typing3 {
+    animation: typing3 1s infinite ease-in-out 0.4s;
+  }
+
+  .animate-pulse-gentle {
+    animation: pulseGentle 3s infinite ease-in-out;
+  }
+}
+
 @layer components {
   /* Board container styling */
   .board-container {
