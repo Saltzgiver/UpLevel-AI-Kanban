@@ -122,6 +122,7 @@ export function GPTChat({
   // Add forceShowTyping state at this level so it can be shared between handleSendMessage and the ChatMessages
   const [forceShowTyping, setForceShowTyping] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Track if user has manually scrolled up
@@ -296,6 +297,11 @@ export function GPTChat({
             top: chatContainerRef.current.scrollHeight,
             behavior: 'smooth'
           });
+        }
+        
+        // Keep focus on the input field after sending the message
+        if (inputRef.current) {
+          inputRef.current.focus();
         }
       }, 100);
       
@@ -797,6 +803,7 @@ export function GPTChat({
       {/* Chat Input - Always at the bottom */}
       <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
         <Input
+          ref={inputRef}
           type="text"
           placeholder={gptName === "Comments" 
             ? "Add a comment..." 
@@ -850,6 +857,7 @@ export function GPTChat({
         {/* Chat Input - Fixed at the bottom */}
         <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
           <Input
+            ref={inputRef}
             type="text"
             placeholder={gptName === "Comments" 
               ? "Add a comment..." 
