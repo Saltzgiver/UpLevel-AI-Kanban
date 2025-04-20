@@ -251,6 +251,21 @@ function ImageDialogModal({
   );
 }
 
+// Create a global markdown cache to prevent jitter during re-renders
+const markdownCache = new Map<string, React.ReactNode>();
+
+// Function to generate a stable hash for cache keys
+function stableHash(content: string): string {
+  let hash = 0;
+  if (content.length === 0) return hash.toString();
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(36);
+}
+
 export function GPTChat({ 
   cardId, 
   chats, 
@@ -269,6 +284,9 @@ export function GPTChat({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  // Create a markdown rendering cache at the component level
+  const contentCacheRef = useRef<Map<string, React.ReactNode>>(new Map());
 
   // Track if user has manually scrolled up
   const [userHasScrolled, setUserHasScrolled] = useState(false);
@@ -888,10 +906,21 @@ export function GPTChat({
                   {chat.role === 'assistant' ? (
                     <>
                       {/* Debug elements removed to fix mobile rendering issues */}
-                      <ReactMarkdown
-                        key={`md-${index}-${chat.content?.length || 0}`} // Stable key for entire markdown component
-                        remarkPlugins={[remarkGfm]}
-                        components={{
+                      {/* Use cached ReactMarkdown to prevent jittering during re-renders */}
+                      {(() => {
+                        // Create a stable cache key using message content
+                        const cacheKey = `md-${stableHash(chat.content || '')}`;
+                        
+                        // Check if we already have a cached render for this content
+                        if (!markdownCache.has(cacheKey)) {
+                          console.log(`CSV-DEBUG: Creating new cached markdown for key ${cacheKey}`);
+                          
+                          // Create a new cached render if none exists
+                          markdownCache.set(cacheKey, 
+                            <ReactMarkdown
+                              key={cacheKey}
+                              remarkPlugins={[remarkGfm]}
+                              components={{
                           p: memo((props: any) => {
                             // Check if paragraph might contain CSV content directly
                             if (props.children && typeof props.children === 'string' && 
@@ -1023,6 +1052,12 @@ export function GPTChat({
                       >
                         {chat.content}
                       </ReactMarkdown>
+                          )
+                        }
+                        
+                        // Return the cached version
+                        return markdownCache.get(cacheKey);
+                      })()}
                     </>
                   ) : (
                     <div>{chat.content}</div>
