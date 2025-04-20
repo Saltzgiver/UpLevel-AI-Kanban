@@ -93,12 +93,14 @@ export function CSVViewer({ content, maxRows = 100, compact = true }: CSVViewerP
   if (compact) {
     // If there's very little data, render an even more compact view
     const isSmallDataset = rows.length <= 3 && parsedData[0]?.length <= 3;
-    const maxHeight = isSmallDataset ? 'auto' : 'max-h-[180px]';
     
     return (
-      <div className="overflow-hidden rounded border border-gray-200 my-2 bg-white shadow-sm">
-        <div className="flex items-center justify-between bg-gray-50 px-2 py-0.5 border-b border-gray-100 text-[10px]">
-          <div className="text-gray-500 font-medium">CSV Table</div>
+      <div className="w-full overflow-hidden rounded border border-gray-200 my-2 bg-white shadow-sm" 
+           style={{ maxWidth: '100%', minHeight: isSmallDataset ? 'auto' : '100px' }}>
+        <div className="flex items-center justify-between bg-gray-50 px-2 py-1 border-b border-gray-100 text-[10px]">
+          <div className="text-gray-500 font-medium">
+            CSV Data {rows.length > 0 && `(${rows.length} rows)`}
+          </div>
           {!isSmallDataset && (
             <label className="flex items-center space-x-1">
               <input 
@@ -112,21 +114,29 @@ export function CSVViewer({ content, maxRows = 100, compact = true }: CSVViewerP
           )}
         </div>
         
-        <div className={maxHeight}>
-          <div className="w-full overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead className="sticky top-0 bg-white border-b border-gray-100">
+        {/* Fixed height container to prevent layout shifts */}
+        <div className="w-full" style={{ 
+            height: isSmallDataset ? 'auto' : '150px',
+            maxHeight: '200px', 
+            overflow: 'hidden'
+          }}>
+          <div className="w-full h-full overflow-auto" style={{ maxWidth: '100%' }}>
+            <table className="w-full table-fixed border-collapse text-left" style={{ minWidth: '250px' }}>
+              <thead className="sticky top-0 z-10 bg-white border-b border-gray-100">
                 <tr>
                   {hasHeaders ? (
                     headers.map((header, index) => (
-                      <th key={index} className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap">
+                      <th key={index} 
+                          className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis"
+                          style={{ maxWidth: '120px' }}>
                         {header}
                       </th>
                     ))
                   ) : (
                     // Generate column index headers if no headers detected
                     Array.from({ length: parsedData[0]?.length || 0 }).map((_, index) => (
-                      <th key={index} className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap">
+                      <th key={index} className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap"
+                          style={{ width: '80px' }}>
                         {index + 1}
                       </th>
                     ))
@@ -142,7 +152,8 @@ export function CSVViewer({ content, maxRows = 100, compact = true }: CSVViewerP
                     {row.map((cell, cellIndex) => (
                       <td 
                         key={cellIndex} 
-                        className="px-2 py-1 text-[9px] text-gray-700 whitespace-nowrap"
+                        className="px-2 py-1 text-[9px] text-gray-700 overflow-hidden text-ellipsis"
+                        style={{ maxWidth: '120px' }}
                         title={cell} // Show full content on hover
                       >
                         {cell}

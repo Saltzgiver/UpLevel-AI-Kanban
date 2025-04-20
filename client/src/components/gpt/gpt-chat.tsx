@@ -41,12 +41,23 @@ const isCSVContent = (content: string): boolean => {
   }
 
   // Exclude content that looks like prose text
-  // If the content has common sentence punctuation and few commas, it's likely not CSV
-  const hasSentencePunctuation = trimmedContent.match(/[.!?]\s+[A-Z]/g);
+  // If the content has common sentence punctuation, capital letters, and typical prose patterns, it's likely not CSV
+  const hasTypicalSentencePatterns = trimmedContent.match(/[.!?]\s+[A-Z]/g);
   const hasQuotes = (trimmedContent.match(/"/g) || []).length > 3;
+  const hasCommonWords = /\b(the|and|is|in|to|of|that|this|for|with|was|you|your)\b/i.test(trimmedContent);
+  const hasPunctuationVariety = /[.!?;:"]/.test(trimmedContent);
   
-  if (hasSentencePunctuation && !hasQuotes) {
+  // If the text has typical sentence patterns and common words, it's probably prose, not CSV
+  if ((hasTypicalSentencePatterns || (hasCommonWords && hasPunctuationVariety)) && !hasQuotes) {
     console.log("CSV-DEBUG: Content appears to be prose text, not CSV");
+    return false;
+  }
+  
+  // Strong positive indicators that this is NOT CSV but regular text
+  if (trimmedContent.length > 100 && 
+      trimmedContent.split(/\s+/).length > 30 && 
+      !trimmedContent.includes(',')) {
+    console.log("CSV-DEBUG: Long text without commas, not CSV");
     return false;
   }
   
