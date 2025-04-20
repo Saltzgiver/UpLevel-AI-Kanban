@@ -301,10 +301,44 @@ export function GPTChat({
       .filter(item => item.chat.role === 'assistant')
       .pop()?.index;
     
+    // Debug logging for processing state
+    useEffect(() => {
+      console.log(`🔍 [GPTChat:${cardId}] isProcessing changed to: ${isProcessing}`);
+      console.log(`🔍 [GPTChat:${cardId}] finalOutput exists: ${!!finalOutput}`);
+      console.log(`🔍 [GPTChat:${cardId}] embedded: ${!!embedded}`);
+    }, [isProcessing, finalOutput, embedded, cardId]);
+    
     // Determine if we should show processing indicator
     // Hide it if we already have a final output (could be stuck in processing state)
     // Also hide it when embedded in a card (per user requirement)
-    const shouldShowProcessing = isProcessing && !finalOutput && !embedded;
+    
+    // For testing purposes, always show the typing indicator when a chat message is submitted
+    // This will be replaced with the actual processing state later
+    const [forceShowTyping, setForceShowTyping] = useState(false);
+    
+    // On sending a message, show the typing indicator for 5 seconds 
+    useEffect(() => {
+      if (isSending) {
+        console.log(`✅ [GPTChat:${cardId}] Setting force show typing to true`);
+        setForceShowTyping(true);
+        const timeout = setTimeout(() => {
+          console.log(`❌ [GPTChat:${cardId}] Setting force show typing back to false`);
+          setForceShowTyping(false);
+        }, 8000); // Show for 8 seconds for testing
+        return () => clearTimeout(timeout);
+      }
+    }, [isSending, cardId]);
+    
+    // Original processing detection logic
+    const regularProcessingIndicator = isProcessing && !finalOutput && !embedded;
+    
+    // Combine both signals - show if either is true
+    const shouldShowProcessing = regularProcessingIndicator || forceShowTyping;
+    
+    // Log whether processing indicator should show
+    useEffect(() => {
+      console.log(`🔍 [GPTChat:${cardId}] shouldShowProcessing: ${shouldShowProcessing} (regular: ${regularProcessingIndicator}, forced: ${forceShowTyping})`);
+    }, [shouldShowProcessing, regularProcessingIndicator, forceShowTyping, cardId]);
     
     // Direct processing indicator implementation - simpler and more reliable
     const getBgColor = () => {
@@ -322,6 +356,15 @@ export function GPTChat({
       if (gptColor === 'Lavender') return 'text-[#C235D1]';
       return 'text-[#3992B0]'; // Default Aqua
     };
+    
+    // Log when the indicator renders or doesn't render
+    useEffect(() => {
+      if (shouldShowProcessing) {
+        console.log(`✅ [GPTChat:${cardId}] Processing indicator SHOULD be visible`);
+      } else {
+        console.log(`❌ [GPTChat:${cardId}] Processing indicator should NOT be visible`);
+      }
+    }, [shouldShowProcessing, cardId]);
     
     const processingIndicator = shouldShowProcessing && (
       <div className="flex items-start mb-3">

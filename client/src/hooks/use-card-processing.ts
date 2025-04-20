@@ -135,8 +135,9 @@ export function useCardProcessing(cardId: number, isDetailView: boolean = false)
   
   // Return a more comprehensive status object with processing state dependent on view context
   const result = {
-    // Only show processing indicator in card view (not in detail view) if not explicitly requested
-    isProcessing: isDetailView ? false : (data?.processing || false),
+    // Always show processing indicator for both card view and detail view
+    // This allows typing indicators to appear in both views
+    isProcessing: data?.processing || false,
     isProcessingTimedOut: processingTimeout,
     processingError: data?.processingError || null,
     gptOutput: data?.gptOutput || null,
