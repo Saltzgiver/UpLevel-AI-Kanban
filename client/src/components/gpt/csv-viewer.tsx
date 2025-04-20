@@ -166,9 +166,9 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
       <div className="w-full overflow-hidden rounded border border-gray-200 my-2 bg-white shadow-sm" 
            style={{ 
              width: '100%', 
-             minHeight: isSmallDataset ? '80px' : '120px', // Ensure minimum height for small datasets too
+             minHeight: isSmallDataset ? '120px' : '200px', // Increased minimum heights
              height: 'auto',
-             maxHeight: '250px',
+             maxHeight: '350px', // Increased max height
              contain: 'layout paint style', // Optimize rendering performance
              visibility: 'visible', // Ensure visibility
              position: 'relative', // Enable absolute positioning inside
@@ -204,9 +204,9 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
         <div 
           className="w-full" 
           style={{ 
-            height: isSmallDataset ? 'auto' : '150px',
-            minHeight: isSmallDataset ? '50px' : '120px',
-            maxHeight: '220px', 
+            height: isSmallDataset ? 'auto' : '220px',
+            minHeight: isSmallDataset ? '100px' : '180px',
+            maxHeight: '300px', 
             overflow: 'hidden',
             position: 'relative',
             contain: 'layout',
@@ -220,16 +220,16 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
                   {hasHeaders ? (
                     headers.map((header, index) => (
                       <th key={index} 
-                          className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis"
-                          style={{ maxWidth: '120px', width: `${Math.min(120, Math.max(60, 80 / Math.max(1, headers.length)))}px` }}>
+                          className="px-2 py-1 text-[12px] font-medium text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis"
+                          style={{ maxWidth: '150px', width: `${Math.min(150, Math.max(80, 100 / Math.max(1, headers.length)))}px` }}>
                         {header}
                       </th>
                     ))
                   ) : (
                     // Generate column index headers if no headers detected
                     Array.from({ length: parsedData[0]?.length || 0 }).map((_, index) => (
-                      <th key={index} className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap"
-                          style={{ width: `${Math.min(120, Math.max(60, 80 / Math.max(1, parsedData[0]?.length || 1)))}px` }}>
+                      <th key={index} className="px-2 py-1 text-[12px] font-medium text-gray-600 whitespace-nowrap"
+                          style={{ width: `${Math.min(150, Math.max(80, 100 / Math.max(1, parsedData[0]?.length || 1)))}px` }}>
                         {index + 1}
                       </th>
                     ))
@@ -245,8 +245,8 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
                     {row.map((cell, cellIndex) => (
                       <td 
                         key={cellIndex} 
-                        className="px-2 py-1 text-[9px] text-gray-700 overflow-hidden text-ellipsis"
-                        style={{ maxWidth: '120px' }}
+                        className="px-2 py-1 text-[12px] text-gray-700 overflow-hidden text-ellipsis"
+                        style={{ maxWidth: '150px' }}
                         title={cell} // Show full content on hover
                       >
                         {cell}
@@ -371,6 +371,34 @@ const StableCSVWrapper = memo(({ content, ...rest }: CSVViewerProps) => {
 export const CSVViewer = memo(function CSVViewerExport(props: CSVViewerProps) {
   // Log exporter render to track jitter
   console.log("CSV-JITTER-DEBUG: [Main Wrapper] Rendering CSVViewer");
+  
+  // Pre-render placeholder HTML to ensure stable dimensions during typing
+  const preRenderedHTML = useMemo(() => {
+    return (
+      <div 
+        className="csv-viewer-stable-container" 
+        style={{ 
+          width: "100%", 
+          minHeight: props.compact !== false ? "120px" : "200px",
+          height: props.compact !== false ? "auto" : "350px",
+          maxHeight: props.compact !== false ? "300px" : "350px",
+          border: "1px solid #e5e7eb",
+          borderRadius: "0.375rem",
+          overflow: "hidden",
+          marginTop: "0.5rem",
+          marginBottom: "0.5rem",
+          background: "white",
+          contain: "layout paint style",
+          transition: "none"
+        }}
+      >
+        <div style={{ padding: "0.75rem", fontSize: "12px", textAlign: "center", color: "#6b7280" }}>
+          {/* Pre-rendered placeholder to maintain space during transitions */}
+        </div>
+      </div>
+    );
+  }, [props.compact]);
+  
   return <StableCSVWrapper {...props} />;
 });
 
