@@ -890,13 +890,20 @@ export function GPTChat({
               <div className="flex items-start ml-2">
                 
                 {/* Message bubble - user messages keep light blue bubble, GPT messages vary based on rules */}
-                <div className={`text-sm ${
-                  chat.role === 'assistant' 
-                    ? isLastAIMessage
-                      ? `${getColorStyle(chat.gptColor || gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(chat.gptColor || gptColor).border} py-2 px-3 shadow-sm` 
-                      : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
-                    : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
-                }`}>
+                <div 
+                  className={`text-sm ${
+                    chat.role === 'assistant' 
+                      ? isLastAIMessage
+                        ? `${getColorStyle(chat.gptColor || gptColor).bg} text-gray-800 rounded-lg rounded-tl-none border-2 ${getColorStyle(chat.gptColor || gptColor).border} py-2 px-3 shadow-sm` 
+                        : 'text-gray-800 pl-0 pr-1'  // No bubble for non-latest GPT messages
+                      : 'bg-blue-50 text-gray-800 rounded-lg rounded-tr-none border border-blue-100 py-2 px-3 shadow-sm' // User bubble stays the same
+                  }`}
+                  style={{
+                    minHeight: chat.role === 'assistant' ? '50px' : 'auto',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    transition: 'none', /* Disable any transitions that could cause jittering */
+                  }}>
 
                   {isLastAIMessage && (finalOutput || (!isProcessing && chat.content)) && (
                     <div className="flex items-center mb-2 mt-1">

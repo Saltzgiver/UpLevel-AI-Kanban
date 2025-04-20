@@ -166,10 +166,24 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
       <div className="w-full overflow-hidden rounded border border-gray-200 my-2 bg-white shadow-sm" 
            style={{ 
              width: '100%', 
-             minHeight: isSmallDataset ? 'auto' : '100px',
-             maxHeight: isSmallDataset ? 'auto' : '200px'
+             minHeight: isSmallDataset ? '80px' : '120px', // Ensure minimum height for small datasets too
+             height: 'auto',
+             maxHeight: '250px',
+             contain: 'layout paint style', // Optimize rendering performance
+             visibility: 'visible', // Ensure visibility
+             position: 'relative', // Enable absolute positioning inside
+             boxSizing: 'border-box', // Include padding in dimensions
+             transform: 'translateZ(0)', // Hardware acceleration
+             backfaceVisibility: 'hidden', // Prevent rendering artifacts
+             willChange: 'transform', // Hint browser to optimize
+             transition: 'none' // Disable animations that could cause jitter
            }}>
-        <div className="flex items-center justify-between bg-gray-50 px-2 py-1 border-b border-gray-100 text-[10px]">
+        <div className="flex items-center justify-between bg-gray-50 px-2 py-1 border-b border-gray-100 text-[10px]"
+             style={{
+               height: '22px', // Fixed header height
+               position: 'relative',
+               zIndex: 1
+             }}>
           <div className="text-gray-500 font-medium">
             CSV Data {rows.length > 0 && `(${rows.length} rows)`}
           </div>
@@ -187,11 +201,18 @@ const MemoizedCSVViewer = memo(function CSVViewerInner({ content, maxRows = 100,
         </div>
         
         {/* Fixed height container to prevent layout shifts */}
-        <div className="w-full" style={{ 
+        <div 
+          className="w-full" 
+          style={{ 
             height: isSmallDataset ? 'auto' : '150px',
-            maxHeight: '200px', 
-            overflow: 'hidden'
-          }}>
+            minHeight: isSmallDataset ? '50px' : '120px',
+            maxHeight: '220px', 
+            overflow: 'hidden',
+            position: 'relative',
+            contain: 'layout',
+            visibility: 'visible'
+          }}
+        >
           <div className="w-full h-full overflow-auto" style={{ maxWidth: '100%' }}>
             <table className="w-full table-fixed border-collapse text-left" style={{ minWidth: '250px' }}>
               <thead className="sticky top-0 z-10 bg-white border-b border-gray-100">
@@ -320,12 +341,28 @@ const StableCSVWrapper = memo(({ content, ...rest }: CSVViewerProps) => {
       style={{ 
         width: "100%", 
         position: "relative",
-        minHeight: rest.compact !== false ? "50px" : "200px",
+        minHeight: rest.compact !== false ? "120px" : "200px", // Increased minimum height
+        height: rest.compact !== false ? "auto" : "350px",
+        maxHeight: rest.compact !== false ? "300px" : "350px",
+        overflow: "hidden", // Prevent layout shifts from content overflow
+        display: "block", // Force block layout
+        contain: "content", // Use CSS containment for better performance
+        transition: "none", // Disable transitions which cause jitter
       }}
       data-csv-wrapper="true"
       data-content-hash={contentHashForId}
     >
-      <MemoizedCSVViewer content={content} stableId={contentHashForId} {...rest} />
+      <div style={{ 
+        position: "absolute", 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0, 
+        overflow: "hidden",
+        willChange: "transform", // Hint to browser to optimize for transformation
+      }}>
+        <MemoizedCSVViewer content={content} stableId={contentHashForId} {...rest} />
+      </div>
     </div>
   );
 });
@@ -336,3 +373,91 @@ export const CSVViewer = memo(function CSVViewerExport(props: CSVViewerProps) {
   console.log("CSV-JITTER-DEBUG: [Main Wrapper] Rendering CSVViewer");
   return <StableCSVWrapper {...props} />;
 });
+
+// Define CSVTable function that's exported for use in the ReactMarkdown component
+export const CSVTable = memo(function CSVTable({ content }: { content: string }) {
+  console.log("CSV-DEBUG: Rendering CSVTable component with content length:", content.length);
+  return <CSVViewer content={content} compact={true} />;
+});
+
+// Helper function to determine if content looks like CSV
+export function isCSVContent(content: string): boolean {
+  console.log("CSV-DEBUG: Examining content:", content.substring(0, 50) + "...");
+  
+  // Check if it's marked explicitly as CSV
+  if (content.startsWith("```csv") || 
+      content.includes("file:") && (content.includes(".csv") || content.includes("text/csv"))) {
+    return true;
+  }
+  
+  // Empty or very short content is not CSV
+  if (!content || content.length < 5) {
+    console.log("CSV-DEBUG: Content too short to be CSV");
+    return false;
+  }
+  
+  // If it's obviously prose text with punctuation, not CSV
+  if (/^[A-Z][ \w]+[.!?]/.test(content)) {
+    console.log("CSV-DEBUG: Content appears to be prose text, not CSV");
+    return false;
+  }
+  
+  // Count lines and check for delimiters
+  const lines = content.split(/\r?\n/);
+  console.log("CSV-DEBUG: Found", lines.length, "lines in content");
+  
+  // Single line check - needs multiple delimiters to be considered CSV
+  if (lines.length === 1) {
+    const hasMultipleDelimiters = 
+      (lines[0].split(',').length > 2) || 
+      (lines[0].split(';').length > 2) || 
+      (lines[0].split('\t').length > 2);
+    
+    console.log("CSV-DEBUG: Single line with multiple delimiters check:", hasMultipleDelimiters ? "YES" : "NO");
+    return hasMultipleDelimiters;
+  }
+  
+  // If has multiple lines, check if they have similar number of delimiters
+  // This is a common pattern in well-formed CSV
+  if (lines.length >= 2) {
+    // First, identify the most likely delimiter
+    const commaCount = lines[0].split(',').length - 1;
+    const semicolonCount = lines[0].split(';').length - 1;
+    const tabCount = lines[0].split('\t').length - 1;
+    
+    let likelyDelimiter = ',';
+    let maxCount = commaCount;
+    
+    if (semicolonCount > maxCount) {
+      likelyDelimiter = ';';
+      maxCount = semicolonCount;
+    }
+    
+    if (tabCount > maxCount) {
+      likelyDelimiter = '\t';
+      maxCount = tabCount;
+    }
+    
+    // If there are no delimiters, it's probably not CSV
+    if (maxCount === 0) {
+      console.log("CSV-DEBUG: No delimiters found, not CSV");
+      return false;
+    }
+    
+    // Check if at least half the lines have a similar structure
+    let consistentLines = 0;
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      const delimiterCount = lines[i].split(likelyDelimiter).length - 1;
+      // Allow for some variation in delimiter count
+      if (Math.abs(delimiterCount - maxCount) <= 1) {
+        consistentLines++;
+      }
+    }
+    
+    const isConsistent = consistentLines >= Math.min(3, Math.floor(lines.length / 2));
+    console.log(`CSV-DEBUG: Structure consistency check: ${isConsistent ? "PASS" : "FAIL"} (${consistentLines}/${Math.min(5, lines.length)} lines)`);
+    return isConsistent;
+  }
+  
+  return false;
+}
