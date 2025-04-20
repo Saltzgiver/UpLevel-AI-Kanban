@@ -11,6 +11,7 @@ import path from "path";
 import { fromZodError } from "zod-validation-error";
 import { storeSuggestion, checkSuggestion, clearSuggestion, dumpCache } from "./suggestionCache";
 import { registerMcpRoutes } from "./routes/mcp";
+import { WebSocketServer, WebSocket } from "ws";
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
