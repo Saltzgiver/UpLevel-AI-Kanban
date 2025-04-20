@@ -119,6 +119,8 @@ export function GPTChat({
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{src: string, alt: string} | null>(null);
+  // Add forceShowTyping state at this level so it can be shared between handleSendMessage and the ChatMessages
+  const [forceShowTyping, setForceShowTyping] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -225,6 +227,10 @@ export function GPTChat({
   const handleSendMessage = async () => {
     if (!message.trim()) return;
     
+    // First - turn on the typing indicator
+    console.log(`✅ [GPTChat:${cardId}] Setting force show typing to true on message send`);
+    setForceShowTyping(true);
+    
     setIsSending(true);
     // Reset user scroll state when sending a new message
     setUserHasScrolled(false);
@@ -267,12 +273,21 @@ export function GPTChat({
           });
         }
       }, 100);
+      
+      // Keep typing indicator visible for a while
+      setTimeout(() => {
+        console.log(`❌ [GPTChat:${cardId}] Setting force show typing back to false after timeout`);
+        setForceShowTyping(false);
+      }, 8000); // Show typing indicator for 8 seconds
+      
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to send message",
         variant: "destructive"
       });
+      // Turn off typing indicator on error
+      setForceShowTyping(false);
     } finally {
       setIsSending(false);
     }
@@ -312,22 +327,8 @@ export function GPTChat({
     // Hide it if we already have a final output (could be stuck in processing state)
     // Also hide it when embedded in a card (per user requirement)
     
-    // For testing purposes, always show the typing indicator when a chat message is submitted
-    // This will be replaced with the actual processing state later
-    const [forceShowTyping, setForceShowTyping] = useState(false);
-    
-    // On sending a message, show the typing indicator for 5 seconds 
-    useEffect(() => {
-      if (isSending) {
-        console.log(`✅ [GPTChat:${cardId}] Setting force show typing to true`);
-        setForceShowTyping(true);
-        const timeout = setTimeout(() => {
-          console.log(`❌ [GPTChat:${cardId}] Setting force show typing back to false`);
-          setForceShowTyping(false);
-        }, 8000); // Show for 8 seconds for testing
-        return () => clearTimeout(timeout);
-      }
-    }, [isSending, cardId]);
+    // We use the forceShowTyping state from the parent component
+    // This state is managed directly in the handleSendMessage function
     
     // Modified processing detection logic: 
     // Allow typing indicators to appear even in embedded mode
