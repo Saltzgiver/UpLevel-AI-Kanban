@@ -9,6 +9,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { TypingIndicator } from "./typing-indicator";
 import {
   Dialog,
   DialogContent,
@@ -305,12 +306,13 @@ export function GPTChat({
     // Also hide it when embedded in a card (per user requirement)
     const shouldShowProcessing = isProcessing && !finalOutput && !embedded;
     
-    // Processing indicator
+    // Processing indicator - use the new WebSocket-powered realtime typing indicator
+    // instead of the static one
     const processingIndicator = shouldShowProcessing && (
-      <div className="flex items-center justify-center py-3">
-        <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
-        <span className="text-sm text-green-700">Processing with AI...</span>
-      </div>
+      <TypingIndicator 
+        cardId={cardId} 
+        className="mb-3"
+      />
     );
     
     // Function to render attachment images in messages

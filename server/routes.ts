@@ -1531,6 +1531,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMcpRoutes(app);
   
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time typing indicators
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Store active connections by card ID
+  const connections: Map<number, Set<WebSocket>> = new Map();
+
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    let subscribedCardId: number | null = null;
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Handle subscription to a specific card
+        if (data.type === 'subscribe' && data.cardId) {
+          const cardId = parseInt(data.cardId);
+          subscribedCardId = cardId;
+          
+          // Add this connection to the card's subscribers
+          if (!connections.has(cardId)) {
+            connections.set(cardId, new Set());
+          }
+          connections.get(cardId)?.add(ws);
+          console.log(`Client subscribed to card ${cardId}`);
+        }
+        
+        // Handle AI typing indicator updates
+        if (data.type === 'typing' && data.cardId) {
+          const cardId = parseInt(data.cardId);
+          broadcastToCard(cardId, {
+            type: 'typing',
+            cardId: cardId,
+            gptName: data.gptName || 'AI Assistant',
+            gptColor: data.gptColor || null,
+            isTyping: data.isTyping || true
+          });
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+      // Remove this connection from the card's subscribers
+      if (subscribedCardId && connections.has(subscribedCardId)) {
+        connections.get(subscribedCardId)?.delete(ws);
+        // Clean up empty sets
+        if (connections.get(subscribedCardId)?.size === 0) {
+          connections.delete(subscribedCardId);
+        }
+      }
+    });
+  });
+  
+  // Broadcast AI typing status to all clients subscribed to a card
+  function broadcastToCard(cardId: number, data: any) {
+    if (!connections.has(cardId)) return;
+    
+    const cardConnections = connections.get(cardId);
+    if (!cardConnections) return;
+    
+    const message = JSON.stringify(data);
+    cardConnections.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+  
+  // Function to notify clients about AI typing status
+  async function notifyTypingStatus(cardId: number, gptName: string, gptColor: string | null, isTyping: boolean) {
+    broadcastToCard(cardId, {
+      type: 'typing',
+      cardId,
+      gptName,
+      gptColor,
+      isTyping
+    });
+  }
+  
+  // Create wrapped versions of the OpenAI functions that add WebSocket typing indicators
+  // Create function to wrap process chat with typing indicators
+  const wrapProcessChatWithTypingIndicator = async (cardId: number, userMessage: string, column: any) => {
+    try {
+      // Start typing indicator
+      await notifyTypingStatus(cardId, column.gptName || 'AI Assistant', column.gptColor, true);
+      
+      // Process the actual request
+      const result = await processChat(cardId, userMessage, column);
+      
+      // Stop typing indicator
+      await notifyTypingStatus(cardId, column.gptName || 'AI Assistant', column.gptColor, false);
+      
+      return result;
+    } catch (error) {
+      // Ensure typing indicator is removed on error
+      await notifyTypingStatus(cardId, column.gptName || 'AI Assistant', column.gptColor, false);
+      throw error;
+    }
+  };
+  
+  // Create function to wrap trigger GPT with typing indicators
+  const wrapTriggerGPTWithTypingIndicator = async (cardId: number, column: any) => {
+    try {
+      // Start typing indicator
+      await notifyTypingStatus(cardId, column.gptName || 'AI Assistant', column.gptColor, true);
+      
+      // Process the actual request
+      const result = await triggerGPTProcessing(cardId, column);
+      
+      // Stop typing indicator
+      await notifyTypingStatus(cardId, column.gptName || 'AI Assistant', column.gptColor, false);
+      
+      return result;
+    } catch (error) {
+      // Ensure typing indicator is removed on error
+      await notifyTypingStatus(cardId, column.gptName || 'AI Assistant', column.gptColor, false);
+      throw error;
+    }
+  };
+  
+  // Register API routes to use our wrapped versions of the functions
+  app.post("/api/cards/:id/chat", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const { message } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      const card = await storage.getCardById(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // Get the column
+      const column = await storage.getColumnById(card.columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Use our wrapped version with typing indicators
+      await wrapProcessChatWithTypingIndicator(cardId, message, column);
+      
+      return res.json({ message: "Chat processed" });
+    } catch (error) {
+      console.error("Error processing chat:", error);
+      return res.status(500).json({ message: "Error processing chat" });
+    }
+  });
+  
+  app.post("/api/cards/:id/trigger-gpt", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      
+      const card = await storage.getCardById(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // Get the column
+      const column = await storage.getColumnById(card.columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      // Use our wrapped version
+      await wrapTriggerGPTWithTypingIndicator(cardId, column);
+      
+      return res.json({ message: "GPT processing triggered" });
+    } catch (error) {
+      console.error("Error triggering GPT:", error);
+      return res.status(500).json({ message: "Error triggering GPT" });
+    }
+  });
 
   return httpServer;
 }
