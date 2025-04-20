@@ -891,23 +891,30 @@ export function GPTChat({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          p: (props: any) => {
+                          p: memo((props: any) => {
                             // Check if paragraph might contain CSV content directly
                             if (props.children && typeof props.children === 'string' && 
                                 (props.className === 'csv' || isCSVContent(props.children))) {
                               console.log("CSV-DEBUG: Found CSV content in paragraph");
-                              return <CSVTable content={props.children} />;
+                              // Create a stable key based on a hash of the content to ensure component identity is preserved
+                              const contentHash = props.children.length > 0 ? 
+                                props.children.substring(0, 50).replace(/\s+/g, '') : 'empty';
+                              return (
+                                <div className="csv-stable-wrapper" key={`csv-${contentHash}`} data-stable-csv="true">
+                                  <CSVTable content={props.children} />
+                                </div>
+                              );
                             }
                             
                             // Default paragraph rendering
                             return <p className="my-0.5 text-xs" {...props} />;
-                          },
+                          }),
                           ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
                           ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
                           li: (props: any) => <li className="my-0 text-xs" {...props} />,
                           a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
                           blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
-                          code: (props: any) => {
+                          code: memo((props: any) => {
                             console.log("CSV-DEBUG: Code component rendering with:", {
                               inline: props.inline,
                               className: props.className,
@@ -924,15 +931,22 @@ export function GPTChat({
                               
                               if (isCSVByClass || isCSVContent(props.children)) {
                                 console.log("CSV-DEBUG: Rendering code block as CSV table");
-                                return <CSVTable content={props.children} />;
+                                // Create a stable key based on a hash of the content to ensure component identity is preserved
+                                const contentHash = props.children.length > 0 ? 
+                                  props.children.substring(0, 50).replace(/\s+/g, '') : 'empty';
+                                return (
+                                  <div className="csv-stable-wrapper" key={`csv-code-${contentHash}`} data-stable-csv="true">
+                                    <CSVTable content={props.children} />
+                                  </div>
+                                );
                               }
                             }
                             
                             return props.inline 
                               ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
                               : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
-                          },
-                          pre: (props: any) => {
+                          }),
+                          pre: memo((props: any) => {
                             console.log("CSV-DEBUG: Pre component rendering with:", {
                               hasChildren: !!props.children,
                               childrenCount: props.children ? React.Children.count(props.children) : 0,
@@ -950,7 +964,14 @@ export function GPTChat({
                             // If we have direct text content, check if it's CSV
                             if (textContent && isCSVContent(textContent)) {
                               console.log("CSV-DEBUG: Found CSV content directly in pre tag");
-                              return <CSVTable content={textContent} />;
+                              // Create a stable key based on a hash of the content
+                              const contentHash = textContent.length > 0 ? 
+                                textContent.substring(0, 50).replace(/\s+/g, '') : 'empty';
+                              return (
+                                <div className="csv-stable-wrapper" key={`csv-pre-${contentHash}`} data-stable-csv="true">
+                                  <CSVTable content={textContent} />
+                                </div>
+                              );
                             }
                             
                             // Otherwise, look for a code element
@@ -972,14 +993,21 @@ export function GPTChat({
                                 
                                 if (isCSVByClass || isCSVContent(codeContent)) {
                                   console.log("CSV-DEBUG: Rendering pre>code as CSV table");
-                                  return <CSVTable content={codeContent} />;
+                                  // Create a stable key to prevent unmounting during render
+                                  const contentHash = codeContent.length > 0 ? 
+                                    codeContent.substring(0, 50).replace(/\s+/g, '') : 'empty-code';
+                                  return (
+                                    <div className="csv-stable-wrapper" key={`csv-pre-code-${contentHash}`} data-stable-csv="true">
+                                      <CSVTable content={codeContent} />
+                                    </div>
+                                  );
                                 }
                               }
                             }
                             
                             // Default pre element rendering
                             return <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
-                          },
+                          }),
                           strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                           em: (props: any) => <em className="italic text-xs" {...props} />,
                           img: (props: any) => renderImageInMarkdown(props.src, props.alt),
