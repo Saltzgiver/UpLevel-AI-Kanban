@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -796,7 +796,27 @@ export function GPTChat({
                               ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
                               : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
                           },
-                          pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                          pre: (props: any) => {
+                            // Check if the content of pre element contains CSV data
+                            // This accesses the child code element's content
+                            const codeElement = React.Children.toArray(props.children).find(
+                              (child: any) => child.type === 'code'
+                            ) as React.ReactElement | undefined;
+                            
+                            // If there's a code element with CSV content, convert it to a table
+                            if (codeElement && codeElement.props.children && 
+                                typeof codeElement.props.children === 'string') {
+                              const content = codeElement.props.children;
+                              
+                              // Check if it's CSV content or explicitly marked as CSV
+                              if ((codeElement.props.className === 'language-csv' || isCSVContent(content))) {
+                                return <CSVViewer content={content} maxRows={10} />;
+                              }
+                            }
+                            
+                            // Default pre element rendering
+                            return <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
+                          },
                           strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                           em: (props: any) => <em className="italic text-xs" {...props} />,
                           img: (props: any) => renderImageInMarkdown(props.src, props.alt),
