@@ -752,14 +752,28 @@ export function GPTChat({
                           li: (props: any) => <li className="my-0 text-xs" {...props} />,
                           a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
                           blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
-                          code: (props: any) => 
-                            props.inline 
+                          code: (props: any) => {
+                            // Check if the code block is a CSV
+                            if (!props.inline && props.children && typeof props.children === 'string' && 
+                                (props.className === 'language-csv' || isCSVContent(props.children))) {
+                              return <CSVViewer content={props.children} maxRows={10} />;
+                            }
+                            
+                            return props.inline 
                               ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
-                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />;
+                          },
                           pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
                           strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                           em: (props: any) => <em className="italic text-xs" {...props} />,
                           img: (props: any) => renderImageInMarkdown(props.src, props.alt),
+                          // Add table rendering
+                          table: (props: any) => <div className="overflow-x-auto my-1"><table className="min-w-full text-xs border-collapse" {...props} /></div>,
+                          thead: (props: any) => <thead className="bg-gray-50" {...props} />,
+                          tbody: (props: any) => <tbody className="divide-y divide-gray-200" {...props} />,
+                          tr: (props: any) => <tr className="hover:bg-gray-50" {...props} />,
+                          th: (props: any) => <th className="px-2 py-1 text-left font-medium text-gray-700 uppercase text-[10px]" {...props} />,
+                          td: (props: any) => <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-600" {...props} />,
                         }}
                       >
                         {chat.content}
