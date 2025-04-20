@@ -11,6 +11,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { TypingIndicator } from "./typing-indicator";
 import { CSVViewer } from "./csv-viewer";
+import { memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,42 +31,74 @@ const isCSVContent = (content: string): boolean => {
   const trimmedContent = content.trim();
   console.log("CSV-DEBUG: Examining content:", trimmedContent.substring(0, 50) + (trimmedContent.length > 50 ? "..." : ""));
   
-  // Check if this is obviously a CSV file (at least a couple of lines with consistent delimiters)
+  // First check if it's explicitly marked as CSV in filename or attributes
+  if (trimmedContent.includes('language-csv') || 
+      trimmedContent.includes('file:data.csv') || 
+      trimmedContent.includes('text/csv') ||
+      trimmedContent.match(/\.csv/i)) {
+    console.log("CSV-DEBUG: Content is explicitly marked as CSV");
+    return true;
+  }
+  
+  // Check if this looks like CSV data (at least a couple of lines with consistent delimiters)
   const lines = trimmedContent.split(/\r?\n/).filter(line => line.trim().length > 0);
   console.log(`CSV-DEBUG: Found ${lines.length} lines in content`);
   
-  // Need at least 2 lines for a proper CSV (header + data)
-  if (lines.length < 2) {
-    console.log("CSV-DEBUG: Not enough lines for CSV");
-    return false;
+  // For single line data, check if it has multiple commas or semicolons (likely a header line)
+  if (lines.length === 1) {
+    const commaCount = (lines[0].match(/,/g) || []).length;
+    const semicolonCount = (lines[0].match(/;/g) || []).length;
+    const tabCount = (lines[0].match(/\t/g) || []).length;
+    
+    const hasManyDelimiters = commaCount > 3 || semicolonCount > 3 || tabCount > 3;
+    console.log(`CSV-DEBUG: Single line with multiple delimiters check: ${hasManyDelimiters ? "YES" : "NO"}`);
+    return hasManyDelimiters;
   }
   
-  // Log the first two lines for debugging
-  console.log("CSV-DEBUG: First line:", lines[0].substring(0, 50) + (lines[0].length > 50 ? "..." : ""));
-  console.log("CSV-DEBUG: Second line:", lines[1].substring(0, 50) + (lines[1].length > 50 ? "..." : ""));
-  
-  // Check for consistent delimiters
-  const checkDelimiter = (delimiter: string): boolean => {
-    const firstLineCount = (lines[0].match(new RegExp(delimiter, 'g')) || []).length;
-    const secondLineCount = (lines[1].match(new RegExp(delimiter, 'g')) || []).length;
+  // For multi-line data, check for consistent delimiters
+  if (lines.length >= 2) {
+    // Log the first two lines for debugging
+    console.log("CSV-DEBUG: First line:", lines[0].substring(0, 50) + (lines[0].length > 50 ? "..." : ""));
+    console.log("CSV-DEBUG: Second line:", lines[1].substring(0, 50) + (lines[1].length > 50 ? "..." : ""));
     
-    // For a CSV, both lines should have the same number of delimiters
-    // And there should be at least one delimiter
-    const result = firstLineCount > 0 && firstLineCount === secondLineCount;
-    console.log(`CSV-DEBUG: Delimiter '${delimiter}' check - First line count: ${firstLineCount}, Second line count: ${secondLineCount}, Match: ${result}`);
-    return result;
-  };
+    // Check for consistent delimiters
+    const checkDelimiter = (delimiter: string): boolean => {
+      const firstLineCount = (lines[0].match(new RegExp(delimiter, 'g')) || []).length;
+      const secondLineCount = (lines[1].match(new RegExp(delimiter, 'g')) || []).length;
+      
+      // For a CSV, both lines should have the same number of delimiters
+      // And there should be at least one delimiter
+      const result = firstLineCount > 0 && firstLineCount === secondLineCount;
+      console.log(`CSV-DEBUG: Delimiter '${delimiter}' check - First line count: ${firstLineCount}, Second line count: ${secondLineCount}, Match: ${result}`);
+      return result;
+    };
+    
+    // Check different delimiter types commonly used in CSV data
+    const isCommaDelimited = checkDelimiter(',');
+    const isSemicolonDelimited = checkDelimiter(';');
+    const isTabDelimited = checkDelimiter('\\t');
+    
+    // If any of the delimiter checks pass, this is likely CSV data
+    const isCSV = isCommaDelimited || isSemicolonDelimited || isTabDelimited;
+    console.log(`CSV-DEBUG: Final detection result: ${isCSV ? "IS CSV" : "NOT CSV"}`);
+    return isCSV;
+  }
   
-  // Check different delimiter types commonly used in CSV data
-  const isCommaDelimited = checkDelimiter(',');
-  const isSemicolonDelimited = checkDelimiter(';');
-  const isTabDelimited = checkDelimiter('\\t');
-  
-  // If any of the delimiter checks pass, this is likely CSV data
-  const isCSV = isCommaDelimited || isSemicolonDelimited || isTabDelimited;
-  console.log(`CSV-DEBUG: Final detection result: ${isCSV ? "IS CSV" : "NOT CSV"}`);
-  return isCSV;
+  return false;
 };
+
+// Enhanced CSV table wrapper component
+const CSVTable = memo(({ content }: { content: string }) => {
+  console.log("CSV-DEBUG: Rendering CSVTable component with content length:", content?.length || 0);
+  
+  // Handle empty content
+  if (!content) {
+    return <div className="text-gray-400 text-xs italic">Empty CSV content</div>;
+  }
+  
+  // Use the CSVViewer component for rendering
+  return <CSVViewer content={content} maxRows={10} />;
+});
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -795,7 +828,17 @@ export function GPTChat({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
+                          p: (props: any) => {
+                            // Check if paragraph might contain CSV content directly
+                            if (props.children && typeof props.children === 'string' && 
+                                (props.className === 'csv' || isCSVContent(props.children))) {
+                              console.log("CSV-DEBUG: Found CSV content in paragraph");
+                              return <CSVTable content={props.children} />;
+                            }
+                            
+                            // Default paragraph rendering
+                            return <p className="my-0.5 text-xs" {...props} />;
+                          },
                           ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
                           ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
                           li: (props: any) => <li className="my-0 text-xs" {...props} />,
@@ -810,11 +853,16 @@ export function GPTChat({
                               childLength: typeof props.children === 'string' ? props.children.length : 'N/A'
                             });
                             
-                            // Check if the code block is a CSV
-                            if (!props.inline && props.children && typeof props.children === 'string' && 
-                                (props.className === 'language-csv' || isCSVContent(props.children))) {
-                              console.log("CSV-DEBUG: Rendering code block as CSV table");
-                              return <CSVViewer content={props.children} maxRows={10} />;
+                            // Special handling for code blocks with CSV content or marked as CSV
+                            if (!props.inline && props.children && typeof props.children === 'string') {
+                              // Directly check for CSV class or filename indicators
+                              const isCSVByClass = props.className === 'language-csv' || 
+                                                  (props.className && props.className.includes('csv'));
+                              
+                              if (isCSVByClass || isCSVContent(props.children)) {
+                                console.log("CSV-DEBUG: Rendering code block as CSV table");
+                                return <CSVTable content={props.children} />;
+                              }
                             }
                             
                             return props.inline 
@@ -825,36 +873,44 @@ export function GPTChat({
                             console.log("CSV-DEBUG: Pre component rendering with:", {
                               hasChildren: !!props.children,
                               childrenCount: props.children ? React.Children.count(props.children) : 0,
-                              childrenTypes: props.children ? 
-                                React.Children.map(props.children, child => ({
-                                  type: child?.type?.toString?.() || typeof child,
-                                  hasProps: !!child?.props
-                                })) : []
                             });
                             
-                            // Check if the content of pre element contains CSV data
-                            // This accesses the child code element's content
+                            // First, let's check if there's any text content directly in the pre tag
+                            let textContent = '';
+                            if (React.Children.count(props.children) === 1) {
+                              const child = React.Children.toArray(props.children)[0];
+                              if (typeof child === 'string') {
+                                textContent = child;
+                              }
+                            }
+                            
+                            // If we have direct text content, check if it's CSV
+                            if (textContent && isCSVContent(textContent)) {
+                              console.log("CSV-DEBUG: Found CSV content directly in pre tag");
+                              return <CSVTable content={textContent} />;
+                            }
+                            
+                            // Otherwise, look for a code element
                             const codeElement = React.Children.toArray(props.children).find(
-                              (child: any) => child.type === 'code'
+                              (child: any) => child && child.type === 'code'
                             ) as React.ReactElement | undefined;
                             
-                            console.log("CSV-DEBUG: Found code element in pre:", {
-                              found: !!codeElement,
-                              hasProps: codeElement ? !!codeElement.props : false,
-                              hasChildren: codeElement?.props ? !!codeElement.props.children : false,
-                              childType: codeElement?.props?.children ? typeof codeElement.props.children : 'N/A',
-                              className: codeElement?.props?.className
-                            });
-                            
-                            // If there's a code element with CSV content, convert it to a table
-                            if (codeElement && codeElement.props.children && 
-                                typeof codeElement.props.children === 'string') {
-                              const content = codeElement.props.children;
+                            if (codeElement) {
+                              console.log("CSV-DEBUG: Found code element in pre");
                               
-                              // Check if it's CSV content or explicitly marked as CSV
-                              if ((codeElement.props.className === 'language-csv' || isCSVContent(content))) {
-                                console.log("CSV-DEBUG: Rendering pre>code as CSV table");
-                                return <CSVViewer content={content} maxRows={10} />;
+                              // Extract the content from the code element
+                              const codeContent = codeElement.props?.children;
+                              
+                              // Check if it's string content that could be CSV
+                              if (typeof codeContent === 'string') {
+                                // Check if it's explicitly marked as CSV or looks like CSV
+                                const isCSVByClass = codeElement.props.className === 'language-csv' || 
+                                                    (codeElement.props.className && codeElement.props.className.includes('csv'));
+                                
+                                if (isCSVByClass || isCSVContent(codeContent)) {
+                                  console.log("CSV-DEBUG: Rendering pre>code as CSV table");
+                                  return <CSVTable content={codeContent} />;
+                                }
                               }
                             }
                             
