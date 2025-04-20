@@ -91,45 +91,49 @@ export function CSVViewer({ content, maxRows = 100, compact = true }: CSVViewerP
   
   // Compact version for chat messages
   if (compact) {
+    // If there's very little data, render an even more compact view
+    const isSmallDataset = rows.length <= 3 && parsedData[0]?.length <= 3;
+    const maxHeight = isSmallDataset ? 'auto' : 'max-h-[180px]';
+    
     return (
-      <div className="flex flex-col gap-1 overflow-hidden rounded-md border border-gray-200 my-1">
-        <div className="flex items-center justify-between bg-gray-50 px-2 py-1 border-b border-gray-200">
-          <div className="text-xs text-gray-500">
-            CSV Data ({rows.length} rows)
-          </div>
-          <label className="flex items-center space-x-1">
-            <input 
-              type="checkbox" 
-              checked={hasHeaders} 
-              onChange={() => setHasHeaders(!hasHeaders)}
-              className="rounded border-gray-300 h-3 w-3"
-            />
-            <span className="text-xs text-gray-600">Headers</span>
-          </label>
+      <div className="overflow-hidden rounded border border-gray-200 my-2 bg-white shadow-sm">
+        <div className="flex items-center justify-between bg-gray-50 px-2 py-0.5 border-b border-gray-100 text-[10px]">
+          <div className="text-gray-500 font-medium">CSV Table</div>
+          {!isSmallDataset && (
+            <label className="flex items-center space-x-1">
+              <input 
+                type="checkbox" 
+                checked={hasHeaders} 
+                onChange={() => setHasHeaders(!hasHeaders)}
+                className="rounded border-gray-200 h-3 w-3"
+              />
+              <span className="text-gray-500">Headers</span>
+            </label>
+          )}
         </div>
         
-        <ScrollArea className="h-[200px]">
-          <div className="p-1">
-            <Table>
-              <thead className="sticky top-0 bg-gray-50">
+        <div className={maxHeight}>
+          <div className="w-full overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 bg-white border-b border-gray-100">
                 <tr>
                   {hasHeaders ? (
                     headers.map((header, index) => (
-                      <th key={index} className="px-1 py-1 text-[10px] font-medium text-gray-700">
+                      <th key={index} className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap">
                         {header}
                       </th>
                     ))
                   ) : (
                     // Generate column index headers if no headers detected
                     Array.from({ length: parsedData[0]?.length || 0 }).map((_, index) => (
-                      <th key={index} className="px-1 py-1 text-[10px] font-medium text-gray-700">
-                        Col {index + 1}
+                      <th key={index} className="px-2 py-1 text-[9px] font-medium text-gray-600 whitespace-nowrap">
+                        {index + 1}
                       </th>
                     ))
                   )}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {rows.map((row, rowIndex) => (
                   <tr 
                     key={rowIndex} 
@@ -138,7 +142,7 @@ export function CSVViewer({ content, maxRows = 100, compact = true }: CSVViewerP
                     {row.map((cell, cellIndex) => (
                       <td 
                         key={cellIndex} 
-                        className="px-1 py-0.5 text-[10px] text-gray-700 truncate max-w-[150px]"
+                        className="px-2 py-1 text-[9px] text-gray-700 whitespace-nowrap"
                         title={cell} // Show full content on hover
                       >
                         {cell}
@@ -147,9 +151,9 @@ export function CSVViewer({ content, maxRows = 100, compact = true }: CSVViewerP
                   </tr>
                 ))}
               </tbody>
-            </Table>
+            </table>
           </div>
-        </ScrollArea>
+        </div>
       </div>
     );
   }

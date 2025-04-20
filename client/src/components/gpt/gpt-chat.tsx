@@ -33,11 +33,21 @@ const isCSVContent = (content: string): boolean => {
   
   // First check if it's explicitly marked as CSV in filename or attributes
   if (trimmedContent.includes('language-csv') || 
-      trimmedContent.includes('file:data.csv') || 
+      trimmedContent.match(/file:.*\.csv/i) || 
       trimmedContent.includes('text/csv') ||
-      trimmedContent.match(/\.csv/i)) {
+      trimmedContent.match(/\.csv\b/i)) {
     console.log("CSV-DEBUG: Content is explicitly marked as CSV");
     return true;
+  }
+
+  // Exclude content that looks like prose text
+  // If the content has common sentence punctuation and few commas, it's likely not CSV
+  const hasSentencePunctuation = trimmedContent.match(/[.!?]\s+[A-Z]/g);
+  const hasQuotes = (trimmedContent.match(/"/g) || []).length > 3;
+  
+  if (hasSentencePunctuation && !hasQuotes) {
+    console.log("CSV-DEBUG: Content appears to be prose text, not CSV");
+    return false;
   }
   
   // Check if this looks like CSV data (at least a couple of lines with consistent delimiters)
@@ -45,14 +55,52 @@ const isCSVContent = (content: string): boolean => {
   console.log(`CSV-DEBUG: Found ${lines.length} lines in content`);
   
   // For single line data, check if it has multiple commas or semicolons (likely a header line)
+  // But also check that it doesn't look like a regular sentence
   if (lines.length === 1) {
     const commaCount = (lines[0].match(/,/g) || []).length;
     const semicolonCount = (lines[0].match(/;/g) || []).length;
     const tabCount = (lines[0].match(/\t/g) || []).length;
     
-    const hasManyDelimiters = commaCount > 3 || semicolonCount > 3 || tabCount > 3;
-    console.log(`CSV-DEBUG: Single line with multiple delimiters check: ${hasManyDelimiters ? "YES" : "NO"}`);
-    return hasManyDelimiters;
+    // More strict requirements for single line - must have more delimiters
+    // and they should be evenly distributed (roughly)
+    const hasManyDelimiters = (commaCount >= 4 || semicolonCount >= 4 || tabCount >= 4);
+    
+    // Check if the line is too long to be a CSV header
+    const isTooLong = lines[0].length > 150 && !hasQuotes;
+    
+    // For commas, check if they're roughly evenly distributed which is more likely in CSV
+    let isEvenlyDistributed = false;
+    if (commaCount >= 3) {
+      const positions = [];
+      let pos = -1;
+      while ((pos = lines[0].indexOf(',', pos + 1)) !== -1) {
+        positions.push(pos);
+      }
+      
+      // Calculate average distances between commas
+      let sumDist = 0;
+      let diffCount = 0;
+      for (let i = 1; i < positions.length; i++) {
+        sumDist += (positions[i] - positions[i-1]);
+        diffCount++;
+      }
+      
+      const avgDist = sumDist / diffCount;
+      
+      // Check if the distribution is relatively consistent (standard deviation is less than half the average)
+      let sumVariance = 0;
+      for (let i = 1; i < positions.length; i++) {
+        const diff = positions[i] - positions[i-1];
+        sumVariance += Math.pow(diff - avgDist, 2);
+      }
+      
+      const stdDev = Math.sqrt(sumVariance / diffCount);
+      isEvenlyDistributed = stdDev < (avgDist / 2);
+    }
+    
+    const result = hasManyDelimiters && !isTooLong && (isEvenlyDistributed || hasQuotes);
+    console.log(`CSV-DEBUG: Single line with multiple delimiters check: ${result ? "YES" : "NO"}`);
+    return result;
   }
   
   // For multi-line data, check for consistent delimiters
@@ -63,13 +111,17 @@ const isCSVContent = (content: string): boolean => {
     
     // Check for consistent delimiters
     const checkDelimiter = (delimiter: string): boolean => {
-      const firstLineCount = (lines[0].match(new RegExp(delimiter, 'g')) || []).length;
-      const secondLineCount = (lines[1].match(new RegExp(delimiter, 'g')) || []).length;
+      const counts = lines.slice(0, Math.min(5, lines.length)).map(line => 
+        (line.match(new RegExp(delimiter, 'g')) || []).length
+      );
       
-      // For a CSV, both lines should have the same number of delimiters
+      // For a CSV, lines should have the same number of delimiters
       // And there should be at least one delimiter
-      const result = firstLineCount > 0 && firstLineCount === secondLineCount;
-      console.log(`CSV-DEBUG: Delimiter '${delimiter}' check - First line count: ${firstLineCount}, Second line count: ${secondLineCount}, Match: ${result}`);
+      const firstCount = counts[0];
+      const consistent = firstCount > 0 && counts.every(count => count === firstCount);
+      
+      const result = consistent && firstCount >= 2; // Require at least 2 delimiters (3 columns)
+      console.log(`CSV-DEBUG: Delimiter '${delimiter}' check - ${counts.join(', ')} - Match: ${result}`);
       return result;
     };
     
@@ -96,8 +148,8 @@ const CSVTable = memo(({ content }: { content: string }) => {
     return <div className="text-gray-400 text-xs italic">Empty CSV content</div>;
   }
   
-  // Use the CSVViewer component for rendering
-  return <CSVViewer content={content} maxRows={10} />;
+  // Use the CSVViewer component in compact mode for rendering in chat messages
+  return <CSVViewer content={content} maxRows={10} compact={true} />;
 });
 
 // Define color palette
