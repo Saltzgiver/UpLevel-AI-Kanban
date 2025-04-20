@@ -329,8 +329,9 @@ export function GPTChat({
       }
     }, [isSending, cardId]);
     
-    // Original processing detection logic
-    const regularProcessingIndicator = isProcessing && !finalOutput && !embedded;
+    // Modified processing detection logic: 
+    // Allow typing indicators to appear even in embedded mode
+    const regularProcessingIndicator = isProcessing && !finalOutput;
     
     // Combine both signals - show if either is true
     const shouldShowProcessing = regularProcessingIndicator || forceShowTyping;
