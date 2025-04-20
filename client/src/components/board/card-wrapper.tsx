@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { Card as CardType } from "@shared/schema";
+import { Card as CardType, Chat } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProcessingIndicator } from "@/components/ui/processing-indicator";
 import { useCardProcessing } from "@/hooks/use-card-processing";
@@ -16,18 +16,32 @@ interface CardProps {
 interface ProcessingStatus {
   processing: boolean;
   gptOutput: string | null;
+  chats: Chat[];
 }
 
 export function Card({ card, index, onClick }: CardProps) {
   // Use our unified processing hook instead of custom implementation
   const {
     isProcessing,
-    gptOutput
+    gptOutput,
+    chats
   } = useCardProcessing(card.id);
   
-  // We'll use the gptOutput from the real-time status if available,
-  // otherwise fall back to the card's stored output
-  const finalOutput = gptOutput || card.gptOutput;
+  // Find the latest assistant message from chats
+  const lastAssistantMessage = chats
+    .filter(chat => chat.role === 'assistant')
+    .sort((a, b) => {
+      // Sort by timestamp if available
+      if (a.timestamp && b.timestamp) {
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      }
+      // Otherwise sort by id (assuming higher id = more recent)
+      return b.id - a.id;
+    })[0];
+  
+  // Use the most recent assistant message content if available,
+  // otherwise fall back to the gptOutput from API, and finally to the card's stored output
+  const finalOutput = lastAssistantMessage?.content || gptOutput || card.gptOutput;
   
   const [expanded, setExpanded] = useState(false);
   
@@ -70,10 +84,10 @@ export function Card({ card, index, onClick }: CardProps) {
                 compact={true}
               />
               
-              {/* Always show GPT output on unopened cards if it exists */}
+              {/* Always show latest GPT output on unopened cards if it exists */}
               {finalOutput && (
                 <div className="mt-2 pt-2 text-xs text-gray-600 border-t border-gray-100">
-                  <div className="font-medium mb-1 text-gray-500">Last GPT Output</div>
+                  <div className="font-medium mb-1 text-gray-500">Latest AI Output</div>
                   <div 
                     className={expanded ? "prose prose-sm max-w-full" : "line-clamp-2 prose prose-sm max-w-full"}
                     onClick={handleExpand}
