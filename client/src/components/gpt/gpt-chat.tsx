@@ -306,13 +306,36 @@ export function GPTChat({
     // Also hide it when embedded in a card (per user requirement)
     const shouldShowProcessing = isProcessing && !finalOutput && !embedded;
     
-    // Processing indicator - use the new WebSocket-powered realtime typing indicator
-    // instead of the static one
+    // Direct processing indicator implementation - simpler and more reliable
+    const getBgColor = () => {
+      if (gptColor === 'Mint') return 'bg-[#DDFFE7]';
+      if (gptColor === 'Sky') return 'bg-[#E1F2FE]';
+      if (gptColor === 'Peach') return 'bg-[#FEE9D7]';
+      if (gptColor === 'Lavender') return 'bg-[#F6E6FF]';
+      return 'bg-[#E0F9FF]'; // Default Aqua
+    };
+    
+    const getTextColor = () => {
+      if (gptColor === 'Mint') return 'text-[#1A9E5E]';
+      if (gptColor === 'Sky') return 'text-[#2E7EC9]';
+      if (gptColor === 'Peach') return 'text-[#E25B3D]';
+      if (gptColor === 'Lavender') return 'text-[#C235D1]';
+      return 'text-[#3992B0]'; // Default Aqua
+    };
+    
     const processingIndicator = shouldShowProcessing && (
-      <TypingIndicator 
-        cardId={cardId} 
-        className="mb-3"
-      />
+      <div className="flex items-start mb-3">
+        <div className={`flex items-center gap-2 p-2.5 ${getBgColor()} rounded-lg max-w-[80%] animate-pulse-gentle transition-opacity`}>
+          <div className="relative h-4 w-10">
+            <span className={`absolute left-0 w-2 h-2 rounded-full bg-current ${getTextColor()} animate-typing1 opacity-70`}></span>
+            <span className={`absolute left-3 w-2 h-2 rounded-full bg-current ${getTextColor()} animate-typing2 opacity-70`}></span>
+            <span className={`absolute left-6 w-2 h-2 rounded-full bg-current ${getTextColor()} animate-typing3 opacity-70`}></span>
+          </div>
+          <span className={`text-sm font-medium ${getTextColor()}`}>
+            {gptName} is thinking...
+          </span>
+        </div>
+      </div>
     );
     
     // Function to render attachment images in messages
