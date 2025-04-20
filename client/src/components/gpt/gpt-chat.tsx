@@ -224,10 +224,22 @@ export function GPTChat({
   // Reference to track previous finalOutput status
   const prevFinalOutputRef = useRef(finalOutput);
 
+  // Watch for changes in isProcessing state and update the typing indicator accordingly
+  useEffect(() => {
+    if (isProcessing) {
+      console.log(`✅ [GPTChat:${cardId}] Processing started - showing typing indicator`);
+      setForceShowTyping(true);
+    } else {
+      console.log(`❌ [GPTChat:${cardId}] Processing ended - hiding typing indicator`);
+      setForceShowTyping(false);
+    }
+  }, [isProcessing, cardId]);
+
   const handleSendMessage = async () => {
     if (!message.trim()) return;
     
-    // First - turn on the typing indicator
+    // Turn on the typing indicator immediately when sending
+    // This shows the indicator before the server starts processing
     console.log(`✅ [GPTChat:${cardId}] Setting force show typing to true on message send`);
     setForceShowTyping(true);
     
@@ -274,11 +286,8 @@ export function GPTChat({
         }
       }, 100);
       
-      // Keep typing indicator visible for a while
-      setTimeout(() => {
-        console.log(`❌ [GPTChat:${cardId}] Setting force show typing back to false after timeout`);
-        setForceShowTyping(false);
-      }, 8000); // Show typing indicator for 8 seconds
+      // The typing indicator will be turned off automatically 
+      // when the isProcessing state changes to false in the useEffect above
       
     } catch (error) {
       toast({
