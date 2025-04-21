@@ -8,12 +8,10 @@
  */
 
 // Use node-fetch for making HTTP requests
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
-// Base URL for API requests
-const API_BASE = process.env.REPL_SLUG 
-  ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api`
-  : 'http://localhost:3000/api';
+// Base URL for API requests - use localhost since we're running in the same environment
+const API_BASE = 'http://localhost:3000/api';
 
 // Helper function to make API requests
 async function makeRequest(endpoint, method = 'GET', body = undefined) {
