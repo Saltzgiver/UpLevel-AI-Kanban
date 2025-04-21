@@ -7,7 +7,7 @@
  * 3. Logging the results and any errors
  */
 
-import { handleGoogleDocsSearch } from './server/googleDocsHandler.js';
+import { handleGoogleDocsSearch } from './server/googleDocsHandler.ts';
 
 // Test arguments for the Google Docs search
 const testArgs = {
