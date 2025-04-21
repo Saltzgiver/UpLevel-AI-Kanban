@@ -8,7 +8,7 @@
 import fetch from 'node-fetch';
 
 // Base URL for API requests
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/api';
 
 async function makeRequest(endpoint, method = 'GET', body = undefined) {
   const url = `${API_BASE}${endpoint}`;
@@ -80,24 +80,18 @@ async function testGoogleDocsDirectly() {
     // 2. Now, make a direct request to search for a document
     console.log("\n2. Testing Google Docs search directly...");
     
-    // Get a test card to use
-    const cardsResponse = await makeRequest('/cards?limit=1');
-    
-    if (!cardsResponse.success || cardsResponse.data.length === 0) {
-      throw new Error('No cards found to use for testing');
-    }
-    
-    const testCard = cardsResponse.data[0];
-    console.log(`Using test card: ${testCard.title} (ID: ${testCard.id})`);
+    // Use a fixed card ID (94) that we know exists
+    const cardId = 94;
+    console.log(`Using test card with ID: ${cardId}`);
     
     // Make the manual MCP publish request with the Google Docs action
     const publishResponse = await makeRequest(
-      `/cards/${testCard.id}/mcp-publish`, 
+      `/cards/${cardId}/mcp-publish`, 
       'POST', 
       { 
         actionName: googleDocsAction.name,
         action_params: {
-          query: 'Recipe Collection'
+          query: 'Project Doc'
         }
       }
     );
