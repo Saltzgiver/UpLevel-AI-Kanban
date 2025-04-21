@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table } from "lucide-react";
+import { useState } from "react";
+import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Attachment } from "@shared/schema";
@@ -17,9 +17,6 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
-  
-  // No need for keyboard event handlers or body style management
-  // as the Dialog component handles all of this automatically
 
   const handleDownload = () => {
     try {
@@ -135,6 +132,20 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
     }
   };
 
+  // Calculate file size from base64 content
+  const getFileSizeDisplay = () => {
+    // Base64 encoded size is approximately 4/3 of the original data
+    if (!attachment.content) return "";
+    
+    const sizeInBytes = Math.floor((attachment.content.length * 3) / 4);
+    
+    // Display in KB with one decimal place
+    if (sizeInBytes > 1024) {
+      return `${(sizeInBytes / 1024).toFixed(1)} KB`;
+    }
+    return `${sizeInBytes} B`;
+  };
+
   return (
     <>
       {isImage ? (
@@ -145,9 +156,11 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             onClick={() => setShowPreview(true)}
           >
             {/* Expand Button */}
-            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
-              <Maximize2 className="h-2 w-2 mr-0.5" />
-              <span>Expand</span>
+            <div className="absolute inset-0 z-10 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
+              <div className="bg-black/60 text-white px-2 py-1 text-xs rounded-md flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Maximize2 className="h-3 w-3 mr-1" />
+                <span>Expand</span>
+              </div>
             </div>
             
             {/* Delete Button - Absolute positioned in top right with slight transparency */}
@@ -198,7 +211,6 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           </div>
         </div>
       ) : (
-        // New compact link-style for CSV and all other non-image files
         <div className="flex items-center rounded-md border border-gray-200 bg-white px-2 py-1.5 shadow-sm hover:bg-gray-50 transition-colors group">
           <div className="h-5 w-5 rounded-md flex items-center justify-center mr-2">
             {renderIcon()}
@@ -207,8 +219,13 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             className="flex-1 min-w-0 cursor-pointer" 
             onClick={() => setShowPreview(true)}
           >
-            <div className="text-xs font-medium text-gray-700 truncate">
+            <div className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium truncate flex items-center">
               {attachment.filename}
+              <Maximize2 className="h-3 w-3 ml-1 text-gray-400" />
+            </div>
+            <div className="text-[9px] text-gray-500">
+              {/* Calculate and show approximate file size */}
+              <span>{getFileSizeDisplay()}</span>
             </div>
           </div>
           <div className="flex gap-1">
