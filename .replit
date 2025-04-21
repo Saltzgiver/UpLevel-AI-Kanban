@@ -44,3 +44,12 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start App (Port 5000)"
+mode = "sequential"
+author = 22091254
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./start.sh"
