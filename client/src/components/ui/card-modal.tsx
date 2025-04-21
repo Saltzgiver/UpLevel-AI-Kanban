@@ -474,8 +474,8 @@ export function CardModal({
               </div>
             </div>
             
-            {/* Attachments Section - Compact when empty */}
-            <div className={`mt-4 pt-2 border-t border-gray-100 ${attachments.length === 0 ? 'pb-1' : ''}`}>
+            {/* Attachments Section - Clear separation and grouping */}
+            <div className="mt-4 pt-2 border-t border-gray-100">
               <div className="flex items-center mb-2 gap-1.5">
                 <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
                 <h3 className="text-xs font-medium">
@@ -483,37 +483,27 @@ export function CardModal({
                     ? `Attachments (${attachments.length})` 
                     : "Upload Attachment"}
                 </h3>
-                
-                {/* Always show upload button in the header when there are no attachments */}
-                {attachments.length === 0 && (
-                  <div className="ml-auto">
-                    <FileUpload cardId={card.id} compact={true} />
-                  </div>
-                )}
               </div>
               
-              {/* Only show grid when there are attachments */}
-              {attachments.length > 0 && (
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1 pl-1 mb-3">
-                  {/* Display existing attachments */}
-                  {attachments.map((attachment) => (
-                    <div key={attachment.id} className="w-full">
-                      <AttachmentItem 
-                        attachment={attachment}
-                        onDelete={() => {
-                          // This will refresh attachments
-                          // We rely on the AttachmentItem component to handle the actual deletion
-                        }}
-                      />
-                    </div>
-                  ))}
-                  
-                  {/* Add the upload component as the last item in the grid */}
-                  <div className="w-full">
-                    <FileUpload cardId={card.id} />
+              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1 pl-1 mb-3">
+                {/* Display existing attachments */}
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="w-full">
+                    <AttachmentItem 
+                      attachment={attachment}
+                      onDelete={() => {
+                        // This will refresh attachments
+                        // We rely on the AttachmentItem component to handle the actual deletion
+                      }}
+                    />
                   </div>
+                ))}
+                
+                {/* Add the upload component as the last item in the grid */}
+                <div className="w-full">
+                  <FileUpload cardId={card.id} />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

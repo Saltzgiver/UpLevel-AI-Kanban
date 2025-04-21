@@ -6,10 +6,9 @@ import { queryClient } from "@/lib/queryClient";
 
 interface FileUploadProps {
   cardId: number;
-  compact?: boolean;
 }
 
-export function FileUpload({ cardId, compact = false }: FileUploadProps) {
+export function FileUpload({ cardId }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,36 +139,6 @@ export function FileUpload({ cardId, compact = false }: FileUploadProps) {
     }
   };
 
-  // Return compact version when compact prop is true
-  if (compact) {
-    return (
-      <div
-        className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs shadow-sm hover:bg-gray-100 transition-colors cursor-pointer"
-        onClick={handleButtonClick}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        title="Upload attachment"
-      >
-        <input 
-          type="file"
-          multiple 
-          ref={fileInputRef} 
-          onChange={handleFileChange} 
-          className="hidden" 
-          disabled={isUploading}
-        />
-        
-        {isUploading ? (
-          <Loader2 className="h-3 w-3 animate-spin text-gray-600" />
-        ) : (
-          <Paperclip className="h-3 w-3 text-gray-600" />
-        )}
-      </div>
-    );
-  }
-  
-  // Return regular version for grid layout
   return (
     <div 
       className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors overflow-hidden h-full flex flex-col"
@@ -195,10 +164,10 @@ export function FileUpload({ cardId, compact = false }: FileUploadProps) {
       >
         <div className="absolute inset-0 flex items-center justify-center">
           {isUploading ? (
-            <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
           ) : (
             <div className="flex flex-col items-center justify-center">
-              <Paperclip className="h-6 w-6 text-gray-500 mb-1" />
+              <Upload className="h-6 w-6 text-blue-500 mb-1" />
               <p className="text-[9px] text-center text-gray-500 px-1">
                 Select multiple files
               </p>

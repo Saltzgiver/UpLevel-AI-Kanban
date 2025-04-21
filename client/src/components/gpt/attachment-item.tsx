@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, Table } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Attachment } from "@shared/schema";
@@ -17,6 +17,9 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
+  
+  // No need for keyboard event handlers or body style management
+  // as the Dialog component handles all of this automatically
 
   const handleDownload = () => {
     try {
@@ -132,20 +135,6 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
     }
   };
 
-  // Calculate file size from base64 content
-  const getFileSizeDisplay = () => {
-    // Base64 encoded size is approximately 4/3 of the original data
-    if (!attachment.content) return "";
-    
-    const sizeInBytes = Math.floor((attachment.content.length * 3) / 4);
-    
-    // Display in KB with one decimal place
-    if (sizeInBytes > 1024) {
-      return `${(sizeInBytes / 1024).toFixed(1)} KB`;
-    }
-    return `${sizeInBytes} B`;
-  };
-
   return (
     <>
       {isImage ? (
@@ -156,11 +145,9 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             onClick={() => setShowPreview(true)}
           >
             {/* Expand Button */}
-            <div className="absolute inset-0 z-10 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
-              <div className="bg-black/60 text-white px-2 py-1 text-xs rounded-md flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Maximize2 className="h-3 w-3 mr-1" />
-                <span>Expand</span>
-              </div>
+            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
+              <Maximize2 className="h-2 w-2 mr-0.5" />
+              <span>Expand</span>
             </div>
             
             {/* Delete Button - Absolute positioned in top right with slight transparency */}
@@ -210,46 +197,112 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             </Button>
           </div>
         </div>
-      ) : (
-        <div className="flex items-center rounded-md border border-gray-200 bg-white px-2 py-1.5 shadow-sm hover:bg-gray-50 transition-colors group">
-          <div className="h-5 w-5 rounded-md flex items-center justify-center mr-2">
-            {renderIcon()}
-          </div>
+      ) : isCSV ? (
+        <div className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors group overflow-hidden h-full flex flex-col">
+          {/* CSV Preview Area - square with a table-like appearance */}
           <div 
-            className="flex-1 min-w-0 cursor-pointer" 
+            className="relative cursor-pointer aspect-square bg-gradient-to-br from-green-50 to-green-100 border-b border-gray-100" 
             onClick={() => setShowPreview(true)}
           >
-            <div className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium truncate flex items-center">
-              {attachment.filename}
-              <Maximize2 className="h-3 w-3 ml-1 text-gray-400" />
+            {/* Expand Button */}
+            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
+              <Maximize2 className="h-2 w-2 mr-0.5" />
+              <span>View CSV</span>
             </div>
-            <div className="text-[9px] text-gray-500">
-              {/* Calculate and show approximate file size */}
-              <span>{getFileSizeDisplay()}</span>
+            
+            {/* Delete Button */}
+            <div 
+              className="absolute top-0 right-0 z-10 bg-red-500/80 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening the preview
+                handleDelete();
+              }}
+              title="Delete attachment"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-2.5 w-2.5" />
+              )}
+            </div>
+            
+            {/* CSV Thumbnail Preview */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
+              <Table className="h-8 w-8 text-green-500 mb-1 opacity-50" />
+              
+              {/* Fake CSV table-like lines */}
+              <div className="w-full max-w-[90%] bg-white rounded-sm shadow-sm border border-green-200 p-1">
+                <div className="h-1.5 w-full bg-green-200/50 rounded-sm mb-1.5"></div>
+                <div className="h-1 w-full bg-green-100/50 rounded-sm mb-1"></div>
+                <div className="h-1 w-full bg-green-100/50 rounded-sm mb-1"></div>
+                <div className="h-1 w-full bg-green-100/50 rounded-sm"></div>
+              </div>
+              
+              <div className="text-[9px] text-green-700 mt-2 font-medium">
+                Click to view data
+              </div>
+            </div>
+          </div>
+          
+          {/* File Info & Actions - Same as image */}
+          <div className="flex items-center p-1 border-t border-gray-100 mt-auto">
+            <div className="h-4 w-4 rounded bg-green-50 flex items-center justify-center mr-1 border border-green-100">
+              {renderIcon()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[9px] font-medium text-gray-700 truncate">
+                {attachment.filename}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 ml-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening the preview
+                handleDownload();
+              }}
+              title="Download"
+            >
+              <Download className="h-2 w-2" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center rounded-md border border-gray-200 bg-white p-2 shadow-sm hover:bg-gray-50 transition-colors group">
+          <div className="h-8 w-8 rounded-md bg-indigo-50 flex items-center justify-center mr-3 border border-indigo-100">
+            {renderIcon()}
+          </div>
+          <div className="flex-1 min-w-0" onClick={() => setShowPreview(true)} style={{ cursor: 'pointer' }}>
+            <div className="text-sm font-medium text-gray-700 truncate">
+              {attachment.filename}
+            </div>
+            <div className="text-xs text-gray-500">
+              AI generated file
             </div>
           </div>
           <div className="flex gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full transition-colors"
               onClick={handleDownload}
               title="Download"
             >
-              <Download className="h-2.5 w-2.5" />
+              <Download className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
               onClick={handleDelete}
               disabled={isDeleting}
               title="Delete"
             >
               {isDeleting ? (
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Trash2 className="h-2.5 w-2.5" />
+                <Trash2 className="h-3.5 w-3.5" />
               )}
             </Button>
           </div>
