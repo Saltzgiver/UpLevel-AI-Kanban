@@ -1533,7 +1533,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // Set up WebSocket server for real-time typing indicators
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws'
+  });
   
   // Store active connections by card ID
   const connections: Map<number, Set<WebSocket>> = new Map();

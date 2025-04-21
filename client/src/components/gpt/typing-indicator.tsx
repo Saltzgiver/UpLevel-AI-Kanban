@@ -41,7 +41,8 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
     
     // Initialize WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
     
     console.log(`🔌 [TypingIndicator] Connecting to WebSocket at ${wsUrl}`);
     
