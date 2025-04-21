@@ -39,14 +39,20 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
     
     connectionAttemptsRef.current += 1;
     
-    // Initialize WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
-    
-    console.log(`🔌 [TypingIndicator] Connecting to WebSocket at ${wsUrl}`);
-    
+    // Initialize WebSocket connection with more robust error handling
     try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || '';
+      
+      // Make sure we have a valid host before creating the URL
+      if (!host) {
+        console.error('❌ [TypingIndicator] Invalid host, cannot create WebSocket URL');
+        return;
+      }
+      
+      const wsUrl = `${protocol}//${host}/ws`;
+      console.log(`🔌 [TypingIndicator] Connecting to WebSocket at ${wsUrl}`);
+      
       const newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
@@ -124,22 +130,12 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
     // Establish WebSocket connection when component mounts
     connectWebSocket();
     
-    // For testing purposes, manually trigger typing status after a short delay
-    const testTimer = setTimeout(() => {
-      console.log(`🧪 [TypingIndicator] Testing indicator by setting to true`);
-      setIsTyping(true);
-      setAiName('Test AI');
-      setAiColor('Mint');
-      
-      // Clear test after a few seconds
-      setTimeout(() => {
-        setIsTyping(false);
-      }, 5000);
-    }, 1000);
+    // Disable automatic testing in production
+    // const testTimer = setTimeout(() => {}, 0);
 
     // Clean up WebSocket connection when component unmounts
     return () => {
-      clearTimeout(testTimer);
+      // clearTimeout(testTimer);
       if (socket && socket.readyState === WebSocket.OPEN) {
         console.log(`🔌 [TypingIndicator] Closing WebSocket connection`);
         socket.close();
