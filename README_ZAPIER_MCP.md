@@ -104,9 +104,13 @@ If an error occurs, the response should contain:
 
 ### Common Issues
 
-1. **405 Method Not Allowed**: Verify your Zapier webhook URL is correct and active
+1. **405 Method Not Allowed**: Verify your Zapier webhook URL is correct and active. Note that Zapier MCP expects GET requests with query parameters, not POST requests with JSON payload.
 2. **Connection Timeout**: Check your network settings and Zapier account status
 3. **Authentication Failed**: Ensure your `ZAPIER_MCP_KEY` is correct (if using)
+
+### Important Implementation Note
+
+The Zapier MCP integration uses HTTP GET requests with query parameters rather than POST requests with JSON payload. This is different from many other API integrations. When setting up your Zapier webhooks, ensure they are configured to accept GET requests with parameters in the query string.
 
 ### Viewing Logs
 
