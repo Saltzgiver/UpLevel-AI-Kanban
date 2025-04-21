@@ -6,9 +6,10 @@ import { queryClient } from "@/lib/queryClient";
 
 interface FileUploadProps {
   cardId: number;
+  compact?: boolean;
 }
 
-export function FileUpload({ cardId }: FileUploadProps) {
+export function FileUpload({ cardId, compact = false }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +140,36 @@ export function FileUpload({ cardId }: FileUploadProps) {
     }
   };
 
+  // Return compact version when compact prop is true
+  if (compact) {
+    return (
+      <div
+        className="inline-flex items-center rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-xs shadow-sm hover:bg-blue-100 transition-colors cursor-pointer"
+        onClick={handleButtonClick}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input 
+          type="file"
+          multiple 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+          className="hidden" 
+          disabled={isUploading}
+        />
+        
+        {isUploading ? (
+          <Loader2 className="h-3 w-3 animate-spin text-blue-600 mr-1" />
+        ) : (
+          <Upload className="h-3 w-3 text-blue-600 mr-1" />
+        )}
+        <span className="text-blue-700 font-medium">Upload</span>
+      </div>
+    );
+  }
+  
+  // Return regular version for grid layout
   return (
     <div 
       className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors overflow-hidden h-full flex flex-col"

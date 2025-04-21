@@ -75,42 +75,74 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
               {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
             </Badge>
           </div>
-          <div className="p-2">
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1">
-              {visibleAttachments.map(attachment => (
-                <div key={attachment.id} className="w-full">
-                  <AttachmentItem 
-                    attachment={attachment} 
-                    onDelete={() => {
-                      // This will refresh the query after deletion
-                      // We rely on the AttachmentItem component to handle the actual deletion
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
+          
+          {/* Separate images from other files */}
+          {(() => {
+            const imageAttachments = visibleAttachments.filter(a => a.fileType.startsWith('image/'));
+            const otherAttachments = visibleAttachments.filter(a => !a.fileType.startsWith('image/'));
             
-            {hasMoreAttachments && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 mt-3 flex items-center justify-center"
-                onClick={() => setShowAllAttachments(!showAllAttachments)}
-              >
-                {showAllAttachments ? (
-                  <>
-                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
-                    Show fewer files
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
-                    Show {attachments.length - 2} more files
-                  </>
+            return (
+              <div className="p-2">
+                {/* Show images in grid if any */}
+                {imageAttachments.length > 0 && (
+                  <div className="mb-3">
+                    <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1">
+                      {imageAttachments.map(attachment => (
+                        <div key={attachment.id} className="w-full">
+                          <AttachmentItem 
+                            attachment={attachment} 
+                            onDelete={() => {
+                              // This will refresh the query after deletion
+                              // We rely on the AttachmentItem component to handle the actual deletion
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </Button>
-            )}
-          </div>
+                
+                {/* Show non-image files in a list if any */}
+                {otherAttachments.length > 0 && (
+                  <div className="mb-2 space-y-1">
+                    {otherAttachments.map(attachment => (
+                      <div key={attachment.id}>
+                        <AttachmentItem 
+                          attachment={attachment} 
+                          onDelete={() => {
+                            // This will refresh the query after deletion
+                            // We rely on the AttachmentItem component to handle the actual deletion
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Show more/less button */}
+                {hasMoreAttachments && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 mt-2 flex items-center justify-center"
+                    onClick={() => setShowAllAttachments(!showAllAttachments)}
+                  >
+                    {showAllAttachments ? (
+                      <>
+                        <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                        Show fewer files
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                        Show {attachments.length - 2} more files
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
