@@ -45,32 +45,38 @@ export class McpClient {
         throw new Error('MCP configuration missing: endpoint not set');
       }
 
-      // For Zapier webhook integrations, the action is often part of the URL or ignored
-      // Just use the main endpoint URL as provided
-      const url = this.endpoint;
+      // For Zapier webhook integrations, the action is part of the query parameters
+      // Build URL with query parameters for GET request
+      let url = this.endpoint;
       
-      const payload = JSON.stringify({
-        ...params.action_params,
-        action: params.action  // Include action name in the payload for Zapier to route
-      });
+      // Add action and parameters as query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.append('action', params.action);
       
-      // Headers setup - only add auth headers if API key is provided
+      // Add all action parameters as query parameters
+      for (const [key, value] of Object.entries(params.action_params)) {
+        queryParams.append(key, typeof value === 'object' ? JSON.stringify(value) : value.toString());
+      }
+      
+      // Append query string to URL
+      url = `${url}?${queryParams.toString()}`;
+      
+      // Headers setup
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
       
       // Only add auth headers if API key is provided and not the placeholder
       if (this.apiKey && this.apiKey !== 'no-key-required') {
-        const signature = this.createSignature(payload);
+        const signature = this.createSignature(url);
         headers['X-MCP-Key'] = this.apiKey;
         headers['X-MCP-Signature'] = signature;
       }
       
-      // Make the request
+      // Make the request using GET method
       const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: payload
+        method: 'GET',
+        headers
       });
       
       if (!response.ok) {
