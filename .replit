@@ -46,10 +46,10 @@ args = "npm run dev"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "Start App (Port 5000)"
+name = "Start App (Port 3000)"
 mode = "sequential"
 author = 22091254
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "./start.sh"
+args = "node start-on-port-3000.js"
