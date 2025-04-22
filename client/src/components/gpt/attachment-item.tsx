@@ -312,29 +312,27 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           </div>
         </div>
       ) : (
-        // Single-line file item with icon and name
+        // Ultra simple file item with icon and name - like in the reference image
         <div 
-          className="group flex items-center rounded-md border border-gray-200 bg-white p-2 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer"
+          className="group flex items-center rounded-md bg-transparent hover:bg-gray-50 px-2 py-1.5 transition-colors cursor-pointer"
           onClick={() => setShowPreview(true)}
         >
           {/* File icon */}
-          <div className={`h-8 w-8 rounded-md ${getIconBackground()} flex items-center justify-center mr-2 border ${getIconBorder()}`}>
+          <div className={`h-6 w-6 ${getIconBackground()} flex items-center justify-center rounded-sm mr-2`}>
             {renderIcon()}
           </div>
           
-          {/* Filename */}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-700 truncate">
-              {attachment.filename}
-            </div>
-          </div>
+          {/* Filename - simple text label */}
+          <span className="text-sm text-gray-700 truncate mr-2">
+            {attachment.filename}
+          </span>
           
-          {/* Actions */}
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Actions - minimal */}
+          <div className="flex gap-0.5 ml-auto">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700 rounded-full"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent opening the preview
                 handleDownload();
@@ -346,7 +344,7 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
+              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 rounded-full"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent opening the preview
                 handleDelete();
