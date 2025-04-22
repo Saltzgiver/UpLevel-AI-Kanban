@@ -312,55 +312,54 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           </div>
         </div>
       ) : (
-        // New file item with icon and file name
+        // Single-line file item with icon and name
         <div 
-          className="group flex flex-col rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors overflow-hidden cursor-pointer"
+          className="group flex items-center rounded-md border border-gray-200 bg-white p-2 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer"
           onClick={() => setShowPreview(true)}
         >
-          {/* File icon area */}
-          <div className={`flex items-center justify-center p-3 ${getIconBackground()}`}>
-            <div className={`h-10 w-10 flex items-center justify-center rounded-md border ${getIconBorder()}`}>
-              {renderIcon()}
+          {/* File icon */}
+          <div className={`h-8 w-8 rounded-md ${getIconBackground()} flex items-center justify-center mr-2 border ${getIconBorder()}`}>
+            {renderIcon()}
+          </div>
+          
+          {/* Filename */}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-700 truncate">
+              {attachment.filename}
             </div>
           </div>
           
-          {/* File name with actions */}
-          <div className="flex flex-col p-2 text-center">
-            <div className="text-xs font-medium text-gray-700 truncate mb-1">
-              {attachment.filename}
-            </div>
-            
-            <div className="flex justify-center gap-1 mt-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent opening the preview
-                  handleDownload();
-                }}
-                title="Download"
-              >
-                <Download className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-0 text-gray-500 hover:text-red-600 rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent opening the preview
-                  handleDelete();
-                }}
-                disabled={isDeleting}
-                title="Delete"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3 w-3" />
-                )}
-              </Button>
-            </div>
+          {/* Actions */}
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening the preview
+                handleDownload();
+              }}
+              title="Download"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening the preview
+                handleDelete();
+              }}
+              disabled={isDeleting}
+              title="Delete"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
           </div>
         </div>
       )}
