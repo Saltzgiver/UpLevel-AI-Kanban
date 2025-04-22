@@ -476,13 +476,16 @@ export function CardModal({
             
             {/* Attachments Section - Clear separation and grouping */}
             <div className="mt-4 pt-2 border-t border-gray-100">
-              <div className="flex items-center mb-2 gap-1.5">
-                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                <h3 className="text-xs font-medium">
-                  {attachments.length > 0 
-                    ? `Attachments (${attachments.length})` 
-                    : "Upload Attachment"}
-                </h3>
+              <div className="flex items-center mb-2 justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h3 className="text-xs font-medium">
+                    Attachments {attachments.length > 0 && `(${attachments.length})`}
+                  </h3>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <FileUpload cardId={card.id} iconOnly={true} />
+                </div>
               </div>
               
               <div className="flex flex-col space-y-1 pl-1 mb-3">
@@ -498,11 +501,6 @@ export function CardModal({
                     />
                   </div>
                 ))}
-                
-                {/* Add the upload component */}
-                <div>
-                  <FileUpload cardId={card.id} />
-                </div>
               </div>
             </div>
           </div>

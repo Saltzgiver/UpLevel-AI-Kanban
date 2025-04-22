@@ -68,12 +68,19 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
       
       {attachments.length > 0 && (
         <div className="rounded-lg bg-white border border-blue-100 overflow-hidden shadow-sm mb-4">
-          <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center">
-            <FileText className="h-4 w-4 text-blue-600 mr-2" />
-            <span className="text-sm font-medium text-blue-800">Generated Files</span>
-            <Badge variant="outline" className="ml-auto text-xs font-normal py-0 h-5 bg-blue-50 border-blue-200 text-blue-700">
-              {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
-            </Badge>
+          <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+            <div className="flex items-center">
+              <FileText className="h-4 w-4 text-blue-600 mr-2" />
+              <span className="text-sm font-medium text-blue-800">Generated Files</span>
+              <Badge variant="outline" className="ml-2 text-xs font-normal py-0 h-5 bg-blue-50 border-blue-200 text-blue-700">
+                {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
+              </Badge>
+            </div>
+            {cardId && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <FileUpload cardId={cardId} iconOnly={true} />
+              </div>
+            )}
           </div>
           <div className="p-2">
             <div className="flex flex-col space-y-1">

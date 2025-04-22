@@ -6,9 +6,10 @@ import { queryClient } from "@/lib/queryClient";
 
 interface FileUploadProps {
   cardId: number;
+  iconOnly?: boolean;
 }
 
-export function FileUpload({ cardId }: FileUploadProps) {
+export function FileUpload({ cardId, iconOnly = false }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +140,35 @@ export function FileUpload({ cardId }: FileUploadProps) {
     }
   };
 
+  // If icon-only mode is enabled, return just the + icon button
+  if (iconOnly) {
+    return (
+      <>
+        <input 
+          type="file"
+          multiple 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+          className="hidden" 
+          disabled={isUploading}
+        />
+        <button
+          className="h-5 w-5 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+          onClick={handleButtonClick}
+          title="Add attachment"
+          type="button"
+        >
+          {isUploading ? (
+            <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+          ) : (
+            <span className="text-blue-500 text-xs font-bold">+</span>
+          )}
+        </button>
+      </>
+    );
+  }
+  
+  // Standard mode with thumbnail and label
   return (
     <div 
       className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors overflow-hidden h-full flex flex-col"
