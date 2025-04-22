@@ -83,11 +83,34 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
     }
   };
 
-  // Determine icon based on file type
+  // Determine icon based on file type - styled to match exactly the reference icons
   const renderIcon = () => {
+    // Spreadsheets (CSV, Excel) - Green table icon
+    if (attachment.fileType.includes('csv') || 
+        attachment.filename.endsWith('.csv') ||
+        attachment.filename.endsWith('.xlsx') ||
+        attachment.filename.endsWith('.xls')) {
+      return <Table className="h-5 w-5 text-green-500" />;
+    }
+    // Folders - Google Drive style icon with colors
+    else if (attachment.fileType.includes('folder') || 
+             attachment.filename.includes('folder')) {
+      return <Folder className="h-5 w-5 text-blue-500" />;
+    }
+    // Tickets or Issues - Blue ticket icon
+    else if (attachment.filename.includes('ticket') || 
+             attachment.filename.includes('issue')) {
+      return <Ticket className="h-5 w-5 text-blue-500" />;
+    }
+    // Links - Gray link icon
+    else if (attachment.fileType.includes('url') || 
+             attachment.filename.startsWith('http') ||
+             attachment.filename.includes('link')) {
+      return <LinkIcon className="h-5 w-5 text-gray-500" />;
+    }
     // Images
-    if (attachment.fileType.startsWith('image/')) {
-      return <Image className="h-4 w-4 text-blue-500" />;
+    else if (attachment.fileType.startsWith('image/')) {
+      return <Image className="h-5 w-5 text-purple-500" />;
     } 
     // Documents (PDF, Word, etc.)
     else if (attachment.fileType.includes('document') || 
@@ -95,34 +118,11 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
              attachment.filename.endsWith('.pdf') ||
              attachment.filename.endsWith('.doc') ||
              attachment.filename.endsWith('.docx')) {
-      return <FileText className="h-4 w-4 text-indigo-500" />;
+      return <FileText className="h-5 w-5 text-indigo-500" />;
     } 
-    // Spreadsheets (CSV, Excel)
-    else if (attachment.fileType.includes('csv') || 
-             attachment.filename.endsWith('.csv') ||
-             attachment.filename.endsWith('.xlsx') ||
-             attachment.filename.endsWith('.xls')) {
-      return <Table className="h-4 w-4 text-green-500" />;
-    }
-    // Folders
-    else if (attachment.fileType.includes('folder') || 
-             attachment.filename.includes('folder')) {
-      return <Folder className="h-4 w-4 text-orange-500" />;
-    }
-    // Links
-    else if (attachment.fileType.includes('url') || 
-             attachment.filename.startsWith('http') ||
-             attachment.filename.includes('link')) {
-      return <LinkIcon className="h-4 w-4 text-gray-500" />;
-    }
-    // Tickets or Issues
-    else if (attachment.filename.includes('ticket') || 
-             attachment.filename.includes('issue')) {
-      return <Ticket className="h-4 w-4 text-purple-500" />;
-    }
-    // Default - generic file
+    // Default - colorful file icon
     else {
-      return <File className="h-4 w-4 text-blue-500" />;
+      return <File className="h-5 w-5 text-blue-500" />;
     }
   };
   
@@ -312,39 +312,32 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           </div>
         </div>
       ) : (
-        // Ultra simple file item with icon and name - like in the reference image
-        <div 
-          className="group flex items-center rounded-md bg-transparent hover:bg-gray-50 px-2 py-1.5 transition-colors cursor-pointer w-full"
-          onClick={() => setShowPreview(true)}
-        >
-          {/* File icon */}
-          <div className={`h-6 w-6 ${getIconBackground()} flex items-center justify-center rounded-sm mr-2`}>
+        // Ultra minimal horizontal layout with icon and filename matching reference image exactly
+        <div className="flex items-center gap-2 py-1 w-full">
+          {/* File icon - more minimal and simplified */}
+          <div className="flex-shrink-0">
             {renderIcon()}
           </div>
           
-          {/* Filename - simple text label on single line */}
-          <span className="text-sm text-gray-700 mr-2 whitespace-nowrap overflow-hidden text-ellipsis min-w-0 flex-1">
+          {/* Filename - simple text label on single line without truncation */}
+          <span className="text-sm text-gray-700 flex-1">
             {attachment.filename}
           </span>
           
-          {/* Actions - minimal */}
-          <div className="flex gap-0.5 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700 rounded-full"
+          {/* Actions - extremely minimal */}
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              className="text-gray-400 hover:text-gray-700"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent opening the preview
                 handleDownload();
               }}
               title="Download"
             >
-              <Download className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 rounded-full"
+              <Download className="h-4 w-4" />
+            </button>
+            <button
+              className="text-gray-400 hover:text-red-600"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent opening the preview
                 handleDelete();
@@ -353,11 +346,11 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
               title="Delete"
             >
               {isDeleting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               )}
-            </Button>
+            </button>
           </div>
         </div>
       )}

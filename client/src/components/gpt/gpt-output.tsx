@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, FileText, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, Sparkles, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AttachmentItem } from "./attachment-item";
 import { Attachment } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { FileUpload } from "@/components/ui/file-upload";
 
 interface GPTOutputProps {
   output: string | null;
   attachments: Attachment[];
+  cardId?: number;
 }
 
-export function GPTOutput({ output, attachments }: GPTOutputProps) {
+export function GPTOutput({ output, attachments, cardId }: GPTOutputProps) {
   const [showAllAttachments, setShowAllAttachments] = useState(attachments.length <= 2);
   
   if (!output && attachments.length === 0) {
@@ -67,14 +69,11 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
       )}
       
       {attachments.length > 0 && (
-        <div className="rounded-lg bg-white border border-blue-100 overflow-hidden shadow-sm mb-4">
-          <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center">
-              <FileText className="h-4 w-4 text-blue-600 mr-2" />
-              <span className="text-sm font-medium text-blue-800">Generated Files</span>
-              <Badge variant="outline" className="ml-2 text-xs font-normal py-0 h-5 bg-blue-50 border-blue-200 text-blue-700">
-                {attachments.length} {attachments.length === 1 ? 'File' : 'Files'}
-              </Badge>
+              <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
+              <span className="text-sm font-medium text-gray-800">Attachments ({attachments.length})</span>
             </div>
             {cardId && (
               <div onClick={(e) => e.stopPropagation()}>
@@ -82,8 +81,8 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
               </div>
             )}
           </div>
-          <div className="p-2">
-            <div className="flex flex-col space-y-1">
+          <div>
+            <div className="flex flex-col">
               {visibleAttachments.map(attachment => (
                 <div key={attachment.id}>
                   <AttachmentItem 

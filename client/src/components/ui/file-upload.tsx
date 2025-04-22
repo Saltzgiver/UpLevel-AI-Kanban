@@ -140,7 +140,7 @@ export function FileUpload({ cardId, iconOnly = false }: FileUploadProps) {
     }
   };
 
-  // If icon-only mode is enabled, return just the + icon button
+  // If icon-only mode is enabled, return just the plus icon button that matches reference design
   if (iconOnly) {
     return (
       <>
@@ -153,15 +153,15 @@ export function FileUpload({ cardId, iconOnly = false }: FileUploadProps) {
           disabled={isUploading}
         />
         <button
-          className="h-5 w-5 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+          className="text-blue-500 hover:text-blue-600"
           onClick={handleButtonClick}
           title="Add attachment"
           type="button"
         >
           {isUploading ? (
-            <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <span className="text-blue-500 text-xs font-bold">+</span>
+            <span className="text-lg font-medium">+</span>
           )}
         </button>
       </>
