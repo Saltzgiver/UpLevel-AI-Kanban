@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
-  Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table,
+  Download, Trash2, FileText, Image, File, Loader2, Maximize2, Table,
   Folder, Link as LinkIcon, Ticket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,14 +21,15 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
   
-  // No need for keyboard event handlers or body style management
-  // as the Dialog component handles all of this automatically
+  // Check if this is an image attachment
+  const isImage = attachment.fileType.startsWith('image/');
+
+  // Check if this is a CSV file
+  const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
 
   const handleDownload = () => {
     try {
       // For CSV files, use direct API endpoint for better browser compatibility
-      const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
-      
       if (isCSV) {
         console.log("Using server API endpoint for CSV download");
         // Create a direct link to the attachment endpoint
@@ -129,12 +130,6 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const getAttachmentUrl = () => {
     return `data:${attachment.fileType};base64,${attachment.content}`;
   };
-  
-  // Check if this is an image attachment
-  const isImage = attachment.fileType.startsWith('image/');
-
-  // Check if this is a CSV file
-  const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
   
   // Safely decode base64 content for CSV files
   const getCSVContent = () => {
