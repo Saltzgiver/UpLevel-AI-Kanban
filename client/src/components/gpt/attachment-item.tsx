@@ -313,7 +313,10 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
         </div>
       ) : (
         // Ultra minimal horizontal layout with icons directly next to filename
-        <div className="flex items-center gap-2 py-1 w-full">
+        <div 
+          className="flex items-center gap-2 py-1 w-full cursor-pointer hover:bg-gray-50 rounded px-1"
+          onClick={() => setShowPreview(true)}
+        >
           {/* File icon - more minimal and simplified */}
           <div className="flex-shrink-0">
             {renderIcon()}
