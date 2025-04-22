@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table } from "lucide-react";
+import { 
+  Download, Trash2, FileText, Image, File, Loader2, Maximize2, X, ExternalLink, Table,
+  Folder, Link as LinkIcon, Ticket
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Attachment } from "@shared/schema";
@@ -81,14 +84,44 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
 
   // Determine icon based on file type
   const renderIcon = () => {
+    // Images
     if (attachment.fileType.startsWith('image/')) {
-      return <Image className="h-4 w-4 text-indigo-500" />;
-    } else if (attachment.fileType.includes('document') || attachment.fileType.includes('pdf')) {
+      return <Image className="h-4 w-4 text-blue-500" />;
+    } 
+    // Documents (PDF, Word, etc.)
+    else if (attachment.fileType.includes('document') || 
+             attachment.fileType.includes('pdf') || 
+             attachment.filename.endsWith('.pdf') ||
+             attachment.filename.endsWith('.doc') ||
+             attachment.filename.endsWith('.docx')) {
       return <FileText className="h-4 w-4 text-indigo-500" />;
-    } else if (attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv')) {
+    } 
+    // Spreadsheets (CSV, Excel)
+    else if (attachment.fileType.includes('csv') || 
+             attachment.filename.endsWith('.csv') ||
+             attachment.filename.endsWith('.xlsx') ||
+             attachment.filename.endsWith('.xls')) {
       return <Table className="h-4 w-4 text-green-500" />;
-    } else {
-      return <File className="h-4 w-4 text-indigo-500" />;
+    }
+    // Folders
+    else if (attachment.fileType.includes('folder') || 
+             attachment.filename.includes('folder')) {
+      return <Folder className="h-4 w-4 text-orange-500" />;
+    }
+    // Links
+    else if (attachment.fileType.includes('url') || 
+             attachment.filename.startsWith('http') ||
+             attachment.filename.includes('link')) {
+      return <LinkIcon className="h-4 w-4 text-gray-500" />;
+    }
+    // Tickets or Issues
+    else if (attachment.filename.includes('ticket') || 
+             attachment.filename.includes('issue')) {
+      return <Ticket className="h-4 w-4 text-purple-500" />;
+    }
+    // Default - generic file
+    else {
+      return <File className="h-4 w-4 text-blue-500" />;
     }
   };
   
@@ -132,6 +165,92 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
     } catch (error) {
       console.error("Error processing CSV content:", error);
       return "Error processing CSV content. Please download the file to view its contents.";
+    }
+  };
+
+  // Function to determine the background color based on file type
+  const getIconBackground = () => {
+    // Images
+    if (attachment.fileType.startsWith('image/')) {
+      return 'bg-blue-50';
+    }
+    // Documents
+    else if (attachment.fileType.includes('document') || 
+             attachment.fileType.includes('pdf') || 
+             attachment.filename.endsWith('.pdf') ||
+             attachment.filename.endsWith('.doc') ||
+             attachment.filename.endsWith('.docx')) {
+      return 'bg-indigo-50';
+    }
+    // Spreadsheets
+    else if (attachment.fileType.includes('csv') || 
+             attachment.filename.endsWith('.csv') ||
+             attachment.filename.endsWith('.xlsx') ||
+             attachment.filename.endsWith('.xls')) {
+      return 'bg-green-50';
+    }
+    // Folders
+    else if (attachment.fileType.includes('folder') || 
+             attachment.filename.includes('folder')) {
+      return 'bg-orange-50';
+    }
+    // Links
+    else if (attachment.fileType.includes('url') || 
+             attachment.filename.startsWith('http') ||
+             attachment.filename.includes('link')) {
+      return 'bg-gray-50';
+    }
+    // Tickets
+    else if (attachment.filename.includes('ticket') || 
+             attachment.filename.includes('issue')) {
+      return 'bg-purple-50';
+    }
+    // Default
+    else {
+      return 'bg-blue-50';
+    }
+  };
+  
+  // Get border color to match the icon
+  const getIconBorder = () => {
+    // Images
+    if (attachment.fileType.startsWith('image/')) {
+      return 'border-blue-200';
+    }
+    // Documents
+    else if (attachment.fileType.includes('document') || 
+             attachment.fileType.includes('pdf') || 
+             attachment.filename.endsWith('.pdf') ||
+             attachment.filename.endsWith('.doc') ||
+             attachment.filename.endsWith('.docx')) {
+      return 'border-indigo-200';
+    }
+    // Spreadsheets
+    else if (attachment.fileType.includes('csv') || 
+             attachment.filename.endsWith('.csv') ||
+             attachment.filename.endsWith('.xlsx') ||
+             attachment.filename.endsWith('.xls')) {
+      return 'border-green-200';
+    }
+    // Folders
+    else if (attachment.fileType.includes('folder') || 
+             attachment.filename.includes('folder')) {
+      return 'border-orange-200';
+    }
+    // Links
+    else if (attachment.fileType.includes('url') || 
+             attachment.filename.startsWith('http') ||
+             attachment.filename.includes('link')) {
+      return 'border-gray-200';
+    }
+    // Tickets
+    else if (attachment.filename.includes('ticket') || 
+             attachment.filename.includes('issue')) {
+      return 'border-purple-200';
+    }
+    // Default
+    else {
+      return 'border-blue-200';
     }
   };
 
@@ -197,114 +316,56 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             </Button>
           </div>
         </div>
-      ) : isCSV ? (
-        <div className="rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors group overflow-hidden h-full flex flex-col">
-          {/* CSV Preview Area - square with a table-like appearance */}
-          <div 
-            className="relative cursor-pointer aspect-square bg-gradient-to-br from-green-50 to-green-100 border-b border-gray-100" 
-            onClick={() => setShowPreview(true)}
-          >
-            {/* Expand Button */}
-            <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
-              <Maximize2 className="h-2 w-2 mr-0.5" />
-              <span>View CSV</span>
-            </div>
-            
-            {/* Delete Button */}
-            <div 
-              className="absolute top-0 right-0 z-10 bg-red-500/80 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent opening the preview
-                handleDelete();
-              }}
-              title="Delete attachment"
-            >
-              {isDeleting ? (
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-2.5 w-2.5" />
-              )}
-            </div>
-            
-            {/* CSV Thumbnail Preview */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
-              <Table className="h-8 w-8 text-green-500 mb-1 opacity-50" />
-              
-              {/* Fake CSV table-like lines */}
-              <div className="w-full max-w-[90%] bg-white rounded-sm shadow-sm border border-green-200 p-1">
-                <div className="h-1.5 w-full bg-green-200/50 rounded-sm mb-1.5"></div>
-                <div className="h-1 w-full bg-green-100/50 rounded-sm mb-1"></div>
-                <div className="h-1 w-full bg-green-100/50 rounded-sm mb-1"></div>
-                <div className="h-1 w-full bg-green-100/50 rounded-sm"></div>
-              </div>
-              
-              <div className="text-[9px] text-green-700 mt-2 font-medium">
-                Click to view data
-              </div>
+      ) : (
+        // New file item with icon and file name
+        <div 
+          className="group flex flex-col rounded-md border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors overflow-hidden cursor-pointer"
+          onClick={() => setShowPreview(true)}
+        >
+          {/* File icon area */}
+          <div className={`flex items-center justify-center p-3 ${getIconBackground()}`}>
+            <div className={`h-10 w-10 flex items-center justify-center rounded-md border ${getIconBorder()}`}>
+              {renderIcon()}
             </div>
           </div>
           
-          {/* File Info & Actions - Same as image */}
-          <div className="flex items-center p-1 border-t border-gray-100 mt-auto">
-            <div className="h-4 w-4 rounded bg-green-50 flex items-center justify-center mr-1 border border-green-100">
-              {renderIcon()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[9px] font-medium text-gray-700 truncate">
-                {attachment.filename}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-4 w-4 p-0 ml-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent opening the preview
-                handleDownload();
-              }}
-              title="Download"
-            >
-              <Download className="h-2 w-2" />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center rounded-md border border-gray-200 bg-white p-2 shadow-sm hover:bg-gray-50 transition-colors group">
-          <div className="h-8 w-8 rounded-md bg-indigo-50 flex items-center justify-center mr-3 border border-indigo-100">
-            {renderIcon()}
-          </div>
-          <div className="flex-1 min-w-0" onClick={() => setShowPreview(true)} style={{ cursor: 'pointer' }}>
-            <div className="text-sm font-medium text-gray-700 truncate">
+          {/* File name with actions */}
+          <div className="flex flex-col p-2 text-center">
+            <div className="text-xs font-medium text-gray-700 truncate mb-1">
               {attachment.filename}
             </div>
-            <div className="text-xs text-gray-500">
-              AI generated file
+            
+            <div className="flex justify-center gap-1 mt-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 rounded-full"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent opening the preview
+                  handleDownload();
+                }}
+                title="Download"
+              >
+                <Download className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 p-0 text-gray-500 hover:text-red-600 rounded-full"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent opening the preview
+                  handleDelete();
+                }}
+                disabled={isDeleting}
+                title="Delete"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+              </Button>
             </div>
-          </div>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-indigo-50 rounded-full transition-colors"
-              onClick={handleDownload}
-              title="Download"
-            >
-              <Download className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              title="Delete"
-            >
-              {isDeleting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-            </Button>
           </div>
         </div>
       )}
