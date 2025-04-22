@@ -70,16 +70,16 @@ export function GPTOutput({ output, attachments, cardId }: GPTOutputProps) {
       
       {attachments.length > 0 && (
         <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center">
+          <div className="flex items-center mb-2">
+            <div className="flex items-center flex-1">
               <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm font-medium text-gray-800">Attachments ({attachments.length})</span>
+              <span className="text-sm font-medium text-gray-800 mr-2">Attachments ({attachments.length})</span>
+              {cardId && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <FileUpload cardId={cardId} iconOnly={true} />
+                </div>
+              )}
             </div>
-            {cardId && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <FileUpload cardId={cardId} iconOnly={true} />
-              </div>
-            )}
           </div>
           <div>
             <div className="flex flex-col">
