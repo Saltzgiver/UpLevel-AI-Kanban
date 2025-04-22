@@ -76,9 +76,9 @@ export function GPTOutput({ output, attachments }: GPTOutputProps) {
             </Badge>
           </div>
           <div className="p-2">
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1">
+            <div className="flex flex-col space-y-1">
               {visibleAttachments.map(attachment => (
-                <div key={attachment.id} className="w-full">
+                <div key={attachment.id}>
                   <AttachmentItem 
                     attachment={attachment} 
                     onDelete={() => {

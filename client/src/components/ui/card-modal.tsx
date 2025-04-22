@@ -485,10 +485,10 @@ export function CardModal({
                 </h3>
               </div>
               
-              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1 pl-1 mb-3">
+              <div className="flex flex-col space-y-1 pl-1 mb-3">
                 {/* Display existing attachments */}
                 {attachments.map((attachment) => (
-                  <div key={attachment.id} className="w-full">
+                  <div key={attachment.id}>
                     <AttachmentItem 
                       attachment={attachment}
                       onDelete={() => {
@@ -499,8 +499,8 @@ export function CardModal({
                   </div>
                 ))}
                 
-                {/* Add the upload component as the last item in the grid */}
-                <div className="w-full">
+                {/* Add the upload component */}
+                <div>
                   <FileUpload cardId={card.id} />
                 </div>
               </div>
