@@ -312,22 +312,22 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           </div>
         </div>
       ) : (
-        // Ultra minimal horizontal layout with icon and filename matching reference image exactly
+        // Ultra minimal horizontal layout with icons directly next to filename
         <div className="flex items-center gap-2 py-1 w-full">
           {/* File icon - more minimal and simplified */}
           <div className="flex-shrink-0">
             {renderIcon()}
           </div>
           
-          {/* Filename - simple text label on single line without truncation */}
-          <span className="text-sm text-gray-700 flex-1">
-            {attachment.filename}
-          </span>
-          
-          {/* Actions - extremely minimal */}
-          <div className="flex gap-2 flex-shrink-0">
+          {/* Filename with icons placed directly after it */}
+          <div className="flex items-center flex-1">
+            <span className="text-sm text-gray-700 mr-2">
+              {attachment.filename}
+            </span>
+            
+            {/* Actions - immediately after filename */}
             <button
-              className="text-gray-400 hover:text-gray-700"
+              className="text-gray-400 hover:text-gray-700 mx-1"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent opening the preview
                 handleDownload();
@@ -337,7 +337,7 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
               <Download className="h-4 w-4" />
             </button>
             <button
-              className="text-gray-400 hover:text-red-600"
+              className="text-gray-400 hover:text-red-600 mx-1"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent opening the preview
                 handleDelete();

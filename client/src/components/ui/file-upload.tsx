@@ -153,7 +153,7 @@ export function FileUpload({ cardId, iconOnly = false }: FileUploadProps) {
           disabled={isUploading}
         />
         <button
-          className="text-blue-500 hover:text-blue-600"
+          className="text-blue-500 hover:text-blue-600 flex items-center justify-center leading-none"
           onClick={handleButtonClick}
           title="Add attachment"
           type="button"
@@ -161,7 +161,7 @@ export function FileUpload({ cardId, iconOnly = false }: FileUploadProps) {
           {isUploading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <span className="text-lg font-medium">+</span>
+            <span className="text-lg leading-none">+</span>
           )}
         </button>
       </>
