@@ -314,7 +314,7 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       ) : (
         // Ultra simple file item with icon and name - like in the reference image
         <div 
-          className="group flex items-center rounded-md bg-transparent hover:bg-gray-50 px-2 py-1.5 transition-colors cursor-pointer"
+          className="group flex items-center rounded-md bg-transparent hover:bg-gray-50 px-2 py-1.5 transition-colors cursor-pointer w-full flex-wrap"
           onClick={() => setShowPreview(true)}
         >
           {/* File icon */}
@@ -322,13 +322,13 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             {renderIcon()}
           </div>
           
-          {/* Filename - simple text label */}
-          <span className="text-sm text-gray-700 truncate mr-2">
+          {/* Filename - simple text label without truncation */}
+          <span className="text-sm text-gray-700 mr-2 break-all min-w-0 flex-1">
             {attachment.filename}
           </span>
           
           {/* Actions - minimal */}
-          <div className="flex gap-0.5 ml-auto">
+          <div className="flex gap-0.5 flex-shrink-0">
             <Button
               variant="ghost"
               size="icon"
