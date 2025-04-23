@@ -38,7 +38,7 @@ async function getGlobalPrompt(): Promise<string> {
 const OPENAI_MODEL = "gpt-4o"; // Using GPT-4o which has vision capabilities built in
 
 // Initialize OpenAI client
-const getOpenAIClient = (apiKey?: string) => {
+export const getOpenAIClient = (apiKey?: string) => {
   // Special handling for "from_env" value or undefined apiKey
   console.log(`getOpenAIClient called with apiKey param: ${apiKey ? (apiKey === "from_env" ? "from_env" : "custom key provided") : "undefined"}`);
   
