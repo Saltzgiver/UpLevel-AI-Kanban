@@ -9,7 +9,8 @@ import {
   Bell,
   Upload,
   Globe,
-  LogOut
+  LogOut,
+  Wand2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -99,6 +100,12 @@ export function NavigationBar({ className }: NavigationBarProps) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
+              <Link href="/workflow-generator-prompt" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  <span>Workflow Generator Prompt</span>
+                </DropdownMenuItem>
+              </Link>
               <Link href="/prompt-analyzer-settings" className="w-full">
                 <DropdownMenuItem className="cursor-pointer">
                   <Wrench className="mr-2 h-4 w-4" />

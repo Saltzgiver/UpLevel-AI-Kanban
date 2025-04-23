@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { PageLayout } from "@/components/layout/page-layout";
 
 /**
  * Workflow Generator Prompt settings page
@@ -88,55 +89,57 @@ export default function WorkflowGeneratorPromptPage() {
   const hasWorkflowPromptChanges = workflowPrompt !== originalWorkflowPrompt;
 
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">Workflow Generator Prompt</h1>
+    <PageLayout>
+      <div className="container py-8">
+        <h1 className="text-2xl font-bold mb-6">Workflow Generator Prompt</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Customize AI Behavior</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Customize the system prompt used by the AI to generate Kanban board columns based on workflow descriptions.
-              </p>
-              <Textarea
-                value={workflowPrompt}
-                onChange={(e) => setWorkflowPrompt(e.target.value)}
-                placeholder="Enter system prompt for workflow generation..."
-                className="min-h-[300px] font-mono text-sm"
-              />
-            </>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button 
-            variant="outline" 
-            onClick={handleResetWorkflowPrompt}
-            disabled={isLoading || !hasWorkflowPromptChanges}
-          >
-            Reset
-          </Button>
-          <Button 
-            onClick={handleSaveWorkflowPrompt} 
-            disabled={isLoading || isSaving || !hasWorkflowPromptChanges}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
+        <Card>
+          <CardHeader>
+            <CardTitle>Customize AI Behavior</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
             ) : (
-              'Save Changes'
+              <>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Customize the system prompt used by the AI to generate Kanban board columns based on workflow descriptions.
+                </p>
+                <Textarea
+                  value={workflowPrompt}
+                  onChange={(e) => setWorkflowPrompt(e.target.value)}
+                  placeholder="Enter system prompt for workflow generation..."
+                  className="min-h-[300px] font-mono text-sm"
+                />
+              </>
             )}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={handleResetWorkflowPrompt}
+              disabled={isLoading || !hasWorkflowPromptChanges}
+            >
+              Reset
+            </Button>
+            <Button 
+              onClick={handleSaveWorkflowPrompt} 
+              disabled={isLoading || isSaving || !hasWorkflowPromptChanges}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    </PageLayout>
   );
 }
