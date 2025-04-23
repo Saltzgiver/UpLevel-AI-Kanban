@@ -250,7 +250,13 @@ export default function CreateWorkflowPage() {
                       placeholder={`Lane ${index + 1} Name`}
                       className="font-medium"
                     />
-                    <span className="text-xs text-gray-500">0</span>
+                    <span 
+                      className="text-xs text-gray-500 flex items-center cursor-default" 
+                      title="Cards will be added here after the board is created"
+                    >
+                      <div className="h-4 w-4 text-gray-400 mr-1">📄</div>
+                      0
+                    </span>
                   </div>
                   {column.gptAssigned && (
                     <div className="mt-2">
