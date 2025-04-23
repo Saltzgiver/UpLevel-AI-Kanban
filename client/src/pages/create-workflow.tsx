@@ -45,6 +45,8 @@ export default function CreateWorkflowPage() {
   const [generatedColumns, setGeneratedColumns] = useState<GenerateColumnsResponse['columns']>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const [editingInstructions, setEditingInstructions] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Generate board with AI
@@ -199,6 +201,56 @@ export default function CreateWorkflowPage() {
   const updateColumn = (index: number, data: Partial<typeof generatedColumns[0]>) => {
     const updatedColumns = [...generatedColumns];
     updatedColumns[index] = { ...updatedColumns[index], ...data };
+    setGeneratedColumns(updatedColumns);
+  };
+  
+  // Toggle card expansion
+  const toggleCardExpansion = (index: number) => {
+    if (expandedCard === index) {
+      setExpandedCard(null);
+    } else {
+      setExpandedCard(index);
+    }
+  };
+  
+  // Toggle edit mode for instructions
+  const toggleEditInstructions = (index: number) => {
+    if (editingInstructions === index) {
+      setEditingInstructions(null);
+    } else {
+      setEditingInstructions(index);
+    }
+  };
+  
+  // Add a new lane at the bottom
+  const addNewLane = () => {
+    const newColumn = {
+      name: `Lane ${generatedColumns.length + 1}`,
+      gptAssigned: false,
+      gptName: "",
+      gptInstructions: ""
+    };
+    setGeneratedColumns([...generatedColumns, newColumn]);
+  };
+  
+  // Toggle AI assistant for a lane
+  const toggleGptAssigned = (index: number) => {
+    const updatedColumns = [...generatedColumns];
+    if (!updatedColumns[index].gptAssigned) {
+      updatedColumns[index] = { 
+        ...updatedColumns[index], 
+        gptAssigned: true,
+        gptName: `AI Assistant ${index + 1}`,
+        gptInstructions: "Help the user with their task. Provide guidance, answer questions, and offer suggestions."
+      };
+    } else {
+      updatedColumns[index] = { 
+        ...updatedColumns[index], 
+        gptAssigned: false,
+        gptName: "",
+        gptInstructions: ""
+      };
+    }
     setGeneratedColumns(updatedColumns);
   };
 
@@ -396,7 +448,11 @@ export default function CreateWorkflowPage() {
                           className="font-bold uppercase text-xl w-auto border-none p-0 focus-visible:ring-0"
                         />
                       </div>
-                      <div className="text-muted-foreground cursor-pointer">
+                      <div 
+                        className="text-muted-foreground cursor-pointer"
+                        onClick={() => toggleGptAssigned(index)}
+                        title={column.gptAssigned ? "Remove AI Assistant" : "Add AI Assistant"}
+                      >
                         <MoreVertical className="h-5 w-5" />
                       </div>
                     </div>
@@ -414,16 +470,80 @@ export default function CreateWorkflowPage() {
                             />
                           </div>
                           <div className="flex items-center gap-2">
-                            <ChevronDown className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text}`} />
-                            <Edit className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text}`} />
+                            <div 
+                              className="cursor-pointer" 
+                              onClick={() => toggleCardExpansion(index)}
+                              title="Toggle instructions"
+                            >
+                              {expandedCard === index ? (
+                                <ChevronDown className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text} rotate-180 transition-transform`} />
+                              ) : (
+                                <ChevronDown className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text} transition-transform`} />
+                              )}
+                            </div>
+                            <div 
+                              className="cursor-pointer" 
+                              onClick={() => toggleEditInstructions(index)}
+                              title="Edit instructions"
+                            >
+                              <Edit className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text}`} />
+                            </div>
                           </div>
                         </div>
-                        <div className="text-gray-500 mt-1 pl-6">DO'S: - Example AI Prompt</div>
+                        
+                        {expandedCard === index && (
+                          <div className="mt-2 pl-7">
+                            {editingInstructions === index ? (
+                              <Textarea 
+                                value={column.gptInstructions}
+                                onChange={(e) => updateColumn(index, { gptInstructions: e.target.value })}
+                                placeholder="Enter instructions for AI assistant"
+                                className="min-h-[100px] text-sm"
+                                onBlur={() => setEditingInstructions(null)}
+                                autoFocus
+                              />
+                            ) : (
+                              <div className="text-gray-500 text-sm">
+                                {column.gptInstructions || "No instructions provided. Click the edit button to add instructions."}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {!expandedCard && (
+                          <div className="text-gray-500 mt-1 pl-6">
+                            {editingInstructions === index ? (
+                              <Textarea 
+                                value={column.gptInstructions}
+                                onChange={(e) => updateColumn(index, { gptInstructions: e.target.value })}
+                                placeholder="Enter instructions for AI assistant"
+                                className="min-h-[100px] text-sm"
+                                onBlur={() => setEditingInstructions(null)}
+                                autoFocus
+                              />
+                            ) : (
+                              <div className="line-clamp-1">
+                                {column.gptInstructions || "Click edit to add instructions"}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
               ))}
+              
+              {/* Add New Lane Button */}
+              <div className="flex justify-center mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={addNewLane}
+                  className="text-gray-500 border-dashed border-2 w-full py-6 hover:bg-gray-50"
+                >
+                  + Add New Lane
+                </Button>
+              </div>
             </div>
             
             <div className="mt-6 flex justify-center">
