@@ -399,7 +399,7 @@ export default function CreateWorkflowPage() {
   const renderStepContent = () => {
     if (step === 'description') {
       return (
-        <div className="max-w-md mx-auto p-4 flex flex-col items-center">
+        <div className="max-w-2xl mx-auto p-4 flex flex-col items-center">
           <Card className="w-full">
             <CardHeader>
               <CardTitle className="text-xl text-center">What's your workflow?</CardTitle>
@@ -466,7 +466,7 @@ export default function CreateWorkflowPage() {
       };
       
       return (
-        <div className="max-w-md mx-auto p-4">
+        <div className="max-w-2xl mx-auto p-4">
           <div className="bg-white rounded-xl border shadow-sm p-4 mb-4">
             <h2 className="text-center font-bold text-2xl mb-6">{boardName || "Workflow Name #1"}</h2>
             
@@ -621,7 +621,7 @@ export default function CreateWorkflowPage() {
 
     // Loading state
     return (
-      <div className="max-w-md mx-auto p-4 flex flex-col items-center justify-center min-h-[300px]">
+      <div className="max-w-2xl mx-auto p-4 flex flex-col items-center justify-center min-h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-center text-lg font-medium">Creating your workflow board...</p>
       </div>
