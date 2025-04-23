@@ -29,6 +29,17 @@ export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorPro
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
+  // Define type for the API response
+  interface GenerateColumnsResponse {
+    boardName: string;
+    columns: {
+      name: string;
+      gptAssigned: boolean;
+      gptName: string;
+      gptInstructions: string;
+    }[];
+  }
+
   // Generate board with AI
   const handleGenerateWithAI = async () => {
     if (!workflowDescription.trim()) {
@@ -44,7 +55,7 @@ export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorPro
 
     try {
       // Call the API to generate columns based on workflow description
-      const response = await apiRequest("POST", "/api/generate-columns", {
+      const response = await apiRequest<GenerateColumnsResponse>("POST", "/api/generate-columns", {
         description: workflowDescription,
       });
 
@@ -98,6 +109,14 @@ export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorPro
     setGeneratedColumns(updatedColumns);
   };
 
+  // Define board response type
+  interface BoardResponse {
+    id: number;
+    name: string;
+    userId: number | null;
+    createdAt: string;
+  }
+
   // Create the final board
   const handleCreateBoard = async () => {
     setIsCreating(true);
@@ -105,7 +124,7 @@ export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorPro
 
     try {
       // First create the board
-      const board = await apiRequest("POST", "/api/boards", {
+      const board = await apiRequest<BoardResponse>("POST", "/api/boards", {
         name: boardName.trim() || "My Workflow",
         userId: null,
       });

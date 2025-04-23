@@ -41,6 +41,8 @@ const upload = multer({
   }
 });
 
+import { registerWorkflowRoutes } from "./routes/workflow";
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Error handling middleware
   app.use((err: any, req: any, res: any, next: any) => {
@@ -1530,6 +1532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Zapier MCP routes
   registerMcpRoutes(app);
+  registerWorkflowRoutes(app);
   
   const httpServer = createServer(app);
   

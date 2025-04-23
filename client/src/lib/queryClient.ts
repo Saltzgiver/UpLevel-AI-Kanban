@@ -28,11 +28,11 @@ function getFullUrl(url: string): string {
   }
 }
 
-export async function apiRequest(
+export async function apiRequest<T = any>(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<Response> {
+): Promise<T> {
   const fullUrl = getFullUrl(url);
   
   try {
@@ -64,7 +64,7 @@ export async function apiRequest(
       });
 
     await throwIfResNotOk(res);
-    return res;
+    return await res.json() as T;
   } catch (error) {
     console.error(`API request failed for ${method} ${fullUrl}:`, error);
     
