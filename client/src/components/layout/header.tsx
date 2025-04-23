@@ -357,7 +357,7 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
                 <div className="px-2 py-1.5">
-                  <Link href="/settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                  <Link href="/workflow-generator-prompt" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Wand2 className="mr-2 h-4 w-4" />
                     <span>Workflow Generator Prompt</span>
                   </Link>

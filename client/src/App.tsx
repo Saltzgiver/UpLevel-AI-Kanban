@@ -11,6 +11,7 @@ import DirectToastTestPage from "@/pages/direct-toast-test";
 import PromptAnalyzerSettings from "@/pages/prompt-analyzer-settings";
 import GlobalSettings from "@/pages/global-settings";
 import SettingsPage from "@/pages/settings";
+import WorkflowGeneratorPromptPage from "@/pages/workflow-generator-prompt";
 import CreateWorkflowPage from "@/pages/create-workflow";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
@@ -38,6 +39,7 @@ function Router() {
       <CustomRoute path="/" component={Home} showNav={false} />
       <CustomRoute path="/create-workflow" component={CreateWorkflowPage} showNav={false} />
       <CustomRoute path="/settings" component={SettingsPage} />
+      <CustomRoute path="/workflow-generator-prompt" component={WorkflowGeneratorPromptPage} />
       <CustomRoute path="/test-upload" component={TestUploadPage} />
       <CustomRoute path="/test-suggestion" component={TestSuggestionPage} />
       <CustomRoute path="/direct-toast-test" component={DirectToastTestPage} />
