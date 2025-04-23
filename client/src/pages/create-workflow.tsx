@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, MoreVertical, ChevronDown, Edit, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -381,7 +381,7 @@ export default function CreateWorkflowPage() {
       return (
         <div className="max-w-md mx-auto p-4">
           <div className="bg-white rounded-xl border shadow-sm p-4 mb-4">
-            <h2 className="text-center font-bold text-2xl mb-6">[{boardName || "Workflow Name #1"}]</h2>
+            <h2 className="text-center font-bold text-2xl mb-6">{boardName || "Workflow Name #1"}</h2>
             
             <div className="space-y-4">
               {generatedColumns.map((column, index) => (
@@ -395,10 +395,9 @@ export default function CreateWorkflowPage() {
                           placeholder={`LANE ${index + 1} NAME`}
                           className="font-bold uppercase text-xl w-auto border-none p-0 focus-visible:ring-0"
                         />
-                        <span className="text-gray-400 ml-2">0</span>
                       </div>
-                      <div className="text-gray-400">
-                        <span className="text-xl">⋮</span>
+                      <div className="text-muted-foreground cursor-pointer">
+                        <MoreVertical className="h-5 w-5" />
                       </div>
                     </div>
                     
@@ -406,7 +405,7 @@ export default function CreateWorkflowPage() {
                       <div className={`mt-4 p-4 rounded-lg ${getColorStyles(getColorForIndex(index)).cardBg}`}>
                         <div className="flex justify-between">
                           <div className={`flex items-center gap-2 ${getColorStyles(getColorForIndex(index)).text}`}>
-                            <div className="flex items-center justify-center text-xl">✧</div>
+                            <Sparkles className="h-5 w-5" />
                             <Input
                               value={column.gptName}
                               onChange={(e) => updateColumn(index, { gptName: e.target.value })}
@@ -414,9 +413,9 @@ export default function CreateWorkflowPage() {
                               className={`font-medium text-lg border-none p-0 ${getColorStyles(getColorForIndex(index)).text} focus-visible:ring-0 bg-transparent`}
                             />
                           </div>
-                          <div className="flex gap-2">
-                            <span className={`${getColorStyles(getColorForIndex(index)).text}`}>▼</span>
-                            <span className={`${getColorStyles(getColorForIndex(index)).text}`}>✎</span>
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text}`} />
+                            <Edit className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text}`} />
                           </div>
                         </div>
                         <div className="text-gray-500 mt-1 pl-6">DO'S: - Example AI Prompt</div>
