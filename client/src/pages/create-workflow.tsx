@@ -6,10 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft, MoreVertical, ChevronDown, Edit, Sparkles } from "lucide-react";
+import { Loader2, ArrowLeft, MoreVertical, ChevronDown, Edit, Sparkles, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Type for the API response from the generate-columns endpoint
@@ -47,6 +55,7 @@ export default function CreateWorkflowPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
   const [editingInstructions, setEditingInstructions] = useState<number | null>(null);
+  const [menuOpenForIndex, setMenuOpenForIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Generate board with AI
@@ -253,6 +262,32 @@ export default function CreateWorkflowPage() {
     }
     setGeneratedColumns(updatedColumns);
   };
+  
+  // Delete a lane
+  const deleteLane = (index: number) => {
+    // Ask for confirmation
+    if (window.confirm(`Are you sure you want to delete the "${generatedColumns[index].name}" lane?`)) {
+      const updatedColumns = [...generatedColumns];
+      updatedColumns.splice(index, 1);
+      setGeneratedColumns(updatedColumns);
+      
+      // Make sure to clear any expanded/editing state if the deleted lane had any
+      if (expandedCard === index) {
+        setExpandedCard(null);
+      }
+      if (editingInstructions === index) {
+        setEditingInstructions(null);
+      }
+      if (menuOpenForIndex === index) {
+        setMenuOpenForIndex(null);
+      }
+      
+      toast({
+        title: "Lane deleted",
+        description: "The lane has been removed from your workflow."
+      });
+    }
+  };
 
   // Create the final board
   const handleCreateBoard = async () => {
@@ -448,13 +483,33 @@ export default function CreateWorkflowPage() {
                           className="font-bold uppercase text-xl w-auto border-none p-0 focus-visible:ring-0"
                         />
                       </div>
-                      <div 
-                        className="text-muted-foreground cursor-pointer"
-                        onClick={() => toggleGptAssigned(index)}
-                        title={column.gptAssigned ? "Remove AI Assistant" : "Add AI Assistant"}
+                      <DropdownMenu
+                        open={menuOpenForIndex === index}
+                        onOpenChange={(open) => {
+                          setMenuOpenForIndex(open ? index : null);
+                        }}
                       >
-                        <MoreVertical className="h-5 w-5" />
-                      </div>
+                        <DropdownMenuTrigger asChild>
+                          <div 
+                            className="text-muted-foreground cursor-pointer"
+                            title="Options"
+                          >
+                            <MoreVertical className="h-5 w-5" />
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Lane Options</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => toggleGptAssigned(index)}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            {column.gptAssigned ? "Remove AI Assistant" : "Add AI Assistant"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => deleteLane(index)}>
+                            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                            Delete Lane
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     
                     {column.gptAssigned && (
@@ -491,7 +546,8 @@ export default function CreateWorkflowPage() {
                           </div>
                         </div>
                         
-                        {expandedCard === index && (
+                        {/* Show only one of these two blocks depending on the expandedCard state */}
+                        {expandedCard === index ? (
                           <div className="mt-2 pl-7">
                             {editingInstructions === index ? (
                               <Textarea 
@@ -508,9 +564,7 @@ export default function CreateWorkflowPage() {
                               </div>
                             )}
                           </div>
-                        )}
-                        
-                        {!expandedCard && (
+                        ) : (
                           <div className="text-gray-500 mt-1 pl-6">
                             {editingInstructions === index ? (
                               <Textarea 
