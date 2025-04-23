@@ -1,0 +1,101 @@
+# Product Requirements Document (PRD)
+
+**Onboarding Flow for Creating a New Kanban Board in AI-Powered Kanban App**
+
+
+
+## 1. Introduction
+
+### 1.1 Purpose
+
+This PRD defines the requirements for an onboarding flow that allows users to create a new Kanban board within an AI-powered Kanban app. The flow simplifies setup by asking users to describe their workflow, using AI to generate lanes and custom prompts, and providing a functional board where AI processes cards based on lane-specific prompts.
+
+
+
+### 1.2 Scope
+
+The onboarding flow will:
+
+- Prompt users to input their workflow description.
+
+- Generate lanes representing workflow steps, each with a custom AI prompt.
+
+- Allow manual lane creation and customization.
+
+
+
+## 2. Objectives
+
+- Streamline Kanban board creation by leveraging AI based on user-defined workflows.
+
+- Provide flexibility with AI-assisted and manual setup options.
+
+
+
+## 3. Functional Requirements
+
+### 3.1 Workflow Description Input
+
+- **Description:** Users start by describing their workflow.
+
+- **Requirements:**
+
+  - A text input area with a clear label, e.g., "What's your workflow?"
+
+  - Placeholder text (e.g., "Describe your workflow here...") to guide input.
+
+  - A "Generate with AI" button to initiate AI-assisted lane creation.
+
+
+
+### 3.2 AI-Assisted Lane Generation
+
+- **Description:** AI analyzes the workflow description to create lanes and prompts.
+
+- **Requirements:**
+
+  - Generate lanes, each representing a distinct step in the workflow.
+
+  - Assign a custom AI prompt to each lane based on its step (e.g., "DO's - Example AI Prompt").
+
+  - Display generated lanes in a preview card with lane names and prompts.
+
+
+
+### 3.3 Manual Lane Creation Option
+
+- **Description:** Users can opt for manual setup instead of AI generation.
+
+- **Requirements:**
+
+  - A "Start from Scratch" button to bypass AI board generation and start with a blank board
+
+
+
+### 3.4 Lane Customization
+
+- **Description:** Users can modify AI-generated or manually created lanes.
+
+- **Requirements:**
+
+  - Editable fields or dropdowns for lane names and custom AI prompts.
+
+  - Real-time updates to reflect changes.
+
+  - A "Create Board" button to finalize the setup and generate the Kanban board.
+
+
+
+### 3.5 Kanban Board Interface
+
+- **Description:** The resulting board displays lanes and supports card management.
+
+- **Requirements:**
+
+  - Display lanes with names (e.g., "Lane 1 Name") and card counters (e.g., "0").
+
+  - Include a "Backlog" lane for unassigned tasks, with no default AI prompt.
+
+  - Provide an "Add a card" option in each lane to create new cards.
+
+  - Use visual differentiation (e.g., color coding) for lanes.
