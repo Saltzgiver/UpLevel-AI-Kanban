@@ -157,6 +157,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
           onClick={() => setIsWorkflowDialogOpen(true)}
           className="flex items-center bg-purple-500 hover:bg-purple-600"
           variant="default"
+          data-workflow-creator="true"
         >
           <Wand2 className="h-4 w-4 mr-1" />
           Create Workflow

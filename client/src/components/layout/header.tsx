@@ -14,7 +14,8 @@ import {
   Wrench,
   Bell,
   Upload,
-  Globe
+  Globe,
+  Wand2
 } from "lucide-react";
 import logoPath from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -225,6 +226,24 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
               >
                 <Plus className="h-4 w-4 mr-2" /> 
                 Create New Board
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  if (viewMode === "list") {
+                    onBoardListClick();
+                  }
+                  // Need to wait for the board list to be shown
+                  setTimeout(() => {
+                    const workflowBtn = document.querySelector('[data-workflow-creator]');
+                    if (workflowBtn) {
+                      (workflowBtn as HTMLButtonElement).click();
+                    }
+                  }, 100);
+                }}
+                className="text-purple-500 cursor-pointer"
+              >
+                <Wand2 className="h-4 w-4 mr-2" /> 
+                Create Workflow
               </DropdownMenuItem>
 
             </DropdownMenuContent>
