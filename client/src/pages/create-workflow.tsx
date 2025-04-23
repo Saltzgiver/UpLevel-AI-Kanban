@@ -186,7 +186,12 @@ export default function CreateWorkflowPage() {
 
       // Navigate to the board page
       console.log("Redirecting to home page");
-      setLocation("/");
+      
+      // We need a more forceful navigation to ensure a fresh load of the home component
+      window.location.href = "/";
+      
+      // The setLocation is a fallback, but we primarily want the full page reload
+      // setLocation("/");
       
       // After the navigation, the home component will show the latest board
     } catch (error: any) {
@@ -209,7 +214,8 @@ export default function CreateWorkflowPage() {
 
   // Go back to the home page
   const handleCancel = () => {
-    setLocation("/");
+    // Use window.location for a full page refresh to ensure proper state loading
+    window.location.href = "/";
   };
 
   // Render the appropriate content based on the current step
