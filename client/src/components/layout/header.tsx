@@ -229,31 +229,8 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => {
-                  console.log("Dropdown workflow click");
-                  if (viewMode === "list") {
-                    // If already in list view, immediately try to find the button
-                    const workflowBtn = document.querySelector('[data-workflow-creator]');
-                    if (workflowBtn) {
-                      console.log("Found workflow button, clicking directly");
-                      (workflowBtn as HTMLButtonElement).click();
-                    } else {
-                      console.log("Workflow button not found, will try again after switching view");
-                    }
-                  } else {
-                    // Switch to list view first
-                    onBoardListClick();
-                    // Need to wait for the board list to be shown
-                    setTimeout(() => {
-                      console.log("Trying to find workflow button after view switch");
-                      const workflowBtn = document.querySelector('[data-workflow-creator]');
-                      if (workflowBtn) {
-                        console.log("Found workflow button after delay, clicking");
-                        (workflowBtn as HTMLButtonElement).click();
-                      } else {
-                        console.log("Workflow button not found after delay");
-                      }
-                    }, 300); // Increased timeout for more reliability
-                  }
+                  // Navigate directly to the workflow creation page
+                  window.location.href = "/create-workflow";
                 }}
                 className="text-purple-500 cursor-pointer"
               >

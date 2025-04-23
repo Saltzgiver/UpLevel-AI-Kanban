@@ -165,7 +165,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
       <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
-          onClick={openWorkflowDialog}
+          onClick={() => window.location.href = "/create-workflow"}
           className="flex items-center bg-purple-500 hover:bg-purple-600"
           variant="default"
           data-workflow-creator="true"
