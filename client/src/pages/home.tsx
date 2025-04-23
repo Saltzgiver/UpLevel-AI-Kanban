@@ -57,7 +57,8 @@ export default function Home() {
 
   // Set the active board once we have data
   useEffect(() => {
-    if (boards && boards.length > 0) {
+    // Make sure boards is an array and has items
+    if (boards && Array.isArray(boards) && boards.length > 0) {
       // If we have a stored board ID in localStorage, use that
       const storedBoardId = localStorage.getItem('activeBoardId');
       if (storedBoardId) {
@@ -123,8 +124,9 @@ export default function Home() {
     );
   }
 
-  // Find the active board
-  const activeBoard = boards.find(board => board.id === activeBoardId) || boards[0];
+  // Find the active board - ensure boards is an array first
+  const boardsArray = Array.isArray(boards) ? boards : [];
+  const activeBoard = boardsArray.find(board => board.id === activeBoardId) || boardsArray[0];
   
   // Set the active board ID if it's not set yet
   if (!activeBoardId && activeBoard) {
@@ -135,7 +137,7 @@ export default function Home() {
     <div className="min-h-screen h-screen flex flex-col w-full overflow-hidden bg-muted">
       <Header 
         board={activeBoard}
-        boards={boards || []}
+        boards={boardsArray}
         onBoardListClick={() => setViewMode(viewMode === "board" ? "list" : "board")}
         viewMode={viewMode}
         onSelectBoard={handleSelectBoard}
@@ -152,7 +154,7 @@ export default function Home() {
           ) : (
             <div className="mt-4">
               <BoardList 
-                boards={boards} 
+                boards={boardsArray} 
                 onSelectBoard={handleSelectBoard}
                 currentBoardId={activeBoardId}
               />
