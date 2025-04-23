@@ -336,69 +336,69 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="px-2 py-1.5">
-                  <Link href="/" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                <DropdownMenuItem asChild>
+                  <Link href="/" className="flex items-center cursor-pointer">
                     <Layout className="mr-2 h-4 w-4" />
                     <span>Boards</span>
                   </Link>
-                </div>
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <div className="flex items-center cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </div>
-                </div>
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <div className="flex items-center cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </div>
-                </div>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
-                <div className="px-2 py-1.5">
-                  <Link href="/workflow-generator-prompt" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                <DropdownMenuItem asChild>
+                  <Link href="/workflow-generator-prompt" className="flex items-center cursor-pointer">
                     <Wand2 className="mr-2 h-4 w-4" />
                     <span>Workflow Generator Prompt</span>
                   </Link>
-                </div>
-                <div className="px-2 py-1.5">
-                  <Link href="/prompt-analyzer-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/prompt-analyzer-settings" className="flex items-center cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />
                     <span>Prompt Analyzer Settings</span>
                   </Link>
-                </div>
+                </DropdownMenuItem>
                 {/* Global Prompt Settings moved to Developer Tools section */}
-                <div className="px-2 py-1.5">
-                  <Link href="/global-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                <DropdownMenuItem asChild>
+                  <Link href="/global-settings" className="flex items-center cursor-pointer">
                     <Globe className="mr-2 h-4 w-4" />
                     <span>Global Prompt Settings</span>
                   </Link>
-                </div>
-                <div className="px-2 py-1.5">
-                  <Link href="/test-upload" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/test-upload" className="flex items-center cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     <span>Test Upload</span>
                   </Link>
-                </div>
-                <div className="px-2 py-1.5">
-                  <Link href="/test-suggestion" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/test-suggestion" className="flex items-center cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Test Suggestion</span>
                   </Link>
-                </div>
-                <div className="px-2 py-1.5">
-                  <Link href="/direct-toast-test" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/direct-toast-test" className="flex items-center cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Direct Toast Test</span>
                   </Link>
-                </div>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                <DropdownMenuItem>
+                  <div className="flex items-center cursor-pointer">
                     <span>Log out</span>
                   </div>
-                </div>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
