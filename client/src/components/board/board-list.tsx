@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash } from "lucide-react";
+import { Plus, Trash, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +22,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Board } from "@shared/schema";
+import { WorkflowCreator } from "./workflow-creator";
 
 interface BoardListProps {
   boards: Board[];
@@ -31,6 +32,7 @@ interface BoardListProps {
 
 export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -142,9 +144,23 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
     setIsDeleteDialogOpen(true);
   }
 
+  const handleWorkflowBoardCreated = (boardId: number) => {
+    setIsWorkflowDialogOpen(false);
+    onSelectBoard(boardId);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          size="sm"
+          onClick={() => setIsWorkflowDialogOpen(true)}
+          className="flex items-center bg-purple-500 hover:bg-purple-600"
+          variant="default"
+        >
+          <Wand2 className="h-4 w-4 mr-1" />
+          Create Workflow
+        </Button>
         <Button
           size="sm"
           onClick={() => setIsCreateDialogOpen(true)}
@@ -267,6 +283,21 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
               Delete Board
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Workflow Creator Dialog */}
+      <Dialog open={isWorkflowDialogOpen} onOpenChange={setIsWorkflowDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Create Workflow Board</DialogTitle>
+            <DialogDescription>
+              Describe your workflow and we'll generate a board with AI-powered columns for you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <WorkflowCreator onBoardCreated={handleWorkflowBoardCreated} />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

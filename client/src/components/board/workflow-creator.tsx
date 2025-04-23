@@ -1,44 +1,56 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Column, Board } from "@shared/schema";
-import { Loader2 } from "lucide-react";
 
-interface WorkflowCreatorProps {
-  onBoardCreated: (boardId: number) => void;
-  onCancel: () => void;
-}
-
-export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorProps) {
-  const [step, setStep] = useState<'description' | 'preview' | 'loading'>('description');
-  const [workflowDescription, setWorkflowDescription] = useState("");
-  const [generatedColumns, setGeneratedColumns] = useState<{
+/**
+ * Type for the API response from the generate-columns endpoint
+ */
+interface GenerateColumnsResponse {
+  boardName: string;
+  columns: {
     name: string;
     gptAssigned: boolean;
     gptName: string;
     gptInstructions: string;
-  }[]>([]);
+  }[];
+}
+
+/**
+ * Type for the API response from the boards endpoint
+ */
+interface BoardResponse {
+  id: number;
+  name: string;
+  userId: number | null;
+  createdAt: string;
+}
+
+/**
+ * Props for the WorkflowCreator component
+ */
+interface WorkflowCreatorProps {
+  onBoardCreated: (boardId: number) => void;
+}
+
+/**
+ * Component for creating a board with a guided workflow
+ */
+export function WorkflowCreator({ onBoardCreated }: WorkflowCreatorProps) {
+  // State for the different steps of the workflow creator
+  const [step, setStep] = useState<'description' | 'preview' | 'loading'>('description');
+  const [workflowDescription, setWorkflowDescription] = useState("");
   const [boardName, setBoardName] = useState("");
+  const [generatedColumns, setGeneratedColumns] = useState<GenerateColumnsResponse['columns']>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
-
-  // Define type for the API response
-  interface GenerateColumnsResponse {
-    boardName: string;
-    columns: {
-      name: string;
-      gptAssigned: boolean;
-      gptName: string;
-      gptInstructions: string;
-    }[];
-  }
 
   // Generate board with AI
   const handleGenerateWithAI = async () => {
@@ -86,16 +98,16 @@ export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorPro
         gptInstructions: ""
       },
       {
-        name: "Lane 1",
+        name: "In Progress",
         gptAssigned: true,
-        gptName: "AI Action #1",
-        gptInstructions: "DO's - Example AI Prompt"
+        gptName: "Assistant",
+        gptInstructions: "Help the user with their task in progress. Provide guidance, answer questions, and offer suggestions to move the task forward."
       },
       {
-        name: "Lane 2",
-        gptAssigned: true,
-        gptName: "AI Action #2",
-        gptInstructions: "DO's - Example AI Prompt"
+        name: "Done",
+        gptAssigned: false,
+        gptName: "",
+        gptInstructions: ""
       },
     ]);
     setBoardName("My Workflow");
@@ -108,14 +120,6 @@ export function WorkflowCreator({ onBoardCreated, onCancel }: WorkflowCreatorPro
     updatedColumns[index] = { ...updatedColumns[index], ...data };
     setGeneratedColumns(updatedColumns);
   };
-
-  // Define board response type
-  interface BoardResponse {
-    id: number;
-    name: string;
-    userId: number | null;
-    createdAt: string;
-  }
 
   // Create the final board
   const handleCreateBoard = async () => {
