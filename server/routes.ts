@@ -154,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Provide more detailed error information to help diagnose the issue
       const errorResponse = {
         message: "Error creating board",
-        details: error.message || "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error"
       };
       
       return res.status(500).json(errorResponse);

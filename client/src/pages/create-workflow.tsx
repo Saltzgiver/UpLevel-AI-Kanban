@@ -189,11 +189,11 @@ export default function CreateWorkflowPage() {
       setLocation("/");
       
       // After the navigation, the home component will show the latest board
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create board:", error);
       toast({
         title: "Error",
-        description: `Failed to create your workflow board: ${error.message || "Unknown error"}`,
+        description: `Failed to create your workflow board: ${error?.message || "Unknown error"}`,
         variant: "destructive",
       });
       setStep('preview');
