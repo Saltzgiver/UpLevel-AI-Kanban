@@ -349,10 +349,10 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                   </div>
                 </div>
                 <div className="px-2 py-1.5">
-                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                  <Link href="/settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                  </div>
+                  </Link>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
