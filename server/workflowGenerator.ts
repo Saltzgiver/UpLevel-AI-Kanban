@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { storage } from "./storage";
 
 // Default system prompt if no custom one is found in settings
-const DEFAULT_SYSTEM_PROMPT = `You are an expert workflow designer. Your task is to help users create effective Kanban boards by analyzing their workflow description and generating appropriate columns.
+export const DEFAULT_SYSTEM_PROMPT = `You are an expert workflow designer. Your task is to help users create effective Kanban boards by analyzing their workflow description and generating appropriate columns.
 
 For each workflow, create:
 1. A concise, descriptive board name

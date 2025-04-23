@@ -91,66 +91,64 @@ export default function SettingsPage() {
   const hasWorkflowPromptChanges = workflowPrompt !== originalWorkflowPrompt;
 
   return (
-    <PageLayout>
-      <div className="container py-8">
-        <h1 className="text-2xl font-bold mb-6">Settings</h1>
+    <div className="container py-8">
+      <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
-        <Tabs defaultValue="workflow" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="workflow">Workflow Generator</TabsTrigger>
-            {/* Can add more tabs here in the future */}
-          </TabsList>
+      <Tabs defaultValue="workflow" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="workflow">Workflow Generator</TabsTrigger>
+          {/* Can add more tabs here in the future */}
+        </TabsList>
 
-          <TabsContent value="workflow" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Workflow Generator Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : (
+        <TabsContent value="workflow" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Workflow Generator Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Customize the system prompt used by the AI to generate Kanban board columns based on workflow descriptions.
+                  </p>
+                  <Textarea
+                    value={workflowPrompt}
+                    onChange={(e) => setWorkflowPrompt(e.target.value)}
+                    placeholder="Enter system prompt for workflow generation..."
+                    className="min-h-[300px] font-mono text-sm"
+                  />
+                </>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button 
+                variant="outline" 
+                onClick={handleResetWorkflowPrompt}
+                disabled={isLoading || !hasWorkflowPromptChanges}
+              >
+                Reset
+              </Button>
+              <Button 
+                onClick={handleSaveWorkflowPrompt} 
+                disabled={isLoading || isSaving || !hasWorkflowPromptChanges}
+              >
+                {isSaving ? (
                   <>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Customize the system prompt used by the AI to generate Kanban board columns based on workflow descriptions.
-                    </p>
-                    <Textarea
-                      value={workflowPrompt}
-                      onChange={(e) => setWorkflowPrompt(e.target.value)}
-                      placeholder="Enter system prompt for workflow generation..."
-                      className="min-h-[300px] font-mono text-sm"
-                    />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
                   </>
+                ) : (
+                  'Save Changes'
                 )}
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={handleResetWorkflowPrompt}
-                  disabled={isLoading || !hasWorkflowPromptChanges}
-                >
-                  Reset
-                </Button>
-                <Button 
-                  onClick={handleSaveWorkflowPrompt} 
-                  disabled={isLoading || isSaving || !hasWorkflowPromptChanges}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </PageLayout>
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

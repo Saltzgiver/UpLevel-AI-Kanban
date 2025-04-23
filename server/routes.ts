@@ -13,6 +13,7 @@ import { storeSuggestion, checkSuggestion, clearSuggestion, dumpCache } from "./
 import { registerMcpRoutes } from "./routes/mcp";
 import { WebSocketServer, WebSocket } from "ws";
 import { generateWorkflowColumns } from "./workflowGenerator";
+import { DEFAULT_SYSTEM_PROMPT } from "./workflowGenerator";
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
@@ -61,6 +62,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { key } = req.params;
       const setting = await storage.getSetting(key);
+      
+      // Special handling for workflow_system_prompt
+      if (!setting && key === "workflow_system_prompt") {
+        // Return the default prompt when the setting doesn't exist
+        return res.json({ 
+          id: 0, 
+          key: "workflow_system_prompt", 
+          value: DEFAULT_SYSTEM_PROMPT,
+          updatedAt: new Date()
+        });
+      }
       
       if (!setting) {
         return res.status(404).json({ message: "Setting not found" });
