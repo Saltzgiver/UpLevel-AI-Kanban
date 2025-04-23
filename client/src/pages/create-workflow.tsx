@@ -123,29 +123,60 @@ export default function CreateWorkflowPage() {
 
     try {
       // First create the board
-      const board = await apiRequest<BoardResponse>("POST", "/api/boards", {
-        name: boardName.trim() || "My Workflow",
-        userId: null,
+      console.log("Creating board with name:", boardName.trim() || "My Workflow");
+      
+      // Use fetch directly with a longer timeout to avoid timeouts
+      const boardResponse = await fetch("/api/boards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: boardName.trim() || "My Workflow",
+          userId: null,
+        }),
       });
+      
+      if (!boardResponse.ok) {
+        const errorText = await boardResponse.text();
+        throw new Error(`Server error: ${boardResponse.status} - ${errorText}`);
+      }
+      
+      const board = await boardResponse.json();
+      console.log("Board created successfully:", board);
 
       if (!board || !board.id) {
-        throw new Error("Failed to create board");
+        throw new Error("Failed to create board - no ID returned");
       }
 
       // Create each column
+      console.log("Creating columns for board ID:", board.id);
       for (let i = 0; i < generatedColumns.length; i++) {
         const col = generatedColumns[i];
-        await apiRequest("POST", "/api/columns", {
-          name: col.name,
-          boardId: board.id,
-          gptAssigned: col.gptAssigned,
-          gptName: col.gptName,
-          gptInstructions: col.gptInstructions,
-          order: i,
+        console.log(`Creating column ${i+1}/${generatedColumns.length}: ${col.name}`);
+        
+        const columnResponse = await fetch("/api/columns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: col.name,
+            boardId: board.id,
+            gptAssigned: col.gptAssigned,
+            gptName: col.gptName,
+            gptInstructions: col.gptInstructions,
+            order: i,
+          }),
         });
+        
+        if (!columnResponse.ok) {
+          const errorText = await columnResponse.text();
+          console.error(`Failed to create column ${i+1}: ${errorText}`);
+          // Continue creating other columns even if one fails
+        } else {
+          console.log(`Column ${i+1} created successfully`);
+        }
       }
 
       // Refresh boards data
+      console.log("Refreshing board data");
       queryClient.invalidateQueries({ queryKey: ["/api/boards"] });
 
       toast({
@@ -154,6 +185,7 @@ export default function CreateWorkflowPage() {
       });
 
       // Navigate to the board page
+      console.log("Redirecting to home page");
       setLocation("/");
       
       // After the navigation, the home component will show the latest board
@@ -161,7 +193,7 @@ export default function CreateWorkflowPage() {
       console.error("Failed to create board:", error);
       toast({
         title: "Error",
-        description: "Failed to create your workflow board",
+        description: `Failed to create your workflow board: ${error.message || "Unknown error"}`,
         variant: "destructive",
       });
       setStep('preview');

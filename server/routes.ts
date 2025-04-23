@@ -131,18 +131,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/boards", async (req, res) => {
     try {
+      console.log("POST /api/boards - Request body:", req.body);
+      
       const data = insertBoardSchema.parse(req.body);
+      console.log("Board data validated successfully:", data);
+      
       const board = await storage.createBoard(data);
+      console.log("Board created successfully:", board);
+      
       return res.status(201).json(board);
     } catch (error) {
       if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        console.error("Validation error creating board:", validationError);
         return res.status(400).json({ 
           message: "Validation error", 
-          errors: fromZodError(error).details 
+          errors: validationError.details 
         });
       }
       console.error("Error creating board:", error);
-      return res.status(500).json({ message: "Error creating board" });
+      
+      // Provide more detailed error information to help diagnose the issue
+      const errorResponse = {
+        message: "Error creating board",
+        details: error.message || "Unknown error"
+      };
+      
+      return res.status(500).json(errorResponse);
     }
   });
 
