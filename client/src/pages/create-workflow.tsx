@@ -357,88 +357,91 @@ export default function CreateWorkflowPage() {
     if (step === 'preview') {
       // Helper function to get color style based on index (cycling through colors)
       const getColorForIndex = (index: number) => {
-        const colors = ["Peach", "Sky", "Lavender", "Mint", "Aqua"];
+        // Based on the mockup:
+        // First lane uses Mint (green)
+        // Second lane uses Sky (blue)
+        // Third lane uses Peach (orange)
+        const colors = ["Mint", "Sky", "Peach", "Lavender", "Aqua"];
         return colors[index % colors.length];
       };
       
       // Helper function to get style classes based on color name
       const getColorStyles = (colorName: string) => {
-        const colors: Record<string, {bg: string, text: string, border: string}> = {
-          "Peach": { bg: "bg-[#FEE9D7]", text: "text-[#E25B3D]", border: "border-[#F7C9B0]" },
-          "Sky": { bg: "bg-[#E1F2FE]", text: "text-[#2E7EC9]", border: "border-[#B7DCF7]" }, 
-          "Lavender": { bg: "bg-[#F6E6FF]", text: "text-[#C235D1]", border: "border-[#E9CEFB]" },
-          "Mint": { bg: "bg-[#DDFFE7]", text: "text-[#1A9E5E]", border: "border-[#C1EDD4]" },
-          "Aqua": { bg: "bg-[#E0F9FF]", text: "text-[#3992B0]", border: "border-[#C3E8F4]" }
+        const colors: Record<string, {bg: string, text: string, border: string, cardBg: string}> = {
+          "Peach": { bg: "bg-[#FEE9D7]", text: "text-[#E25B3D]", border: "border-[#F7C9B0]", cardBg: "bg-[#FFF5ED]" },
+          "Sky": { bg: "bg-[#E1F2FE]", text: "text-[#2E7EC9]", border: "border-[#B7DCF7]", cardBg: "bg-[#EDF7FE]" }, 
+          "Lavender": { bg: "bg-[#F6E6FF]", text: "text-[#C235D1]", border: "border-[#E9CEFB]", cardBg: "bg-[#FAEDFF]" },
+          "Mint": { bg: "bg-[#DDFFE7]", text: "text-[#1A9E5E]", border: "border-[#C1EDD4]", cardBg: "bg-[#EDFFF3]" },
+          "Aqua": { bg: "bg-[#E0F9FF]", text: "text-[#3992B0]", border: "border-[#C3E8F4]", cardBg: "bg-[#EDFCFF]" }
         };
         
         return colors[colorName] || colors["Peach"];
       };
       
       return (
-        <div className="max-w-5xl mx-auto p-4">
-          <Card className="w-full mb-4">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <Input
-                  value={boardName}
-                  onChange={(e) => setBoardName(e.target.value)}
-                  placeholder="Workflow Name"
-                  className="font-bold text-lg"
-                />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {generatedColumns.map((column, index) => (
-                  <Card key={index} className="border p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <Input
-                        value={column.name}
-                        onChange={(e) => updateColumn(index, { name: e.target.value })}
-                        placeholder={`LANE ${index + 1} NAME`}
-                        className="font-medium uppercase text-sm tracking-wide"
-                      />
-                      <span 
-                        className="text-xs text-gray-500 flex items-center cursor-default" 
-                        title="Cards will be added here after the board is created"
-                      >
-                        <div className="h-4 w-4 text-gray-400 mr-1">📄</div>
-                        0
-                      </span>
-                    </div>
-                    {column.gptAssigned && (
-                      <div className="mt-2 p-3 rounded-md" style={{backgroundColor: column.gptName ? `rgba(${index * 40}, ${255 - index * 20}, ${150 + index * 20}, 0.1)` : 'transparent'}}>
-                        <div className={`flex items-center gap-2 mb-1 ${getColorStyles(getColorForIndex(index)).text}`}>
-                          <div className={`w-4 h-4 rounded-full ${getColorStyles(getColorForIndex(index)).bg}`}></div>
-                          <Input
-                            value={column.gptName}
-                            onChange={(e) => updateColumn(index, { gptName: e.target.value })}
-                            placeholder="AI Action #1"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mb-1">DO'S - Example AI Prompt</div>
-                        <Textarea
-                          value={column.gptInstructions}
-                          onChange={(e) => updateColumn(index, { gptInstructions: e.target.value })}
-                          placeholder="AI Instructions"
-                          className="text-sm min-h-[80px] mt-1"
+        <div className="max-w-md mx-auto p-4">
+          <div className="bg-white rounded-xl border shadow-sm p-4 mb-4">
+            <h2 className="text-center font-bold text-2xl mb-6">[{boardName || "Workflow Name #1"}]</h2>
+            
+            <div className="space-y-4">
+              {generatedColumns.map((column, index) => (
+                <div key={index} className="bg-white rounded-lg border shadow-sm">
+                  <div className="p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <Input
+                          value={column.name}
+                          onChange={(e) => updateColumn(index, { name: e.target.value })}
+                          placeholder={`LANE ${index + 1} NAME`}
+                          className="font-bold uppercase text-xl w-auto border-none p-0 focus-visible:ring-0"
                         />
+                        <span className="text-gray-400 ml-2">0</span>
+                      </div>
+                      <div className="text-gray-400">
+                        <span className="text-xl">⋮</span>
+                      </div>
+                    </div>
+                    
+                    {column.gptAssigned && (
+                      <div className={`mt-4 p-4 rounded-lg ${getColorStyles(getColorForIndex(index)).cardBg}`}>
+                        <div className="flex justify-between">
+                          <div className={`flex items-center gap-2 ${getColorStyles(getColorForIndex(index)).text}`}>
+                            <div className="flex items-center justify-center text-xl">✧</div>
+                            <Input
+                              value={column.gptName}
+                              onChange={(e) => updateColumn(index, { gptName: e.target.value })}
+                              placeholder={`AI Action #${index + 1}`}
+                              className={`font-medium text-lg border-none p-0 ${getColorStyles(getColorForIndex(index)).text} focus-visible:ring-0 bg-transparent`}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <span className={`${getColorStyles(getColorForIndex(index)).text}`}>▼</span>
+                            <span className={`${getColorStyles(getColorForIndex(index)).text}`}>✎</span>
+                          </div>
+                        </div>
+                        <div className="text-gray-500 mt-1 pl-6">DO'S: - Example AI Prompt</div>
                       </div>
                     )}
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={handleGoBack}>
-                Back
-              </Button>
-              <Button onClick={handleCreateBoard}>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 flex justify-center">
+              <Button 
+                onClick={handleCreateBoard}
+                className="bg-green-400 hover:bg-green-500 text-white font-semibold rounded-full px-8 py-2 w-full max-w-xs"
+              >
                 Create Board
               </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
+            
+          <div className="flex justify-start">
+            <Button variant="ghost" onClick={handleGoBack} className="text-gray-500">
+              Back
+            </Button>
+          </div>
         </div>
       );
     }
