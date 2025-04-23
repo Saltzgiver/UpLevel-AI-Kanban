@@ -171,15 +171,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
           data-workflow-creator="true"
         >
           <Wand2 className="h-4 w-4 mr-1" />
-          Create Workflow
-        </Button>
-        <Button
-          size="sm"
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="flex items-center"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          New Board
+          Create Board
         </Button>
       </div>
 

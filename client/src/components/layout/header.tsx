@@ -221,13 +221,6 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="text-primary cursor-pointer"
-              >
-                <Plus className="h-4 w-4 mr-2" /> 
-                Create New Board
-              </DropdownMenuItem>
-              <DropdownMenuItem 
                 onClick={() => {
                   // Navigate directly to the workflow creation page
                   window.location.href = "/create-workflow";
@@ -235,7 +228,7 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                 className="text-purple-500 cursor-pointer"
               >
                 <Wand2 className="h-4 w-4 mr-2" /> 
-                Create Workflow
+                Create Board
               </DropdownMenuItem>
 
             </DropdownMenuContent>
