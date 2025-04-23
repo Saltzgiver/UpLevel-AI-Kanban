@@ -29,6 +29,7 @@ interface GenerateColumnsResponse {
     gptAssigned: boolean;
     gptName: string;
     gptInstructions: string;
+    gptColor?: string;
   }[];
 }
 
@@ -136,6 +137,7 @@ export default function CreateWorkflowPage() {
           gptAssigned: false, 
           gptName: "", 
           gptInstructions: "",
+          gptColor: "",
           order: 0 
         },
         {
@@ -143,6 +145,7 @@ export default function CreateWorkflowPage() {
           gptAssigned: true,
           gptName: "Assistant",
           gptInstructions: "Help the user with their task in progress. Provide guidance, answer questions, and offer suggestions to move the task forward.",
+          gptColor: "Sky",
           order: 1
         },
         {
@@ -150,6 +153,7 @@ export default function CreateWorkflowPage() {
           gptAssigned: false,
           gptName: "",
           gptInstructions: "",
+          gptColor: "",
           order: 2
         }
       ];
@@ -167,6 +171,7 @@ export default function CreateWorkflowPage() {
             gptAssigned: col.gptAssigned,
             gptName: col.gptName,
             gptInstructions: col.gptInstructions,
+            gptColor: col.gptColor,
             order: col.order,
           }),
         });
@@ -237,11 +242,22 @@ export default function CreateWorkflowPage() {
       name: `Lane ${generatedColumns.length + 1}`,
       gptAssigned: false,
       gptName: "",
-      gptInstructions: ""
+      gptInstructions: "",
+      gptColor: ""
     };
     setGeneratedColumns([...generatedColumns, newColumn]);
   };
   
+  // Helper function to get color name based on index (cycling through colors)
+  const getColorForIndex = (index: number) => {
+    // Based on the mockup:
+    // First lane uses Mint (green)
+    // Second lane uses Sky (blue)
+    // Third lane uses Peach (orange)
+    const colors = ["Mint", "Sky", "Peach", "Lavender", "Aqua"];
+    return colors[index % colors.length];
+  };
+
   // Toggle AI assistant for a lane
   const toggleGptAssigned = (index: number) => {
     const updatedColumns = [...generatedColumns];
@@ -250,14 +266,16 @@ export default function CreateWorkflowPage() {
         ...updatedColumns[index], 
         gptAssigned: true,
         gptName: `AI Assistant ${index + 1}`,
-        gptInstructions: "Help the user with their task. Provide guidance, answer questions, and offer suggestions."
+        gptInstructions: "Help the user with their task. Provide guidance, answer questions, and offer suggestions.",
+        gptColor: getColorForIndex(index)
       };
     } else {
       updatedColumns[index] = { 
         ...updatedColumns[index], 
         gptAssigned: false,
         gptName: "",
-        gptInstructions: ""
+        gptInstructions: "",
+        gptColor: ""
       };
     }
     setGeneratedColumns(updatedColumns);
@@ -339,6 +357,7 @@ export default function CreateWorkflowPage() {
             gptAssigned: col.gptAssigned,
             gptName: col.gptName,
             gptInstructions: col.gptInstructions,
+            gptColor: col.gptColor || getColorForIndex(i), // Use the assigned color or generate one based on index
             order: i,
           }),
         });
@@ -514,15 +533,15 @@ export default function CreateWorkflowPage() {
                     </div>
                     
                     {column.gptAssigned && (
-                      <div className={`mt-4 p-4 rounded-lg ${getColorStyles(getColorForIndex(index)).cardBg}`}>
+                      <div className={`mt-4 p-4 rounded-lg ${getColorStyles(column.gptColor || getColorForIndex(index)).cardBg}`}>
                         <div className="flex justify-between items-center gap-2">
-                          <div className={`flex items-center gap-2 ${getColorStyles(getColorForIndex(index)).text} flex-grow`}>
+                          <div className={`flex items-center gap-2 ${getColorStyles(column.gptColor || getColorForIndex(index)).text} flex-grow`}>
                             <Sparkles className="h-5 w-5 flex-shrink-0" />
                             <Input
                               value={column.gptName}
                               onChange={(e) => updateColumn(index, { gptName: e.target.value })}
                               placeholder={`AI Action #${index + 1}`}
-                              className={`font-medium text-lg border-none p-0 ${getColorStyles(getColorForIndex(index)).text} focus-visible:ring-0 bg-transparent w-full`}
+                              className={`font-medium text-lg border-none p-0 ${getColorStyles(column.gptColor || getColorForIndex(index)).text} focus-visible:ring-0 bg-transparent w-full`}
                               style={{ minWidth: "0" }}
                             />
                           </div>
@@ -533,9 +552,9 @@ export default function CreateWorkflowPage() {
                               title="Toggle instructions"
                             >
                               {expandedCard === index ? (
-                                <ChevronDown className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text} rotate-180 transition-transform`} />
+                                <ChevronDown className={`h-5 w-5 ${getColorStyles(column.gptColor || getColorForIndex(index)).text} rotate-180 transition-transform`} />
                               ) : (
-                                <ChevronDown className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text} transition-transform`} />
+                                <ChevronDown className={`h-5 w-5 ${getColorStyles(column.gptColor || getColorForIndex(index)).text} transition-transform`} />
                               )}
                             </div>
                             <div 
@@ -543,7 +562,7 @@ export default function CreateWorkflowPage() {
                               onClick={() => toggleEditInstructions(index)}
                               title="Edit instructions"
                             >
-                              <Edit className={`h-5 w-5 ${getColorStyles(getColorForIndex(index)).text}`} />
+                              <Edit className={`h-5 w-5 ${getColorStyles(column.gptColor || getColorForIndex(index)).text}`} />
                             </div>
                           </div>
                         </div>
