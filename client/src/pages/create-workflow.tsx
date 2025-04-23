@@ -112,6 +112,10 @@ export default function CreateWorkflowPage() {
       if (!board || !board.id) {
         throw new Error("Failed to create board - no ID returned");
       }
+      
+      // Store the board ID in localStorage so the home component will select it
+      localStorage.setItem('activeBoardId', board.id.toString());
+      console.log("Set active board ID in localStorage:", board.id);
 
       // Create three basic columns
       console.log("Creating basic columns for board ID:", board.id);
@@ -228,6 +232,10 @@ export default function CreateWorkflowPage() {
       if (!board || !board.id) {
         throw new Error("Failed to create board - no ID returned");
       }
+      
+      // Store the board ID in localStorage so the home component will select it
+      localStorage.setItem('activeBoardId', board.id.toString());
+      console.log("Set active board ID in localStorage:", board.id);
 
       // Create each column
       console.log("Creating columns for board ID:", board.id);
