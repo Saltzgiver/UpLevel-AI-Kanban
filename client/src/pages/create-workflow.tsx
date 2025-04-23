@@ -474,13 +474,14 @@ export default function CreateWorkflowPage() {
               {generatedColumns.map((column, index) => (
                 <div key={index} className="bg-white rounded-lg border shadow-sm">
                   <div className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center">
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex items-center flex-grow">
                         <Input
                           value={column.name}
                           onChange={(e) => updateColumn(index, { name: e.target.value })}
                           placeholder={`LANE ${index + 1} NAME`}
-                          className="font-bold uppercase text-xl w-auto border-none p-0 focus-visible:ring-0"
+                          className="font-bold uppercase text-xl w-full border-none p-0 focus-visible:ring-0"
+                          style={{ minWidth: "0" }}
                         />
                       </div>
                       <DropdownMenu
@@ -514,17 +515,18 @@ export default function CreateWorkflowPage() {
                     
                     {column.gptAssigned && (
                       <div className={`mt-4 p-4 rounded-lg ${getColorStyles(getColorForIndex(index)).cardBg}`}>
-                        <div className="flex justify-between">
-                          <div className={`flex items-center gap-2 ${getColorStyles(getColorForIndex(index)).text}`}>
-                            <Sparkles className="h-5 w-5" />
+                        <div className="flex justify-between items-center gap-2">
+                          <div className={`flex items-center gap-2 ${getColorStyles(getColorForIndex(index)).text} flex-grow`}>
+                            <Sparkles className="h-5 w-5 flex-shrink-0" />
                             <Input
                               value={column.gptName}
                               onChange={(e) => updateColumn(index, { gptName: e.target.value })}
                               placeholder={`AI Action #${index + 1}`}
-                              className={`font-medium text-lg border-none p-0 ${getColorStyles(getColorForIndex(index)).text} focus-visible:ring-0 bg-transparent`}
+                              className={`font-medium text-lg border-none p-0 ${getColorStyles(getColorForIndex(index)).text} focus-visible:ring-0 bg-transparent w-full`}
+                              style={{ minWidth: "0" }}
                             />
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <div 
                               className="cursor-pointer" 
                               onClick={() => toggleCardExpansion(index)}
