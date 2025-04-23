@@ -88,7 +88,7 @@ export default function WorkflowGeneratorPromptPage() {
   const hasWorkflowPromptChanges = workflowPrompt !== originalWorkflowPrompt;
 
   return (
-    <div className="container py-8">
+    <div className="container py-8 px-6">
       <h1 className="text-2xl font-bold mb-6">Workflow Generator Prompt</h1>
 
       <Card>
