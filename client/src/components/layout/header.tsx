@@ -349,13 +349,19 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                   </div>
                 </div>
                 <div className="px-2 py-1.5">
-                  <Link href="/settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                  <div className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                  </Link>
+                  </div>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Developer Tools</DropdownMenuLabel>
+                <div className="px-2 py-1.5">
+                  <Link href="/settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    <span>Workflow Generator Prompt</span>
+                  </Link>
+                </div>
                 <div className="px-2 py-1.5">
                   <Link href="/prompt-analyzer-settings" className="flex items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
                     <Wrench className="mr-2 h-4 w-4" />

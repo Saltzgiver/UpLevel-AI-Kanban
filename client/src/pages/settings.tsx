@@ -12,7 +12,7 @@ import { PageLayout } from "@/components/layout/page-layout";
  * Settings page for configuring application settings
  */
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("workflow");
+  const [activeTab, setActiveTab] = useState("developer");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [workflowPrompt, setWorkflowPrompt] = useState("");
@@ -94,16 +94,16 @@ export default function SettingsPage() {
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
-      <Tabs defaultValue="workflow" value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="developer" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="workflow">Workflow Generator</TabsTrigger>
+          <TabsTrigger value="developer">Developer Tools</TabsTrigger>
           {/* Can add more tabs here in the future */}
         </TabsList>
 
-        <TabsContent value="workflow" className="mt-6">
+        <TabsContent value="developer" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>AI Workflow Generator Settings</CardTitle>
+              <CardTitle>Workflow Generator Prompt</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
