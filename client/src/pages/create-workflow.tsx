@@ -355,8 +355,27 @@ export default function CreateWorkflowPage() {
     }
 
     if (step === 'preview') {
+      // Helper function to get color style based on index (cycling through colors)
+      const getColorForIndex = (index: number) => {
+        const colors = ["Peach", "Sky", "Lavender", "Mint", "Aqua"];
+        return colors[index % colors.length];
+      };
+      
+      // Helper function to get style classes based on color name
+      const getColorStyles = (colorName: string) => {
+        const colors: Record<string, {bg: string, text: string, border: string}> = {
+          "Peach": { bg: "bg-[#FEE9D7]", text: "text-[#E25B3D]", border: "border-[#F7C9B0]" },
+          "Sky": { bg: "bg-[#E1F2FE]", text: "text-[#2E7EC9]", border: "border-[#B7DCF7]" }, 
+          "Lavender": { bg: "bg-[#F6E6FF]", text: "text-[#C235D1]", border: "border-[#E9CEFB]" },
+          "Mint": { bg: "bg-[#DDFFE7]", text: "text-[#1A9E5E]", border: "border-[#C1EDD4]" },
+          "Aqua": { bg: "bg-[#E0F9FF]", text: "text-[#3992B0]", border: "border-[#C3E8F4]" }
+        };
+        
+        return colors[colorName] || colors["Peach"];
+      };
+      
       return (
-        <div className="max-w-2xl mx-auto p-4">
+        <div className="max-w-5xl mx-auto p-4">
           <Card className="w-full mb-4">
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
@@ -369,44 +388,47 @@ export default function CreateWorkflowPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {generatedColumns.map((column, index) => (
-                <Card key={index} className="border p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <Input
-                      value={column.name}
-                      onChange={(e) => updateColumn(index, { name: e.target.value })}
-                      placeholder={`Lane ${index + 1} Name`}
-                      className="font-medium"
-                    />
-                    <span 
-                      className="text-xs text-gray-500 flex items-center cursor-default" 
-                      title="Cards will be added here after the board is created"
-                    >
-                      <div className="h-4 w-4 text-gray-400 mr-1">📄</div>
-                      0
-                    </span>
-                  </div>
-                  {column.gptAssigned && (
-                    <div className="mt-2">
-                      <div className="flex items-center gap-2 mb-1 text-green-600">
-                        <div className="w-4 h-4 rounded-full bg-green-500"></div>
-                        <Input
-                          value={column.gptName}
-                          onChange={(e) => updateColumn(index, { gptName: e.target.value })}
-                          placeholder="AI Action Name"
-                          className="text-sm"
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {generatedColumns.map((column, index) => (
+                  <Card key={index} className="border p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <Input
+                        value={column.name}
+                        onChange={(e) => updateColumn(index, { name: e.target.value })}
+                        placeholder={`LANE ${index + 1} NAME`}
+                        className="font-medium uppercase text-sm tracking-wide"
+                      />
+                      <span 
+                        className="text-xs text-gray-500 flex items-center cursor-default" 
+                        title="Cards will be added here after the board is created"
+                      >
+                        <div className="h-4 w-4 text-gray-400 mr-1">📄</div>
+                        0
+                      </span>
+                    </div>
+                    {column.gptAssigned && (
+                      <div className="mt-2 p-3 rounded-md" style={{backgroundColor: column.gptName ? `rgba(${index * 40}, ${255 - index * 20}, ${150 + index * 20}, 0.1)` : 'transparent'}}>
+                        <div className={`flex items-center gap-2 mb-1 ${getColorStyles(getColorForIndex(index)).text}`}>
+                          <div className={`w-4 h-4 rounded-full ${getColorStyles(getColorForIndex(index)).bg}`}></div>
+                          <Input
+                            value={column.gptName}
+                            onChange={(e) => updateColumn(index, { gptName: e.target.value })}
+                            placeholder="AI Action #1"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1">DO'S - Example AI Prompt</div>
+                        <Textarea
+                          value={column.gptInstructions}
+                          onChange={(e) => updateColumn(index, { gptInstructions: e.target.value })}
+                          placeholder="AI Instructions"
+                          className="text-sm min-h-[80px] mt-1"
                         />
                       </div>
-                      <Textarea
-                        value={column.gptInstructions}
-                        onChange={(e) => updateColumn(index, { gptInstructions: e.target.value })}
-                        placeholder="AI Instructions"
-                        className="text-sm min-h-[80px] mt-1"
-                      />
-                    </div>
-                  )}
-                </Card>
-              ))}
+                    )}
+                  </Card>
+                ))}
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline" onClick={handleGoBack}>
