@@ -10,6 +10,7 @@ import TestSuggestionPage from "@/pages/test-suggestion";
 import DirectToastTestPage from "@/pages/direct-toast-test";
 import PromptAnalyzerSettings from "@/pages/prompt-analyzer-settings";
 import GlobalSettings from "@/pages/global-settings";
+import CreateWorkflowPage from "@/pages/create-workflow";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
@@ -34,6 +35,7 @@ function Router() {
     <Switch>
       {/* Home route doesn't need the default navigation bar, as it has its own */}
       <CustomRoute path="/" component={Home} showNav={false} />
+      <CustomRoute path="/create-workflow" component={CreateWorkflowPage} showNav={false} />
       <CustomRoute path="/test-upload" component={TestUploadPage} />
       <CustomRoute path="/test-suggestion" component={TestSuggestionPage} />
       <CustomRoute path="/direct-toast-test" component={DirectToastTestPage} />

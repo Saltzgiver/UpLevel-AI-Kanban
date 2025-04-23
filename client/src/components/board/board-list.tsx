@@ -145,8 +145,19 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
   }
 
   const handleWorkflowBoardCreated = (boardId: number) => {
+    console.log("Board created from workflow:", boardId);
     setIsWorkflowDialogOpen(false);
     onSelectBoard(boardId);
+  };
+  
+  const openWorkflowDialog = () => {
+    console.log("Opening workflow dialog", new Date().toISOString());
+    alert("Opening the workflow dialog");
+    setIsWorkflowDialogOpen(true);
+    // Add a timeout to log whether the state actually changed
+    setTimeout(() => {
+      console.log("After setting isWorkflowDialogOpen to true:", isWorkflowDialogOpen);
+    }, 100);
   };
 
   return (
@@ -154,7 +165,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
       <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
-          onClick={() => setIsWorkflowDialogOpen(true)}
+          onClick={openWorkflowDialog}
           className="flex items-center bg-purple-500 hover:bg-purple-600"
           variant="default"
           data-workflow-creator="true"
