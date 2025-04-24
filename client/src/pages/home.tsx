@@ -128,6 +128,11 @@ export default function Home() {
   const boardsArray = Array.isArray(boards) ? boards : [];
   const activeBoard = boardsArray.find(board => board.id === activeBoardId) || boardsArray[0];
   
+  // Ensure activeBoard has a columns property
+  if (activeBoard && !activeBoard.columns) {
+    activeBoard.columns = [];
+  }
+  
   // Set the active board ID if it's not set yet
   if (!activeBoardId && activeBoard) {
     setActiveBoardId(activeBoard.id);

@@ -13,7 +13,8 @@ import {
   chats,
   attachments,
   settings,
-  columnMcpActions
+  columnMcpActions,
+  mcpLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
@@ -336,6 +337,11 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(columnMcpActions)
       .where(eq(columnMcpActions.columnId, id));
+      
+    // Delete MCP logs associated with this column
+    await db
+      .delete(mcpLogs)
+      .where(eq(mcpLogs.columnId, id));
 
     // Delete the column
     await db
@@ -419,6 +425,11 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(attachments)
       .where(eq(attachments.cardId, id));
+    
+    // Delete MCP logs associated with this card
+    await db
+      .delete(mcpLogs)
+      .where(eq(mcpLogs.cardId, id));
     
     // Delete the card
     await db
