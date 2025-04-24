@@ -332,6 +332,11 @@ export class DatabaseStorage implements IStorage {
       await this.deleteCard(card.id);
     }
 
+    // Delete column MCP actions associated with this column
+    await db
+      .delete(columnMcpActions)
+      .where(eq(columnMcpActions.columnId, id));
+
     // Delete the column
     await db
       .delete(columns)
