@@ -207,6 +207,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error reordering columns" });
     }
   });
+  
+  app.delete("/api/boards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if the board exists
+      const board = await storage.getBoardById(id);
+      if (!board) {
+        return res.status(404).json({ message: "Board not found" });
+      }
+      
+      // Delete the board and all associated columns and cards
+      await storage.deleteBoard(id);
+      
+      return res.json({ message: "Board deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting board:", error);
+      return res.status(500).json({ message: "Error deleting board" });
+    }
+  });
 
   // COLUMN ROUTES
   app.post("/api/columns", async (req, res) => {
