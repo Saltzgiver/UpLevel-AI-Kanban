@@ -303,6 +303,7 @@ export class DatabaseStorage implements IStorage {
         gptAssigned: column.gptAssigned || false,
         gptName: column.gptName || null,
         gptInstructions: column.gptInstructions || null,
+        gptColor: column.gptColor || null,
         autoTrigger: column.autoTrigger !== false,
         apiKey: apiKey
       })
