@@ -179,10 +179,9 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
         {boards.map((board) => (
           <Card 
             key={board.id}
-            className={`cursor-pointer transition-all hover:shadow-md ${
+            className={`transition-all hover:shadow-md ${
               currentBoardId === board.id ? 'border-primary border-2' : ''
             }`}
-            onClick={() => onSelectBoard(board.id)}
           >
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center">
@@ -204,7 +203,7 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
                 {(board as any).columns?.length || 0} columns
               </p>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-2">
               <Button 
                 variant="outline" 
                 className="w-full"
@@ -212,6 +211,21 @@ export function BoardList({ boards, onSelectBoard, currentBoardId }: BoardListPr
               >
                 Open Board
               </Button>
+              
+              {boards.length > 1 && (
+                <Button 
+                  variant="outline" 
+                  className="w-full text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDeleteDialog(board, e);
+                  }}
+                  disabled={boards.length <= 1}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete Board
+                </Button>
+              )}
             </CardFooter>
           </Card>
         ))}
