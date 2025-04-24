@@ -15,7 +15,8 @@ import {
   Bell,
   Upload,
   Globe,
-  Wand2
+  Wand2,
+  Trash2
 } from "lucide-react";
 import logoPath from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -290,6 +291,33 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
         </div>
         
         <div className="flex items-center space-x-3">
+          {/* Delete Board button - only visible in board view and when there's more than 1 board */}
+          {viewMode === "board" && boards.length > 1 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="bg-transparent text-red-600 hover:bg-red-50 border border-gray-200 rounded h-8 px-3"
+                    onClick={() => {
+                      setBoardToDelete(board);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <span className="flex items-center text-xs">
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      Delete Board
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this board and all its content</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
           {/* Share button */}
           <Button
             variant="ghost"
