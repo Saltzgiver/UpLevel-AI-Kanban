@@ -138,6 +138,7 @@ export function LaneConfigDrawer({
               </DrawerTitle>
               <DrawerClose className="rounded-full">
                 <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
               </DrawerClose>
             </div>
           </DrawerHeader>

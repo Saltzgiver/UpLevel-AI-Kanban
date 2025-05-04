@@ -233,6 +233,7 @@ export function CardDrawer({
         <DrawerContent className="max-h-[90vh]">
           <div className="mx-auto w-full max-w-4xl">
             <DrawerHeader className="px-6 pt-6 pb-3">
+              <DrawerTitle className="sr-only">Card Details</DrawerTitle>
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1 flex-grow">
@@ -241,6 +242,7 @@ export function CardDrawer({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       onBlur={handleSaveTitle}
+                      aria-label="Card title"
                     />
                     <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
                       {column.name}
@@ -248,6 +250,7 @@ export function CardDrawer({
                   </div>
                   <DrawerClose className="rounded-full">
                     <X className="h-4 w-4" />
+                    <span className="sr-only">Close</span>
                   </DrawerClose>
                 </div>
                 
