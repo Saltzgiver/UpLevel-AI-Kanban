@@ -129,7 +129,7 @@ export function LaneConfigDrawer({
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[95vh] h-[95vh]">
+      <DrawerContent className="max-h-[95vh] h-[95vh] outline-none focus:outline-none">
         <div className="mx-auto w-full max-w-4xl">
           <DrawerHeader className="px-6 pt-6 pb-2">
             <div className="flex items-center justify-between">

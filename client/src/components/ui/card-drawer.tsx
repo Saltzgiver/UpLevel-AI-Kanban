@@ -230,7 +230,7 @@ export function CardDrawer({
   return (
     <>
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DrawerContent className="max-h-[95vh] h-[95vh]">
+        <DrawerContent className="max-h-[95vh] h-[95vh] outline-none focus:outline-none">
           <div className="mx-auto w-full max-w-4xl">
             <DrawerHeader className="px-6 pt-6 pb-3">
               <DrawerTitle className="sr-only">Card Details</DrawerTitle>
