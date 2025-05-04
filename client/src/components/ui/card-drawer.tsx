@@ -20,8 +20,8 @@ import { useCardProcessing } from "@/hooks/use-card-processing";
 import { X, ChevronDown, ArrowRight, RotateCw, Trash2, Menu, Loader2, AlertTriangle } from "lucide-react";
 import { GPTChat } from "@/components/gpt/gpt-chat";
 import { Card as CardType, Column, Chat, Attachment } from "@shared/schema";
-import { AttachmentList } from "@/components/ui/attachment-list";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { AttachmentItem } from "@/components/gpt/attachment-item";
 
 interface CardDrawerProps {
   card: CardType & { 
@@ -382,7 +382,19 @@ export function CardDrawer({
                 <>
                   <div className="space-y-2">
                     <div className="font-medium text-sm text-gray-500">Attachments</div>
-                    <AttachmentList attachments={attachments} cardId={card.id} />
+                    <div className="flex flex-col space-y-1">
+                      {attachments.map((attachment) => (
+                        <div key={attachment.id}>
+                          <AttachmentItem 
+                            attachment={attachment}
+                            onDelete={() => {
+                              // This will refresh attachments
+                              // We rely on the AttachmentItem component to handle the actual deletion
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <Separator />
                 </>
@@ -422,7 +434,7 @@ export function CardDrawer({
       </Drawer>
       
       {/* Delete confirmation dialog */}
-      <ConfirmationDialog
+      <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={cancelDelete}
         onConfirm={confirmDelete}

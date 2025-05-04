@@ -2,7 +2,7 @@ import { useState, createContext, useContext, ReactNode } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { Column } from "./column-wrapper";
 import { AddColumn } from "./add-column";
-import { CardModal } from "../ui/card-modal";
+import { CardDrawer } from "../ui/card-drawer";
 import { ConfirmDialog } from "../ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -520,7 +520,7 @@ export function BoardComponent({ board, columns, isLoading }: BoardProps) {
       </DragDropContext>
 
       {selectedCard && selectedColumn && (
-        <CardModal
+        <CardDrawer
           card={selectedCard}
           column={selectedColumn}
           columns={columns}
