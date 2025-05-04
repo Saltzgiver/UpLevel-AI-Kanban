@@ -129,13 +129,21 @@ export function LaneConfigDrawer({
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[95vh] h-[95vh] outline-none focus:outline-none">
+      <DrawerContent 
+        className="max-h-[95vh] h-[95vh] outline-none focus:outline-none"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto w-full max-w-4xl">
           <DrawerHeader className="px-6 pt-6 pb-2">
             <div className="flex items-center justify-between">
               <DrawerTitle>
                 {isSuggestionMode ? "AI Prompt Suggestion" : "Lane Configuration"}
               </DrawerTitle>
+              <DrawerDescription className={isSuggestionMode ? "" : "sr-only"}>
+                {isSuggestionMode 
+                  ? "Review and apply the AI prompt suggestion to improve your workflow"
+                  : "Configure lane settings including name and AI assistant options"}
+              </DrawerDescription>
               <DrawerClose className="rounded-full">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>

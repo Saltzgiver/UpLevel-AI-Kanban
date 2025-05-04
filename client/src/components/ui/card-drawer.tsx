@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Drawer, 
   DrawerContent, 
+  DrawerDescription,
   DrawerFooter, 
   DrawerHeader,
   DrawerTitle,
@@ -230,10 +231,16 @@ export function CardDrawer({
   return (
     <>
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DrawerContent className="max-h-[95vh] h-[95vh] outline-none focus:outline-none">
+        <DrawerContent 
+          className="max-h-[95vh] h-[95vh] outline-none focus:outline-none"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}>
           <div className="mx-auto w-full max-w-4xl">
             <DrawerHeader className="px-6 pt-6 pb-3">
               <DrawerTitle className="sr-only">Card Details</DrawerTitle>
+              <DrawerDescription className="sr-only">
+                View and edit card details, description, and AI conversation
+              </DrawerDescription>
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1 flex-grow">
