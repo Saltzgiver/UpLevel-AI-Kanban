@@ -299,8 +299,8 @@ export function GPTChat({
           });
         }
         
-        // Keep focus on the input field after sending the message
-        if (inputRef.current) {
+        // Only focus input if drawer isn't open
+        if (inputRef.current && !document.body.classList.contains('drawer-open')) {
           inputRef.current.focus();
         }
       }, 100);
