@@ -17,6 +17,17 @@
     padding: 0;
   }
   
+  /* Prevents interactions with elements outside the drawer when it's open */
+  body.drawer-open * {
+    pointer-events: none;
+  }
+  
+  /* Re-enable interactions for drawer elements */
+  body.drawer-open [role="dialog"],
+  body.drawer-open [role="dialog"] * {
+    pointer-events: auto;
+  }
+  
   #root {
     @apply flex flex-col min-h-full h-full w-full;
   }
