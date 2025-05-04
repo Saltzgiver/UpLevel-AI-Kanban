@@ -236,22 +236,22 @@ export function CardDrawer({
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}>
           <div className="mx-auto w-full max-w-4xl">
-            <DrawerHeader className="px-6 pt-6 pb-3">
+            <DrawerHeader className="px-6 pt-3 pb-2">
               <DrawerTitle className="sr-only">Card Details</DrawerTitle>
               <DrawerDescription className="sr-only">
                 View and edit card details, description, and AI conversation
               </DrawerDescription>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1 flex-grow">
+                  <div className="flex-grow">
                     <input 
-                      className="w-full text-2xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent" 
+                      className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent" 
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       onBlur={handleSaveTitle}
                       aria-label="Card title"
                     />
-                    <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
+                    <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 mt-1">
                       {column.name}
                     </Badge>
                   </div>
@@ -263,7 +263,7 @@ export function CardDrawer({
                 
                 {/* Save title button appears if title is edited */}
                 {title !== card.title && (
-                  <div className="flex justify-end mb-2">
+                  <div className="flex justify-end mt-1">
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -277,7 +277,7 @@ export function CardDrawer({
               </div>
             </DrawerHeader>
             
-            <div className="px-6 pb-6 overflow-y-auto space-y-6 max-h-[calc(95vh-8rem)]">
+            <div className="px-6 pb-6 overflow-y-auto space-y-6 max-h-[calc(95vh-6rem)]">
               {/* Description Section */}
               <div className="space-y-2">
                 <div className="font-medium text-sm text-gray-500">Description</div>
