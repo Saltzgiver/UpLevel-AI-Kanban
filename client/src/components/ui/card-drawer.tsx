@@ -232,11 +232,13 @@ export function CardDrawer({
     <>
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DrawerContent 
-          className="max-h-[95vh] h-[95vh] outline-none focus:outline-none"
+          className="max-h-[95vh] h-[95vh] outline-none focus:outline-none pt-0"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}>
+          {/* Custom drawer handle with less margin */}
+          <div className="mx-auto mt-1 h-1 w-[100px] rounded-full bg-muted" />
           <div className="mx-auto w-full max-w-4xl">
-            <DrawerHeader className="px-6 pt-3 pb-2">
+            <DrawerHeader className="px-6 pt-1 pb-1">
               <DrawerTitle className="sr-only">Card Details</DrawerTitle>
               <DrawerDescription className="sr-only">
                 View and edit card details, description, and AI conversation
@@ -277,7 +279,7 @@ export function CardDrawer({
               </div>
             </DrawerHeader>
             
-            <div className="px-6 pb-6 overflow-y-auto space-y-6 max-h-[calc(95vh-6rem)]">
+            <div className="px-6 pb-6 overflow-y-auto space-y-6 max-h-[calc(95vh-4rem)]">
               {/* Description Section */}
               <div className="space-y-2">
                 <div className="font-medium text-sm text-gray-500">Description</div>
