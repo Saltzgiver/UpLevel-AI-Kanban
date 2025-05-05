@@ -48,6 +48,19 @@ export function CardDrawer({
 }: CardDrawerProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
+  
+  // Auto-resize the textarea when content changes or when drawer opens
+  useEffect(() => {
+    if (textAreaRef.current && isOpen) {
+      // Small delay to ensure the drawer is visible first
+      setTimeout(() => {
+        if (textAreaRef.current) {
+          textAreaRef.current.style.height = 'auto';
+          textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
+        }
+      }, 50);
+    }
+  }, [isOpen, description]);
   const [includeChatHistory, setIncludeChatHistory] = useState(card.includeChatHistory || false);
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveOptions, setShowMoveOptions] = useState(false);
@@ -80,16 +93,7 @@ export function CardDrawer({
     }
   }, [isOpen, card]);
 
-  // Handle auto-height for text area after description is set
-  useEffect(() => {
-    if (textAreaRef.current) {
-      // Reset height to minimal value first
-      textAreaRef.current.style.height = '24px';
-      // Then set it to scrollHeight to fit content exactly
-      const scrollHeight = textAreaRef.current.scrollHeight;
-      textAreaRef.current.style.height = scrollHeight + 'px';
-    }
-  }, [description, isOpen]);
+  // Older auto-height effect removed in favor of the more comprehensive one above
 
   if (!isOpen) return null;
 
@@ -362,11 +366,19 @@ export function CardDrawer({
                     setDescription(e.target.value);
                     setDescriptionChanged(e.target.value !== card.description);
                     if (textAreaRef.current) {
-                      textAreaRef.current.style.height = '24px';
-                      textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
+                      // Reset height to calculate the actual content height
+                      textAreaRef.current.style.height = 'auto';
+                      textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
                     }
                   }}
-                  className="min-h-[100px] resize-none"
+                  onFocus={() => {
+                    // Adjust height when focused to handle preloaded text
+                    if (textAreaRef.current) {
+                      textAreaRef.current.style.height = 'auto';
+                      textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
+                    }
+                  }}
+                  className="min-h-[60px] resize-none transition-height duration-200"
                 />
                 
                 {/* Save context button appears if context is edited */}
