@@ -248,6 +248,9 @@ export function CardDrawer({
                   <div className="flex-grow">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 whitespace-nowrap">
+                          {column.name}
+                        </Badge>
                         <input 
                           className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent" 
                           value={title}
@@ -255,9 +258,6 @@ export function CardDrawer({
                           onBlur={handleSaveTitle}
                           aria-label="Card title"
                         />
-                        <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 whitespace-nowrap">
-                          {column.name}
-                        </Badge>
                       </div>
                     </div>
                   </div>
