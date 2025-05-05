@@ -246,16 +246,18 @@ export function CardDrawer({
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <div className="flex-grow">
-                    <input 
-                      className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent" 
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      onBlur={handleSaveTitle}
-                      aria-label="Card title"
-                    />
-                    <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 mt-1">
-                      {column.name}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        className="flex-grow text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent" 
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onBlur={handleSaveTitle}
+                        aria-label="Card title"
+                      />
+                      <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50 whitespace-nowrap">
+                        {column.name}
+                      </Badge>
+                    </div>
                   </div>
                   <DrawerClose className="rounded-full">
                     <X className="h-4 w-4" />
