@@ -257,10 +257,56 @@ export function CardDrawer({
                       {column.name}
                     </Badge>
                   </div>
-                  <DrawerClose className="rounded-full">
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Close</span>
-                  </DrawerClose>
+                  <div className="flex items-center space-x-1">
+                    {/* Card Action Buttons */}
+                    <div className="flex gap-1 mr-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setShowMoveOptions(!showMoveOptions)}
+                        title="Move Card"
+                      >
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleRetriggerGPT}
+                        title="Regenerate"
+                      >
+                        <RotateCw className="h-3.5 w-3.5" />
+                      </Button>
+                      
+                      {(isProcessing || isProcessingTimedOut || processingError) && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="h-7 w-7 text-yellow-600"
+                          onClick={handleResetProcessing}
+                          title="Reset Processing"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-7 w-7 text-red-600"
+                        onClick={handleDelete}
+                        title="Delete Card"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <DrawerClose className="rounded-full">
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Close</span>
+                    </DrawerClose>
+                  </div>
                 </div>
                 
                 {/* Save title button appears if title is edited */}
@@ -274,6 +320,29 @@ export function CardDrawer({
                     >
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Title"}
                     </Button>
+                  </div>
+                )}
+                
+                {/* Move column options - shown when Move Card is clicked */}
+                {showMoveOptions && (
+                  <div className="mt-2 bg-gray-50 p-3 rounded-md">
+                    <div className="text-xs font-medium mb-2">Move to column:</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {columns.map((col) => (
+                        <Button
+                          key={col.id}
+                          variant="ghost"
+                          size="sm"
+                          className={`text-xs justify-start ${
+                            col.id === column.id ? "bg-gray-200 pointer-events-none" : ""
+                          }`}
+                          disabled={col.id === column.id}
+                          onClick={() => handleMoveCard(col.id)}
+                        >
+                          {col.name}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -309,80 +378,6 @@ export function CardDrawer({
                     >
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Description"}
                     </Button>
-                  </div>
-                )}
-              </div>
-              
-              <Separator />
-              
-              {/* Card Actions */}
-              <div className="space-y-2">
-                <div className="font-medium text-sm text-gray-500">Card Actions</div>
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setShowMoveOptions(!showMoveOptions)}
-                  >
-                    <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
-                    Move Card
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs"
-                    onClick={handleRetriggerGPT}
-                  >
-                    <RotateCw className="h-3.5 w-3.5 mr-1.5" />
-                    Regenerate
-                  </Button>
-                  
-                  {/* Reset processing button - only show it when needed */}
-                  {(isProcessing || isProcessingTimedOut || processingError) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-xs text-yellow-600 border-yellow-300 hover:bg-yellow-50"
-                      onClick={handleResetProcessing}
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                      Reset Processing
-                    </Button>
-                  )}
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs text-red-600 border-red-300 hover:bg-red-50"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                    Delete Card
-                  </Button>
-                </div>
-                
-                {/* Move column options */}
-                {showMoveOptions && (
-                  <div className="mt-2 bg-gray-50 p-3 rounded-md">
-                    <div className="text-xs font-medium mb-2">Move to column:</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {columns.map((col) => (
-                        <Button
-                          key={col.id}
-                          variant="ghost"
-                          size="sm"
-                          className={`text-xs justify-start ${
-                            col.id === column.id ? "bg-gray-200 pointer-events-none" : ""
-                          }`}
-                          disabled={col.id === column.id}
-                          onClick={() => handleMoveCard(col.id)}
-                        >
-                          {col.name}
-                        </Button>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>
