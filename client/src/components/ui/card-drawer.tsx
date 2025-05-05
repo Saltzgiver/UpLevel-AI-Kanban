@@ -418,7 +418,6 @@ export function CardDrawer({
                       id="include-chat-history"
                       checked={includeChatHistory}
                       onCheckedChange={handleIncludeChatHistoryChange}
-                      className="h-4 w-6 data-[state=unchecked]:bg-gray-200 [&>span]:data-[state=checked]:translate-x-2 [&>span]:data-[state=unchecked]:translate-x-0.5"
                     />
                     <Label htmlFor="include-chat-history" className="text-xs text-gray-500">Include history</Label>
                   </div>
