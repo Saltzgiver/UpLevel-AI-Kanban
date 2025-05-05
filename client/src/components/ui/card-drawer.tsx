@@ -407,24 +407,22 @@ export function CardDrawer({
                 </>
               )}
               
-              {/* Chat Settings */}
-              <div className="space-y-2">
-                <div className="font-medium text-sm text-gray-500">Chat Settings</div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="include-chat-history"
-                    checked={includeChatHistory}
-                    onCheckedChange={handleIncludeChatHistoryChange}
-                  />
-                  <Label htmlFor="include-chat-history">Include chat history in AI context</Label>
-                </div>
-              </div>
-              
               <Separator />
               
               {/* GPT Chat Section */}
               <div className="space-y-2" ref={chatContainerRef}>
-                <div className="font-medium text-sm text-gray-500">AI Conversation</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-sm text-gray-500">AI Conversation</div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="include-chat-history"
+                      checked={includeChatHistory}
+                      onCheckedChange={handleIncludeChatHistoryChange}
+                      className="h-4 w-7"
+                    />
+                    <Label htmlFor="include-chat-history" className="text-xs text-gray-500">Include history</Label>
+                  </div>
+                </div>
                 <GPTChat
                   cardId={card.id}
                   chats={chats || []}
