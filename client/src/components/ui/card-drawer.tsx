@@ -411,7 +411,7 @@ export function CardDrawer({
               
               {/* GPT Chat Section */}
               <div className="space-y-2" ref={chatContainerRef}>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm z-10 py-2 shadow-sm transition-shadow duration-200">
                   <div className="font-medium text-sm text-gray-500">AI Conversation</div>
                   <div className="flex items-center space-x-3">
                     <Switch
