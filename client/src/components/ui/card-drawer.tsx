@@ -348,6 +348,8 @@ export function CardDrawer({
               </div>
             </DrawerHeader>
             
+            <Separator className="mb-1" />
+            
             <div className="px-6 pb-6 overflow-y-auto space-y-6 max-h-[calc(95vh-4rem)]">
               {/* Description Section */}
               <div className="space-y-2">
