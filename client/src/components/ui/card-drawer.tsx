@@ -413,12 +413,12 @@ export function CardDrawer({
               <div className="space-y-2" ref={chatContainerRef}>
                 <div className="flex items-center justify-between">
                   <div className="font-medium text-sm text-gray-500">AI Conversation</div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <Switch
                       id="include-chat-history"
                       checked={includeChatHistory}
                       onCheckedChange={handleIncludeChatHistoryChange}
-                      className="h-4 w-7 data-[state=unchecked]:bg-gray-200"
+                      className="h-4 w-6 data-[state=unchecked]:bg-gray-200 [&>span]:data-[state=checked]:translate-x-2 [&>span]:data-[state=unchecked]:translate-x-0.5"
                     />
                     <Label htmlFor="include-chat-history" className="text-xs text-gray-500">Include history</Label>
                   </div>
