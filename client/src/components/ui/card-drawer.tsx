@@ -351,12 +351,12 @@ export function CardDrawer({
             <Separator className="mb-1" />
             
             <div className="px-6 pb-6 overflow-y-auto space-y-6 max-h-[calc(95vh-4rem)]">
-              {/* Description Section */}
+              {/* Context Section */}
               <div className="space-y-2">
-                <div className="font-medium text-sm text-gray-500">Description</div>
+                <div className="font-medium text-sm text-gray-500">Context</div>
                 <Textarea
                   ref={textAreaRef}
-                  placeholder="Add a description..."
+                  placeholder="Add context..."
                   value={description}
                   onChange={(e) => {
                     setDescription(e.target.value);
@@ -369,7 +369,7 @@ export function CardDrawer({
                   className="min-h-[100px] resize-none"
                 />
                 
-                {/* Save description button appears if description is edited */}
+                {/* Save context button appears if context is edited */}
                 {descriptionChanged && (
                   <div className="flex justify-end">
                     <Button 
@@ -378,7 +378,7 @@ export function CardDrawer({
                       onClick={handleSaveDescription}
                       disabled={isSaving}
                     >
-                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Description"}
+                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Context"}
                     </Button>
                   </div>
                 )}
