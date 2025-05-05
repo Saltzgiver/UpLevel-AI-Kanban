@@ -382,8 +382,6 @@ export function CardDrawer({
                 )}
               </div>
               
-              <Separator />
-              
               {/* Attachments Section - if there are any */}
               {attachments && attachments.length > 0 && (
                 <>
