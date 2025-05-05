@@ -266,22 +266,24 @@ export function CardDrawer({
                     <div className="flex gap-1 mr-2">
                       <Button 
                         variant="ghost" 
-                        size="icon"
-                        className="h-7 w-7"
+                        size="sm"
+                        className="h-7 px-2"
                         onClick={() => setShowMoveOptions(!showMoveOptions)}
                         title="Move Card"
                       >
-                        <ArrowRight className="h-3.5 w-3.5" />
+                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        Move
                       </Button>
                       
                       <Button 
                         variant="ghost" 
-                        size="icon"
-                        className="h-7 w-7"
+                        size="sm"
+                        className="h-7 px-2"
                         onClick={handleRetriggerGPT}
-                        title="Regenerate"
+                        title="Rerun AI on card"
                       >
-                        <RotateCw className="h-3.5 w-3.5" />
+                        <RotateCw className="h-3.5 w-3.5 mr-1" />
+                        Rerun
                       </Button>
                       
                       {(isProcessing || isProcessingTimedOut || processingError) && (
