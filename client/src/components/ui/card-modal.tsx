@@ -312,7 +312,7 @@ export function CardModal({
         )}
         
         {/* Main Content Area - Scrollable */}
-        <div className="overflow-y-auto flex-1 px-6 pt-3 pb-2">
+        <div className="overflow-y-auto flex-1 px-6 pt-3 pb-2 flex flex-col">
           {/* Description Section - Collapsible Prompt Context */}
           <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
             <div className="flex items-center justify-between">
@@ -422,7 +422,7 @@ export function CardModal({
           <Separator className="my-1" />
           
           {/* GPT Content & Chat Interface - Expanded and prominent */}
-          <div className="space-y-4">
+          <div className="space-y-4 flex flex-col flex-grow">
             {column.gptAssigned ? (
               <>
                 <div className="flex items-center justify-between">
@@ -472,10 +472,10 @@ export function CardModal({
             )}
             
             {/* Unified Chat Interface with Output - shown for all columns now */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-grow overflow-hidden">
               <div 
                 ref={chatContainerRef}
-                className="flex flex-col h-[280px] overflow-y-auto"
+                className="flex flex-col flex-grow overflow-y-auto"
               > 
                 {/* GPTChat component contains both the message area and the input */}
                 <GPTChat 
