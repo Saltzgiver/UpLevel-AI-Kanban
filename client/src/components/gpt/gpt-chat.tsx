@@ -299,8 +299,8 @@ export function GPTChat({
           });
         }
         
-        // Only focus input if drawer isn't open
-        if (inputRef.current && !document.body.classList.contains('drawer-open')) {
+        // Keep focus on the input field after sending the message
+        if (inputRef.current) {
           inputRef.current.focus();
         }
       }, 100);
@@ -840,49 +840,57 @@ export function GPTChat({
     </div>
   ) : (
     <div className="flex flex-col">
-      <div 
-        ref={chatContainerRef}
-        className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
-      >
-        <ChatMessages />
+      <div className="px-3 py-2 border-b border-gray-100">
+        <div className="text-sm font-medium text-gray-700">
+          {gptName === "Comments" ? "Comments" : `Conversation with ${gptName || 'AI Assistant'}`}
+        </div>
       </div>
       
-      {/* Chat Input - Fixed at the bottom */}
-      <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder={gptName === "Comments" 
-            ? "Add a comment..." 
-            : `Ask ${gptName || 'AI'} a question or "create an image of..."`}
-          className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isSending}
-        />
-        
-        <Button
-          size="sm"
-          className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-            isSending 
-              ? 'bg-gray-300 text-gray-600' 
-              : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
-          onClick={handleSendMessage}
-          disabled={isSending}
+      <div className="flex flex-col">
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
         >
-          {isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
+          <ChatMessages />
+        </div>
+        
+        {/* Chat Input - Fixed at the bottom */}
+        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder={gptName === "Comments" 
+              ? "Add a comment..." 
+              : `Ask ${gptName || 'AI'} a question or "create an image of..."`}
+            className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={isSending}
+          />
+          
+          <Button
+            size="sm"
+            className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+              isSending 
+                ? 'bg-gray-300 text-gray-600' 
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+            onClick={handleSendMessage}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

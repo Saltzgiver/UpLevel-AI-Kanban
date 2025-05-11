@@ -6,31 +6,12 @@ import { cn } from "@/lib/utils"
 const Drawer = ({
   shouldScaleBackground = true,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
-  // Add event handler to handle drawer open/close events
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      // When the drawer opens, add a class to indicate focus should be contained
-      document.body.classList.add('drawer-open');
-    } else {
-      // Remove the class when drawer closes
-      document.body.classList.remove('drawer-open');
-    }
-    
-    // Call the original onOpenChange if provided
-    if (props.onOpenChange) {
-      props.onOpenChange(open);
-    }
-  };
-  
-  return (
-    <DrawerPrimitive.Root
-      shouldScaleBackground={shouldScaleBackground}
-      {...props}
-      onOpenChange={handleOpenChange}
-    />
-  );
-}
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
+  <DrawerPrimitive.Root
+    shouldScaleBackground={shouldScaleBackground}
+    {...props}
+  />
+)
 Drawer.displayName = "Drawer"
 
 const DrawerTrigger = DrawerPrimitive.Trigger
@@ -45,8 +26,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    tabIndex={-1}
-    className={cn("fixed inset-0 z-50 bg-black/80 outline-none focus:outline-none", className)}
+    className={cn("fixed inset-0 z-50 bg-black/80", className)}
     {...props}
   />
 ))
@@ -60,11 +40,8 @@ const DrawerContent = React.forwardRef<
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
-      tabIndex={-1}
-      role="dialog"
-      aria-modal="true"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background outline-none focus:outline-none",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className
       )}
       {...props}

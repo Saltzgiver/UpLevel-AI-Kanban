@@ -16,7 +16,6 @@ import CreateWorkflowPage from "@/pages/create-workflow";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
-import { GlobalLaneConfigDrawer } from "@/components/modals/GlobalLaneConfigDrawer";
 import { PageLayout } from "@/components/layout/page-layout";
 
 // Use a custom route component to handle which routes should have the navigation bar
@@ -61,8 +60,6 @@ function App() {
           <SuggestionListener />
           {/* Global modal for handling GPT assignment from anywhere, including suggestions */}
           <GlobalAssignGPTModal />
-          {/* Global drawer for lane configuration */}
-          <GlobalLaneConfigDrawer />
           <Toaster />
         </DndProvider>
       </ModalProvider>
