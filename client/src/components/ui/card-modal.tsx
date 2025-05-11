@@ -17,7 +17,9 @@ import {
   AlignLeft, 
   Sparkles,
   AlertTriangle,
-  History
+  History,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { GPTOutput } from "@/components/gpt/gpt-output";
 import { GPTChat } from "@/components/gpt/gpt-chat";
@@ -34,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ProcessingIndicator } from "@/components/ui/processing-indicator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface CardModalProps {
   card: CardType & { 
@@ -63,6 +66,7 @@ export function CardModal({
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveOptions, setShowMoveOptions] = useState(false);
   const [descriptionChanged, setDescriptionChanged] = useState(false);
+  const [isPromptContextExpanded, setIsPromptContextExpanded] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   // Get real-time processing status with more frequent polling for chat messages
@@ -309,98 +313,111 @@ export function CardModal({
         
         {/* Main Content Area - Scrollable */}
         <div className="overflow-y-auto flex-1 px-6 pt-3 pb-5">
-          {/* Description Section - Prompt Context */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
+          {/* Description Section - Collapsible Prompt Context */}
+          <Collapsible className="mb-4" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
+            <div className="flex items-center justify-between">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center gap-2 mb-2 hover:bg-gray-50 p-1 rounded-md cursor-pointer w-full">
+                  <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
+                  <div className="ml-auto">
+                    {isPromptContextExpanded ? 
+                      <ChevronUp className="h-4 w-4 text-gray-400" /> : 
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    }
+                  </div>
+                </div>
+              </CollapsibleTrigger>
             </div>
-            <div className="pl-6">
-              {/* Dynamic height text area that adapts to content and is read-only until clicked */}
-              <div 
-                className={`rounded-md ${
-                  description ? 
-                    'border border-gray-200 bg-gray-50/50' : 
-                    'border border-dashed border-gray-200 hover:border-gray-300'
-                }`}
-              >
+            
+            <CollapsibleContent>
+              <div className="pl-6">
+                {/* Dynamic height text area that adapts to content and is read-only until clicked */}
                 <div 
-                  className={`min-h-0 w-full relative ${description ? '' : 'cursor-text'}`}
-                  onClick={(e) => {
-                    // Find the textarea and focus it when the container is clicked
-                    const textarea = e.currentTarget.querySelector('textarea');
-                    if (textarea) textarea.focus();
-                  }}
+                  className={`rounded-md ${
+                    description ? 
+                      'border border-gray-200 bg-gray-50/50' : 
+                      'border border-dashed border-gray-200 hover:border-gray-300'
+                  }`}
                 >
-                  {!description && (
-                    <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
-                      Add context for the AI to understand your task...
-                    </div>
-                  )}
-                  <div className="relative">
-                    <textarea
-                      ref={textAreaRef}
-                      className={`w-full text-sm py-2 px-3 bg-transparent ${
-                        description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
-                      }`}
-                      value={description}
-                      onChange={(e) => {
-                        setDescription(e.target.value);
-                        // Set descriptionChanged to true if the content has changed from the original
-                        setDescriptionChanged(e.target.value !== (card.description || ""));
-                        // Only auto-adjust height up to a point
-                        e.target.style.height = '24px';
-                        const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
-                        e.target.style.height = newHeight + 'px';
-                      }}
-                      onFocus={(e) => {
-                        // Show border on focus
-                        e.target.parentElement?.parentElement?.classList.add('border');
-                        e.target.parentElement?.parentElement?.classList.add('border-gray-200');
-                        e.target.classList.remove('opacity-0');
-                        // Auto-adjust height with max
-                        e.target.style.height = '24px';
-                        const newHeight = Math.min(e.target.scrollHeight, 120);
-                        e.target.style.height = newHeight + 'px';
-                      }}
-                      onBlur={(e) => {
-                        if (!description) {
-                          e.target.classList.add('opacity-0');
-                          e.target.parentElement?.parentElement?.classList.remove('border');
-                        }
-                        // Check if description has changed but don't automatically save
-                        setDescriptionChanged(description !== (card.description || ""));
-                      }}
-                      style={{
-                        height: description ? 'auto' : '24px', // Single line height
-                        resize: 'none',
-                        lineHeight: '1.5',
-                        minHeight: '24px', // Minimal single line height
-                        maxHeight: '120px' // Maximum height before scrolling
-                      }}
-                    />
-                    
-                    {/* Minimalist save button that appears only when changes are made */}
-                    {descriptionChanged && (
-                      <div className="absolute right-2 bottom-2 transition-opacity opacity-100">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-3 rounded-full bg-primary text-white hover:bg-primary/90 hover:text-white border-none shadow-sm"
-                          onClick={() => {
-                            handleSaveDescription();
-                          }}
-                          disabled={isSaving}
-                        >
-                          {isSaving ? 'Saving...' : 'Save'}
-                        </Button>
+                  <div 
+                    className={`min-h-0 w-full relative ${description ? '' : 'cursor-text'}`}
+                    onClick={(e) => {
+                      // Find the textarea and focus it when the container is clicked
+                      const textarea = e.currentTarget.querySelector('textarea');
+                      if (textarea) textarea.focus();
+                    }}
+                  >
+                    {!description && (
+                      <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
+                        Add context for the AI to understand your task...
                       </div>
                     )}
+                    <div className="relative">
+                      <textarea
+                        ref={textAreaRef}
+                        className={`w-full text-sm py-2 px-3 bg-transparent ${
+                          description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
+                        }`}
+                        value={description}
+                        onChange={(e) => {
+                          setDescription(e.target.value);
+                          // Set descriptionChanged to true if the content has changed from the original
+                          setDescriptionChanged(e.target.value !== (card.description || ""));
+                          // Only auto-adjust height up to a point
+                          e.target.style.height = '24px';
+                          const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
+                          e.target.style.height = newHeight + 'px';
+                        }}
+                        onFocus={(e) => {
+                          // Show border on focus
+                          e.target.parentElement?.parentElement?.classList.add('border');
+                          e.target.parentElement?.parentElement?.classList.add('border-gray-200');
+                          e.target.classList.remove('opacity-0');
+                          // Auto-adjust height with max
+                          e.target.style.height = '24px';
+                          const newHeight = Math.min(e.target.scrollHeight, 120);
+                          e.target.style.height = newHeight + 'px';
+                        }}
+                        onBlur={(e) => {
+                          if (!description) {
+                            e.target.classList.add('opacity-0');
+                            e.target.parentElement?.parentElement?.classList.remove('border');
+                          }
+                          // Check if description has changed but don't automatically save
+                          setDescriptionChanged(description !== (card.description || ""));
+                        }}
+                        style={{
+                          height: description ? 'auto' : '24px', // Single line height
+                          resize: 'none',
+                          lineHeight: '1.5',
+                          minHeight: '24px', // Minimal single line height
+                          maxHeight: '120px' // Maximum height before scrolling
+                        }}
+                      />
+                      
+                      {/* Minimalist save button that appears only when changes are made */}
+                      {descriptionChanged && (
+                        <div className="absolute right-2 bottom-2 transition-opacity opacity-100">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-3 rounded-full bg-primary text-white hover:bg-primary/90 hover:text-white border-none shadow-sm"
+                            onClick={() => {
+                              handleSaveDescription();
+                            }}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? 'Saving...' : 'Save'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
           
           <Separator className="my-3" />
           
