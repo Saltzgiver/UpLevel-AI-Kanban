@@ -312,9 +312,9 @@ export function CardModal({
         )}
         
         {/* Main Content Area - Scrollable */}
-        <div className="overflow-y-auto flex-1 px-6 pt-3 pb-5">
+        <div className="overflow-y-auto flex-1 px-6 pt-3 pb-2">
           {/* Description Section - Collapsible Prompt Context */}
-          <Collapsible className="mb-4" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
+          <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
             <div className="flex items-center justify-between">
               <CollapsibleTrigger asChild>
                 <div className="flex items-center gap-2 mb-2 hover:bg-gray-50 p-1 rounded-md cursor-pointer w-full">
@@ -419,7 +419,7 @@ export function CardModal({
             </CollapsibleContent>
           </Collapsible>
           
-          <Separator className="my-3" />
+          <Separator className="my-1" />
           
           {/* GPT Content & Chat Interface - Expanded and prominent */}
           <div className="space-y-4">
@@ -491,9 +491,9 @@ export function CardModal({
               </div>
             </div>
             
-            {/* Attachments Section - Clear separation and grouping */}
-            <div className="mt-4 pt-2 border-t border-gray-100">
-              <div className="flex items-center mb-2">
+            {/* Attachments Section - Compact spacing */}
+            <div className="mt-2 pt-1 border-t border-gray-100">
+              <div className="flex items-center mb-1">
                 <div className="flex items-center gap-1.5 flex-1">
                   <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
                   <h3 className="text-xs font-medium mr-2">
