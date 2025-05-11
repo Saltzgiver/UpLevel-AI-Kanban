@@ -270,10 +270,10 @@ export function CardModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden p-8">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden p-4">
       <div 
         ref={modalRef}
-        className="bg-white rounded-xl w-full max-w-5xl max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col shadow-xl"
+        className="bg-white rounded-xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col shadow-xl"
       >
         {/* Header - Fixed at the top with single-line title */}
         <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
