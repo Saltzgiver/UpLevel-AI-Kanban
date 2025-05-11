@@ -273,10 +273,10 @@ export function CardModal({
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
       <div 
         ref={modalRef}
-        className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-xl"
+        className="bg-white rounded-xl w-full max-w-5xl max-h-[98vh] overflow-hidden flex flex-col shadow-xl"
       >
         {/* Header - Fixed at the top with single-line title */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+        <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
           <div className="flex-1 flex items-center overflow-hidden">
             <input 
               className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent overflow-hidden py-0 px-0" 
@@ -524,7 +524,7 @@ export function CardModal({
         </div>
         
         {/* Footer Actions - Fixed at bottom */}
-        <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+        <div className="px-6 py-2 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
           {/* Actions on the left */}
           <div className="flex items-center gap-4">
             <div className="relative">
