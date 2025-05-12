@@ -347,17 +347,10 @@ export function CardModal({
                       if (textarea) textarea.focus();
                     }}
                   >
-                    {!description && (
-                      <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
-                        Add context for the AI to understand your task...
-                      </div>
-                    )}
                     <div className="relative">
                       <textarea
                         ref={textAreaRef}
-                        className={`w-full text-sm py-2 px-3 bg-transparent border-0 focus:outline-none focus:ring-0 overflow-auto ${
-                          description ? '' : 'text-transparent placeholder:text-transparent'
-                        }`}
+                        className="w-full text-sm py-2 px-3 bg-transparent border-0 focus:outline-none focus:ring-0 overflow-auto"
                         value={description}
                         onChange={(e) => {
                           setDescription(e.target.value);
