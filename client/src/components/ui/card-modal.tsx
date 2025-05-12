@@ -355,8 +355,8 @@ export function CardModal({
                     <div className="relative">
                       <textarea
                         ref={textAreaRef}
-                        className={`w-full text-sm py-2 px-3 bg-transparent ${
-                          description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
+                        className={`w-full text-sm py-2 px-3 bg-transparent border-0 focus:outline-none focus:ring-0 overflow-auto ${
+                          description ? '' : 'text-transparent placeholder:text-transparent'
                         }`}
                         value={description}
                         onChange={(e) => {
