@@ -21,22 +21,16 @@ import {
   ChevronDown,
   ChevronUp
 } from "lucide-react";
-import { GPTOutput } from "@/components/gpt/gpt-output";
-import { GPTChat } from "@/components/gpt/gpt-chat";
-import { AttachmentItem } from "@/components/gpt/attachment-item";
-import { FileUpload } from "@/components/ui/file-upload";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useCardProcessing } from "@/hooks/use-card-processing";
-import { Card as CardType, Column, Chat, Attachment } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ProcessingIndicator } from "@/components/ui/processing-indicator";
+import { Switch } from "@/components/ui/switch";
+import { FileUpload } from "@/components/ui/file-upload";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Column, Card as CardType, Attachment, Chat } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { GPTChat } from "@/components/gpt/gpt-chat";
 
 interface CardModalProps {
   card: CardType & { 
@@ -60,224 +54,154 @@ export function CardModal({
   onDelete,
   onMove
 }: CardModalProps) {
+  // Local state for card details
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
-  const [includeChatHistory, setIncludeChatHistory] = useState(card.includeChatHistory || false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showMoveOptions, setShowMoveOptions] = useState(false);
   const [descriptionChanged, setDescriptionChanged] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [includeChatHistory, setIncludeChatHistory] = useState(!!card.includeChatHistory);
   const [isPromptContextExpanded, setIsPromptContextExpanded] = useState(false);
+  
+  // References
   const modalRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  // Get real-time processing status with more frequent polling for chat messages
-  // Pass isDetailView=true to not show processing status in the modal
-  const { 
-    isProcessing, 
-    isProcessingTimedOut,
-    processingError,
-    gptOutput, 
-    chats, 
-    attachments,
-    resetProcessingState,
-    rawProcessingStatus 
-  } = useCardProcessing(card.id, true);
-
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  // Initialize state when the modal opens
+  
+  // Toast notifications
+  const { toast } = useToast();
+  
+  // Derived state
+  const attachments = card.attachments || [];
+  const chats = card.chats || [];
+  const gptOutput = card.gptOutput || null;
+  
+  // Tracking status for in-progress GPT tasks 
+  const [rawProcessingStatus, setRawProcessingStatus] = useState(false);
+  
+  // Poll for status updates when a card is being processed by GPT
   useEffect(() => {
-    if (isOpen) {
-      setTitle(card.title);
-      setDescription(card.description || "");
-      setIncludeChatHistory(card.includeChatHistory || false);
+    if (!column.gptAssigned) return;
+    
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`/api/cards/${card.id}/processing-status`);
+        const data = await response.json();
+        setRawProcessingStatus(!!data.processing);
+      } catch (error) {
+        console.error("Error checking processing status:", error);
+      }
+    };
+    
+    checkStatus();
+    const interval = setInterval(checkStatus, 1000);
+    
+    return () => clearInterval(interval);
+  }, [card.id, column.gptAssigned]);
+  
+  // Save title if it's changed
+  const handleSaveTitle = async () => {
+    if (title === card.title || title.trim() === "") return;
+    
+    setIsSaving(true);
+    try {
+      await apiRequest(`/api/cards/${card.id}`, 'PATCH', { title });
+      toast({
+        title: "Title updated",
+        description: "The card title has been saved.",
+      });
+    } catch (error) {
+      console.error("Error saving title:", error);
+      toast({
+        title: "Error saving title",
+        description: "There was a problem saving the card title.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
-  }, [isOpen, card]);
-
-  // Handle auto-height for text area after description is set
-  useEffect(() => {
-    if (textAreaRef.current) {
-      // Reset height to minimal value first
-      textAreaRef.current.style.height = '24px';
-      // Then set it to scrollHeight to fit content exactly
-      const scrollHeight = textAreaRef.current.scrollHeight;
-      textAreaRef.current.style.height = scrollHeight + 'px';
+  };
+  
+  // Save description if it's changed
+  const handleSaveDescription = async () => {
+    if (description === (card.description || "")) return;
+    
+    setIsSaving(true);
+    try {
+      await apiRequest(`/api/cards/${card.id}`, 'PATCH', { description });
+      toast({
+        title: "Context updated",
+        description: "The prompt context has been saved.",
+      });
+      setDescriptionChanged(false);
+    } catch (error) {
+      console.error("Error saving description:", error);
+      toast({
+        title: "Error saving context",
+        description: "There was a problem saving the prompt context.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
-  }, [description, isOpen]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+  };
+  
+  // Retrigger GPT processing for the card
+  const handleRetriggerGPT = async () => {
+    if (!column.gptAssigned || rawProcessingStatus) return;
+    
+    try {
+      await apiRequest(`/api/cards/${card.id}/retrigger`, 'POST');
+      toast({
+        title: "AI processing retriggered",
+        description: "The AI will process this card again.",
+      });
+    } catch (error) {
+      console.error("Error retriggering GPT:", error);
+      toast({
+        title: "Error retriggering AI",
+        description: "There was a problem retriggering the AI processing.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle delete card action
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    
+    if (window.confirm(`Are you sure you want to delete this card: "${card.title}"?`)) {
+      setIsDeleting(true);
+      try {
+        await apiRequest(`/api/cards/${card.id}`, 'DELETE');
+        onDelete(card.id);
         onClose();
+      } catch (error) {
+        console.error("Error deleting card:", error);
+        toast({
+          title: "Error deleting card",
+          description: "There was a problem deleting the card.",
+          variant: "destructive",
+        });
+        setIsDeleting(false);
       }
     }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-  
-  // Scroll to the bottom of the chat container when the modal opens
-  // or when new messages arrive - with multiple retries to ensure it works
-  useEffect(() => {
-    if (isOpen && chatContainerRef.current) {
-      // First attempt with a small delay
-      const timer1 = setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          console.log("Chat container scrolled to bottom - first attempt");
-        }
-      }, 200);
-      
-      // Second attempt with a longer delay to ensure it works even with slow rendering
-      const timer2 = setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          console.log("Chat container scrolled to bottom - second attempt");
-        }
-      }, 500);
-      
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-      };
-    }
-  }, [isOpen, chats, gptOutput]);
-
-  if (!isOpen) return null;
-
-  const handleSaveTitle = async () => {
-    if (title.trim() === "") return;
-    if (title === card.title) return;
-
-    setIsSaving(true);
-    try {
-      await apiRequest("PATCH", `/api/cards/${card.id}`, { title });
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      // Update the card reference in state to match what's saved
-      card.title = title;
-      toast({
-        title: "Success",
-        description: "Card title updated",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update card title",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSaveDescription = async () => {
-    if (description === card.description) return;
-
-    setIsSaving(true);
-    try {
-      await apiRequest("PATCH", `/api/cards/${card.id}`, { description });
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      // Update the card reference in state to match what's saved
-      card.description = description;
-      // Reset the descriptionChanged state after saving successfully
-      setDescriptionChanged(false);
-      toast({
-        title: "Success",
-        description: "Card description updated",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update card description",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleRetriggerGPT = async () => {
-    try {
-      await apiRequest("POST", `/api/cards/${card.id}/trigger-gpt`, {});
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      toast({
-        title: "Success",
-        description: "GPT processing triggered",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to trigger GPT processing",
-        variant: "destructive",
-      });
-    }
   };
   
-  // Handle manually resetting a card's processing status
-  // Useful when a card is stuck in processing
-  const handleResetProcessing = async () => {
-    try {
-      await apiRequest("PATCH", `/api/cards/${card.id}`, { 
-        processing: false
-      });
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: [`/api/cards/${card.id}/processing-status`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      toast({
-        title: "Processing Reset",
-        description: "Card processing status has been reset",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reset processing status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async () => {
-    onDelete(card.id);
-  };
-
-  const handleMove = async (destinationColumnId: number) => {
-    if (destinationColumnId === column.id) {
-      setShowMoveOptions(false);
-      return;
-    }
-    
-    onMove(card.id, column.id, destinationColumnId);
-    setShowMoveOptions(false);
-  };
-  
+  // Handle including chat history toggle
   const handleChatHistoryToggle = async (checked: boolean) => {
-    setIncludeChatHistory(checked);
+    if (checked === !!card.includeChatHistory) return;
+    
     try {
-      await apiRequest("PATCH", `/api/cards/${card.id}`, { includeChatHistory: checked });
-      queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      
-      // Update the card reference in state
-      card.includeChatHistory = checked;
-      
-      toast({
-        title: "Settings Updated",
-        description: checked 
-          ? "Chat history will be included in AI context" 
-          : "Chat history will not be included in AI context (last response only)"
-      });
+      await apiRequest(`/api/cards/${card.id}`, 'PATCH', { includeChatHistory: !checked });
+      setIncludeChatHistory(!checked);
     } catch (error) {
+      console.error("Error toggling chat history:", error);
       toast({
-        title: "Error",
-        description: "Failed to update card settings",
+        title: "Error updating setting",
+        description: "There was a problem updating the chat history setting.",
         variant: "destructive",
       });
-      // Reset to previous value
-      setIncludeChatHistory(!checked);
     }
   };
 
@@ -287,7 +211,7 @@ export function CardModal({
         ref={modalRef}
         className="bg-white rounded-xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col shadow-xl"
       >
-        {/* Fixed Header Section - Always visible */}
+        {/* === FIXED HEADER SECTION - Always visible === */}
         <div className="flex-shrink-0">
           {/* Top header with title */}
           <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center bg-white z-10">
@@ -325,8 +249,8 @@ export function CardModal({
             </div>
           )}
         </div>
-
-        {/* Prompt Context - Always visible */}
+        
+        {/* === PROMPT CONTEXT SECTION - Collapsible, stays at top === */}
         <div className="flex-shrink-0 px-6 pt-2 bg-white">
           <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
             <div className="flex items-center justify-between">
@@ -399,8 +323,8 @@ export function CardModal({
           </Collapsible>
         </div>
         
-        {/* AI Chat Header - Fixed, always visible */}
-        <div className="flex-shrink-0 px-6 py-2 bg-white border-t border-b border-gray-100">
+        {/* === AI CHAT HEADER - Fixed, always visible === */}
+        <div className="flex-shrink-0 px-6 py-2 bg-white border-t border-b border-gray-100 z-10">
           {column.gptAssigned ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -443,267 +367,105 @@ export function CardModal({
           )}
         </div>
         
-        {/* Chat Content Area - Scrollable */}
+        {/* === CHAT CONTENT AREA - Scrollable === */}
         <div className="overflow-y-auto flex-grow px-6 py-2 flex flex-col">
-          {/* Description Section - Collapsible Prompt Context */}
-          <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
-            <div className="flex items-center justify-between">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center gap-2 mb-2 hover:bg-gray-50 p-1 rounded-md cursor-pointer w-full">
-                  <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
-                  <div className="ml-auto">
-                    {isPromptContextExpanded ? 
-                      <ChevronUp className="h-4 w-4 text-gray-400" /> : 
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    }
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-            </div>
-            
-            <CollapsibleContent>
-              <div className="pl-6">
-                {/* Dynamic height text area that adapts to content and is read-only until clicked */}
-                <div 
-                  className={`rounded-md ${
-                    description ? 
-                      'border border-gray-200 bg-gray-50/50' : 
-                      'border border-dashed border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div 
-                    className={`min-h-0 w-full relative ${description ? '' : 'cursor-text'}`}
-                    onClick={(e) => {
-                      // Find the textarea and focus it when the container is clicked
-                      const textarea = e.currentTarget.querySelector('textarea');
-                      if (textarea) textarea.focus();
-                    }}
-                  >
-                    {!description && (
-                      <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
-                        Add context for the AI to understand your task...
-                      </div>
-                    )}
-                    <div className="relative">
-                      <textarea
-                        ref={textAreaRef}
-                        className={`w-full text-sm py-2 px-3 bg-transparent ${
-                          description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
-                        }`}
-                        value={description}
-                        onChange={(e) => {
-                          setDescription(e.target.value);
-                          // Set descriptionChanged to true if the content has changed from the original
-                          setDescriptionChanged(e.target.value !== (card.description || ""));
-                          // Only auto-adjust height up to a point
-                          e.target.style.height = '24px';
-                          const newHeight = Math.min(e.target.scrollHeight, 120); // Max 120px height
-                          e.target.style.height = newHeight + 'px';
-                        }}
-                        onFocus={(e) => {
-                          // Show border on focus
-                          e.target.parentElement?.parentElement?.classList.add('border');
-                          e.target.parentElement?.parentElement?.classList.add('border-gray-200');
-                          e.target.classList.remove('opacity-0');
-                          // Auto-adjust height with max
-                          e.target.style.height = '24px';
-                          const newHeight = Math.min(e.target.scrollHeight, 120);
-                          e.target.style.height = newHeight + 'px';
-                        }}
-                        onBlur={(e) => {
-                          if (!description) {
-                            e.target.classList.add('opacity-0');
-                            e.target.parentElement?.parentElement?.classList.remove('border');
-                          }
-                          // Check if description has changed but don't automatically save
-                          setDescriptionChanged(description !== (card.description || ""));
-                        }}
-                        style={{
-                          height: description ? 'auto' : '24px', // Single line height
-                          resize: 'none',
-                          lineHeight: '1.5',
-                          minHeight: '24px', // Minimal single line height
-                          maxHeight: '120px' // Maximum height before scrolling
-                        }}
-                      />
-                      
-                      {/* Minimalist save button that appears only when changes are made */}
-                      {descriptionChanged && (
-                        <div className="absolute right-2 bottom-2 transition-opacity opacity-100">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-3 rounded-full bg-primary text-white hover:bg-primary/90 hover:text-white border-none shadow-sm"
-                            onClick={() => {
-                              handleSaveDescription();
-                            }}
-                            disabled={isSaving}
-                          >
-                            {isSaving ? 'Saving...' : 'Save'}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-          
-          <Separator className="my-1" />
-          
-          {/* GPT Content & Chat Interface - Expanded and prominent */}
-          <div className="space-y-4 flex flex-col flex-grow">
-            {column.gptAssigned ? (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-xs font-bold text-green-700">AI</span>
-                    </div>
-                    <h3 className="font-medium text-gray-800 text-sm">{column.gptName || "AI Assistant"}</h3>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center space-x-2">
-                      <History className="h-4 w-4 text-gray-500" />
-                      <Label htmlFor="include-chat-history" className="text-xs font-normal text-gray-600">
-                        Include chat history
-                      </Label>
-                      <Switch
-                        id="include-chat-history"
-                        checked={includeChatHistory}
-                        onCheckedChange={handleChatHistoryToggle}
-                      />
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
-                      onClick={handleRetriggerGPT}
-                      disabled={rawProcessingStatus}
-                    >
-                      <Zap className="h-3 w-3 mr-1" />
-                      Retrigger
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Processing indicator is now completely hidden in the card detail view as per user requirement */}
-                {/* <ProcessingIndicator 
-                  isProcessing={rawProcessingStatus}
-                /> */}
-              </>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <MessageSquare className="h-4 w-4 text-gray-500" />
-                  <h3 className="font-medium text-gray-700 text-sm">Comments & Attachments</h3>
-                </div>
-              </div>
-            )}
-            
-            {/* Unified Chat Interface with Output - shown for all columns now */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-grow overflow-hidden">
-              <div 
-                ref={chatContainerRef}
-                className="flex flex-col flex-grow overflow-y-auto"
-              > 
-                {/* GPTChat component contains both the message area and the input */}
-                <GPTChat 
-                  cardId={card.id} 
-                  chats={chats} 
-                  gptName={column.gptName || "Comments"}
-                  gptColor={column.gptColor}
-                  embedded={true}
-                  finalOutput={gptOutput}
-                  isProcessing={rawProcessingStatus}
-                  attachments={card.attachments || []}
-                />
-              </div>
-            </div>
-            
-            {/* Attachments Section - Compact spacing */}
-            <div className="mt-2 pt-1 border-t border-gray-100">
-              <div className="flex items-center mb-1">
-                <div className="flex items-center gap-1.5 flex-1">
-                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h3 className="text-xs font-medium mr-2">
-                    Attachments {attachments.length > 0 && `(${attachments.length})`}
-                  </h3>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <FileUpload cardId={card.id} iconOnly={true} />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col space-y-1 pl-1 mb-3">
-                {/* Display existing attachments */}
-                {attachments.map((attachment) => (
-                  <div key={attachment.id}>
-                    <AttachmentItem 
-                      attachment={attachment}
-                      onDelete={() => {
-                        // This will refresh attachments
-                        // We rely on the AttachmentItem component to handle the actual deletion
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
+          {/* Unified Chat Interface with Output */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-grow overflow-hidden">
+            <div 
+              ref={chatContainerRef}
+              className="flex flex-col flex-grow overflow-y-auto"
+            > 
+              {/* GPTChat component contains the message area */}
+              <GPTChat 
+                cardId={card.id} 
+                chats={chats} 
+                gptName={column.gptName || "Comments"}
+                gptColor={column.gptColor}
+                embedded={true}
+                finalOutput={gptOutput}
+                isProcessing={rawProcessingStatus}
+                attachments={card.attachments || []}
+              />
             </div>
           </div>
         </div>
         
-        {/* Footer Actions - Fixed at bottom */}
-        <div className="px-6 py-2 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-          {/* Actions on the left */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="text-sm text-gray-600"
-                onClick={() => setShowMoveOptions(!showMoveOptions)}
-              >
-                <Move className="h-4 w-4 mr-1" />
-                Move
-              </Button>
-              
-              {showMoveOptions && (
-                <div className="absolute bottom-full left-0 bg-white shadow-lg rounded-md border border-gray-200 z-10 mb-1 w-48">
-                  <div className="p-2">
-                    <div className="text-xs font-medium mb-2 text-gray-500">Move to column:</div>
-                    {columns.map((col) => (
-                      <div 
-                        key={col.id} 
-                        className={`
-                          text-sm p-2 rounded cursor-pointer hover:bg-gray-50
-                          ${col.id === column.id ? 'bg-gray-50 text-muted-foreground' : ''}
-                        `}
-                        onClick={() => handleMove(col.id)}
-                      >
-                        {col.name} {col.id === column.id && '(current)'}
-                      </div>
-                    ))}
-                  </div>
+        {/* === FIXED FOOTER - Always visible === */}
+        <div className="flex-shrink-0 px-6 pt-2 pb-3 bg-white border-t border-gray-100 mt-2">
+          {/* Attachments Section - Compact spacing */}
+          <div className="mb-1">
+            <div className="flex items-center mb-1">
+              <div className="flex items-center gap-1.5 flex-1">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                <h3 className="text-xs font-medium mr-2">
+                  Attachments {attachments.length > 0 && `(${attachments.length})`}
+                </h3>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <FileUpload cardId={card.id} iconOnly={true} />
                 </div>
-              )}
+              </div>
             </div>
             
-            {/* Chat history toggle removed from here and moved next to the retrigger button */}
+            <div className="flex flex-col space-y-1 pl-1 mb-2">
+              {attachments.length === 0 ? (
+                <div className="text-xs text-gray-400 italic">No attachments</div>
+              ) : (
+                attachments.map((attachment) => (
+                  <a
+                    key={attachment.id}
+                    href={`/api/files/${attachment.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    <FileText className="h-3 w-3" />
+                    {attachment.filename} 
+                    <span className="text-gray-400">({Math.round(attachment.size / 1024)}KB)</span>
+                  </a>
+                ))
+              )}
+            </div>
           </div>
           
-          {/* Delete button on the right */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
+          {/* Card Action Buttons */}
+          <div className="flex justify-between items-center pt-1 border-t border-gray-100">
+            {/* Move to column dropdown */}
+            <div className="flex items-center space-x-3">
+              <div className="relative inline-block text-left">
+                <select
+                  value={column.id}
+                  onChange={(e) => {
+                    const destId = parseInt(e.target.value);
+                    if (destId !== column.id) {
+                      onMove(card.id, column.id, destId);
+                      onClose();
+                    }
+                  }}
+                  className="text-xs text-gray-700 bg-white border border-gray-200 rounded-md px-2 py-1 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value={column.id}>Move to...</option>
+                  {columns
+                    .filter((c) => c.id !== column.id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            
+            {/* Delete button on the right */}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
     </div>
