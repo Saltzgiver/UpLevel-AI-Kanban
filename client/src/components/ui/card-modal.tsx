@@ -191,7 +191,7 @@ export function CardModal({
     if (!column.gptAssigned || rawProcessingStatus) return;
     
     try {
-      await apiRequest('POST', `/api/cards/${card.id}/retrigger`);
+      await apiRequest('POST', `/api/cards/${card.id}/trigger-gpt`);
       toast({
         title: "AI processing retriggered",
         description: "The AI will process this card again.",
