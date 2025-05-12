@@ -287,44 +287,47 @@ export function CardModal({
         ref={modalRef}
         className="bg-white rounded-xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col shadow-xl"
       >
-        {/* Header - Fixed at the top with single-line title */}
-        <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-          <div className="flex-1 flex items-center overflow-hidden">
-            <input 
-              className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent overflow-hidden py-0 px-0" 
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={handleSaveTitle}
-            />
-          </div>
-          <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-        
-        {/* Column tag below title - moved from header */}
-        <div className="px-6 pt-2 pb-0 flex">
-          <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
-            {column.name}
-          </Badge>
-        </div>
-        
-        {/* Save title button appears if title is edited */}
-        {title !== card.title && (
-          <div className="px-6 py-2 bg-gray-50 flex justify-end border-b border-gray-100">
-            <Button 
-              size="sm" 
-              variant="default" 
-              onClick={handleSaveTitle}
-              disabled={isSaving || title.trim() === ""}
-            >
-              Save Title
+        {/* Fixed Header Section - Always visible */}
+        <div className="flex-shrink-0">
+          {/* Top header with title */}
+          <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+            <div className="flex-1 flex items-center overflow-hidden">
+              <input 
+                className="w-full text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent overflow-hidden py-0 px-0" 
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={handleSaveTitle}
+              />
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={onClose}>
+              <X className="h-5 w-5" />
             </Button>
           </div>
-        )}
+          
+          {/* Column tag below title */}
+          <div className="px-6 pt-2 pb-0 flex">
+            <Badge variant="outline" className="text-xs font-normal py-0 h-5 bg-gray-50">
+              {column.name}
+            </Badge>
+          </div>
+          
+          {/* Save title button appears if title is edited */}
+          {title !== card.title && (
+            <div className="px-6 py-2 bg-gray-50 flex justify-end border-b border-gray-100">
+              <Button 
+                size="sm" 
+                variant="default" 
+                onClick={handleSaveTitle}
+                disabled={isSaving || title.trim() === ""}
+              >
+                Save Title
+              </Button>
+            </div>
+          )}
+        </div>
         
-        {/* Main Content Area - Scrollable */}
-        <div className="overflow-y-auto flex-1 px-6 pt-3 pb-2 flex flex-col">
+        {/* Main Content Area - Scrollable with fixed height */}
+        <div className="overflow-y-auto flex-grow px-6 pt-3 pb-2 flex flex-col">
           {/* Description Section - Collapsible Prompt Context */}
           <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
             <div className="flex items-center justify-between">
