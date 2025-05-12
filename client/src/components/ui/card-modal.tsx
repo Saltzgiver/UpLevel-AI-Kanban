@@ -145,7 +145,7 @@ export function CardModal({
     
     setIsSaving(true);
     try {
-      await apiRequest(`/api/cards/${card.id}`, 'PATCH', { title });
+      await apiRequest('PATCH', `/api/cards/${card.id}`, { title });
       toast({
         title: "Title updated",
         description: "The card title has been saved.",
@@ -168,7 +168,7 @@ export function CardModal({
     
     setIsSaving(true);
     try {
-      await apiRequest(`/api/cards/${card.id}`, 'PATCH', { description });
+      await apiRequest('PATCH', `/api/cards/${card.id}`, { description });
       toast({
         title: "Context updated",
         description: "The prompt context has been saved.",
@@ -191,7 +191,7 @@ export function CardModal({
     if (!column.gptAssigned || rawProcessingStatus) return;
     
     try {
-      await apiRequest(`/api/cards/${card.id}/retrigger`, 'POST');
+      await apiRequest('POST', `/api/cards/${card.id}/retrigger`);
       toast({
         title: "AI processing retriggered",
         description: "The AI will process this card again.",
@@ -213,7 +213,7 @@ export function CardModal({
     if (window.confirm(`Are you sure you want to delete this card: "${card.title}"?`)) {
       setIsDeleting(true);
       try {
-        await apiRequest(`/api/cards/${card.id}`, 'DELETE');
+        await apiRequest('DELETE', `/api/cards/${card.id}`);
         onDelete(card.id);
         onClose();
       } catch (error) {
