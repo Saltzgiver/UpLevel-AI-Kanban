@@ -79,6 +79,25 @@ export function CardModal({
   // Tracking status for in-progress GPT tasks 
   const [rawProcessingStatus, setRawProcessingStatus] = useState(false);
   
+  // Scroll to the bottom of the chat container when the modal is opened
+  useEffect(() => {
+    // Only run this effect when the modal is open
+    if (isOpen && chatContainerRef.current) {
+      // Scroll to bottom with a slight delay to ensure content is loaded
+      const scrollToBottom = () => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      };
+      
+      // Execute scroll multiple times with increasing delays to catch late-rendering content
+      scrollToBottom(); // Immediate scroll
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 150);
+      setTimeout(scrollToBottom, 300);
+    }
+  }, [isOpen, card.id]); // Re-run when modal opens or card changes
+  
   // Poll for status updates when a card is being processed by GPT
   useEffect(() => {
     if (!column.gptAssigned) return;

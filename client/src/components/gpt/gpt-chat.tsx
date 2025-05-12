@@ -186,20 +186,38 @@ export function GPTChat({
     }
   }, []);
   
-  // Initial scroll to bottom when component mounts
+  // Initial scroll to bottom when component mounts, and when chat content changes
   useEffect(() => {
+    const scrollToBottom = () => {
+      if (chatContainerRef.current) {
+        // Scroll to bottom immediately
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    };
+    
+    // Scroll immediately on first render
+    scrollToBottom();
+    
+    // Then try again after content has fully rendered with a few attempts
+    // This ensures we catch any dynamic content that might expand
+    setTimeout(scrollToBottom, 50);
+    setTimeout(scrollToBottom, 150);
+    setTimeout(scrollToBottom, 300);
+    
+    // Also add a MutationObserver to detect any changes to the chat container
+    // that might affect its scrollHeight
     if (chatContainerRef.current) {
-      // Scroll to bottom immediately on mount
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      const observer = new MutationObserver(scrollToBottom);
+      observer.observe(chatContainerRef.current, { 
+        childList: true, 
+        subtree: true,
+        characterData: true 
+      });
       
-      // Also do another scroll after a short delay to handle any post-render content expansion
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-      }, 100);
+      // Clean up the observer on unmount
+      return () => observer.disconnect();
     }
-  }, []);
+  }, [chats.length]); // Re-run this effect when the number of chat messages changes
   
   // Auto-scroll to bottom when messages change, but only in specific cases:
   // 1. When new messages arrive AND user hasn't manually scrolled up
