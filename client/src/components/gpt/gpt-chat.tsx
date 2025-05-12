@@ -750,8 +750,7 @@ export function GPTChat({
     
     return (
       <div className="space-y-6 flex flex-col">
-        {/* Display processing indicator if applicable */}
-        {processingIndicator}
+        {/* We don't show processing indicator here anymore - only at the bottom */}
         
         {/* Display all chat messages */}
         {chats.map((chat, index) => {
