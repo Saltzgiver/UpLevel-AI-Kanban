@@ -71,10 +71,15 @@ export function CardModal({
   // Toast notifications
   const { toast } = useToast();
   
+  // Use state for chats and outputs to ensure component rerenders properly
+  const [localChats, setLocalChats] = useState<Chat[]>(card.chats || []);
+  const [localGptOutput, setLocalGptOutput] = useState<string | null>(card.gptOutput || null);
+  
   // Derived state
   const attachments = card.attachments || [];
-  const chats = card.chats || [];
-  const gptOutput = card.gptOutput || null;
+  // Use local state for chats instead of deriving from props to ensure reactivity
+  const chats = localChats;
+  const gptOutput = localGptOutput;
   
   // Tracking status for in-progress GPT tasks 
   const [rawProcessingStatus, setRawProcessingStatus] = useState(false);
@@ -117,7 +122,7 @@ export function CardModal({
       // Clean up timers
       timers.forEach(timer => clearTimeout(timer));
     };
-  }, [isOpen, card.id, chats.length]); // Re-run when modal opens, card changes, or chat messages change
+  }, [isOpen, card.id, localChats.length]); // Re-run when modal opens, card changes, or chat messages change
   
   // Poll for status updates when a card is being processed by GPT
   useEffect(() => {
@@ -127,7 +132,31 @@ export function CardModal({
       try {
         const response = await fetch(`/api/cards/${card.id}/processing-status`);
         const data = await response.json();
+        
+        // Update processing status
         setRawProcessingStatus(!!data.processing);
+        
+        // Update local state with latest chats if they're available in the response
+        if (data.chats && Array.isArray(data.chats) && data.chats.length > 0) {
+          // Only update if the chats array is different from what we already have
+          // Compare by checking if the length has changed or if the last chat content is different
+          const currentLastChat = localChats[localChats.length - 1]?.content;
+          const newLastChat = data.chats[data.chats.length - 1]?.content;
+          
+          if (data.chats.length !== localChats.length || currentLastChat !== newLastChat) {
+            console.log('Updating chats in card modal with new data from API');
+            // Update both the localChats state and the card.chats reference
+            setLocalChats(data.chats);
+            card.chats = data.chats;
+          }
+        }
+        
+        // Update gptOutput if it's available and has changed
+        if (data.gptOutput !== undefined && data.gptOutput !== localGptOutput) {
+          console.log('Updating gptOutput in card modal with new data from API');
+          setLocalGptOutput(data.gptOutput);
+          card.gptOutput = data.gptOutput;
+        }
       } catch (error) {
         console.error("Error checking processing status:", error);
       }
@@ -137,7 +166,7 @@ export function CardModal({
     const interval = setInterval(checkStatus, 1000);
     
     return () => clearInterval(interval);
-  }, [card.id, column.gptAssigned]);
+  }, [card, card.id, column.gptAssigned, localChats, localGptOutput]);
   
   // Save title if it's changed
   const handleSaveTitle = async () => {
