@@ -233,7 +233,7 @@ export function CardModal({
     if (checked === !!card.includeChatHistory) return;
     
     try {
-      await apiRequest(`/api/cards/${card.id}`, 'PATCH', { includeChatHistory: !checked });
+      await apiRequest('PATCH', `/api/cards/${card.id}`, { includeChatHistory: !checked });
       setIncludeChatHistory(!checked);
     } catch (error) {
       console.error("Error toggling chat history:", error);
