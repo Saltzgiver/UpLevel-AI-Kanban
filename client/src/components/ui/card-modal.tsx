@@ -407,23 +407,18 @@ export function CardModal({
             </div>
             
             <div className="flex flex-col space-y-1 pl-1 mb-2">
-              {attachments.length === 0 ? (
-                <div className="text-xs text-gray-400 italic">No attachments</div>
-              ) : (
-                attachments.map((attachment) => (
-                  <a
-                    key={attachment.id}
-                    href={`/api/files/${attachment.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    <FileText className="h-3 w-3" />
-                    {attachment.filename} 
-                    <span className="text-gray-400">({Math.round(attachment.size / 1024)}KB)</span>
-                  </a>
-                ))
-              )}
+              {attachments.map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={`/api/files/${attachment.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  <FileText className="h-3 w-3" />
+                  {attachment.filename}
+                </a>
+              ))}
             </div>
           </div>
           
