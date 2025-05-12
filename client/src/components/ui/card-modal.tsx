@@ -122,17 +122,29 @@ export function CardModal({
   }, [isOpen, onClose]);
   
   // Scroll to the bottom of the chat container when the modal opens
-  // or when new messages arrive
+  // or when new messages arrive - with multiple retries to ensure it works
   useEffect(() => {
     if (isOpen && chatContainerRef.current) {
-      // Small delay to ensure the content is rendered
-      const timer = setTimeout(() => {
+      // First attempt with a small delay
+      const timer1 = setTimeout(() => {
         if (chatContainerRef.current) {
           chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          console.log("Chat container scrolled to bottom - first attempt");
         }
-      }, 100);
+      }, 200);
       
-      return () => clearTimeout(timer);
+      // Second attempt with a longer delay to ensure it works even with slow rendering
+      const timer2 = setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          console.log("Chat container scrolled to bottom - second attempt");
+        }
+      }, 500);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     }
   }, [isOpen, chats, gptOutput]);
 
