@@ -325,9 +325,126 @@ export function CardModal({
             </div>
           )}
         </div>
+
+        {/* Prompt Context - Always visible */}
+        <div className="flex-shrink-0 px-6 pt-2 bg-white">
+          <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
+            <div className="flex items-center justify-between">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center gap-2 hover:bg-gray-50 p-1 rounded-md cursor-pointer w-full">
+                  <AlignLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <h3 className="text-sm font-medium text-gray-700">Prompt Context</h3>
+                  <div className="ml-auto">
+                    {isPromptContextExpanded ? 
+                      <ChevronUp className="h-4 w-4 text-gray-400" /> : 
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    }
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+            </div>
+            
+            <CollapsibleContent>
+              <div className="pl-6 pb-2">
+                <div className={`rounded-md ${
+                  description ? 
+                    'border border-gray-200 bg-gray-50/50' : 
+                    'border border-dashed border-gray-200 hover:border-gray-300'
+                }`}>
+                  <div 
+                    className="min-h-0 w-full relative"
+                    onClick={(e) => {
+                      const textarea = e.currentTarget.querySelector('textarea');
+                      if (textarea) textarea.focus();
+                    }}
+                  >
+                    {!description && (
+                      <div className="absolute inset-0 flex items-center text-gray-400 px-3 py-1 text-sm pointer-events-none">
+                        Add context for the AI to understand your task...
+                      </div>
+                    )}
+                    <div className="relative">
+                      <textarea
+                        ref={textAreaRef}
+                        className={`w-full text-sm py-2 px-3 bg-transparent ${
+                          description ? 'border-0 focus:outline-none focus:ring-0 overflow-auto' : 'opacity-0 overflow-hidden'
+                        }`}
+                        value={description}
+                        onChange={(e) => {
+                          setDescription(e.target.value);
+                          setDescriptionChanged(e.target.value !== (card.description || ""));
+                          e.target.style.height = '24px';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        placeholder="Add context for the AI to understand your task..."
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {descriptionChanged && (
+                  <div className="flex justify-end mt-2">
+                    <Button 
+                      size="sm"
+                      className="h-7 px-3 rounded-full bg-primary text-white hover:bg-primary/90 hover:text-white border-none shadow-sm"
+                      onClick={handleSaveDescription}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
         
-        {/* Main Content Area - Scrollable with fixed height */}
-        <div className="overflow-y-auto flex-grow px-6 pt-3 pb-2 flex flex-col">
+        {/* AI Chat Header - Fixed, always visible */}
+        <div className="flex-shrink-0 px-6 py-2 bg-white border-t border-b border-gray-100">
+          {column.gptAssigned ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center">
+                  <span className="text-xs font-bold text-green-700">AI</span>
+                </div>
+                <h3 className="font-medium text-gray-800 text-sm">{column.gptName || "AI Assistant"}</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <History className="h-4 w-4 text-gray-500" />
+                  <Label htmlFor="include-chat-history" className="text-xs font-normal text-gray-600">
+                    Include chat history
+                  </Label>
+                  <Switch
+                    id="include-chat-history"
+                    checked={includeChatHistory}
+                    onCheckedChange={handleChatHistoryToggle}
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs text-green-700 hover:bg-green-50 border-green-200 h-7 px-2"
+                  onClick={handleRetriggerGPT}
+                  disabled={rawProcessingStatus}
+                >
+                  <Zap className="h-3 w-3 mr-1" />
+                  Retrigger
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-1.5">
+                <MessageSquare className="h-4 w-4 text-gray-500" />
+                <h3 className="font-medium text-gray-700 text-sm">Comments & Attachments</h3>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Chat Content Area - Scrollable */}
+        <div className="overflow-y-auto flex-grow px-6 py-2 flex flex-col">
           {/* Description Section - Collapsible Prompt Context */}
           <Collapsible className="mb-1" open={isPromptContextExpanded} onOpenChange={setIsPromptContextExpanded}>
             <div className="flex items-center justify-between">
