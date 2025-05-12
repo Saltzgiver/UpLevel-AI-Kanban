@@ -79,24 +79,45 @@ export function CardModal({
   // Tracking status for in-progress GPT tasks 
   const [rawProcessingStatus, setRawProcessingStatus] = useState(false);
   
-  // Scroll to the bottom of the chat container when the modal is opened
+  // Function to ensure the chat scrolls to the bottom when card modal opens
   useEffect(() => {
-    // Only run this effect when the modal is open
-    if (isOpen && chatContainerRef.current) {
-      // Scroll to bottom with a slight delay to ensure content is loaded
-      const scrollToBottom = () => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-      };
-      
-      // Execute scroll multiple times with increasing delays to catch late-rendering content
-      scrollToBottom(); // Immediate scroll
-      setTimeout(scrollToBottom, 50);
-      setTimeout(scrollToBottom, 150);
-      setTimeout(scrollToBottom, 300);
-    }
-  }, [isOpen, card.id]); // Re-run when modal opens or card changes
+    if (!isOpen) return;
+    
+    // Scroll function for the outer container
+    const scrollChatToBottom = () => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        
+        // Also try to find any inner scroll containers and scroll them
+        // Specifically target our chat message container
+        const chatMessageContainers = chatContainerRef.current.querySelectorAll('.chat-message-container');
+        chatMessageContainers.forEach(container => {
+          if (container instanceof HTMLElement) {
+            console.log('Scrolling chat message container to bottom:', container.scrollHeight);
+            container.scrollTop = container.scrollHeight;
+          }
+        });
+      }
+    };
+    
+    // Execute with multiple attempts to catch rendering delays
+    // Start with immediate scroll
+    scrollChatToBottom();
+    
+    // Then multiple delayed scrolls with increasing timeouts
+    const timers = [
+      setTimeout(scrollChatToBottom, 50),
+      setTimeout(scrollChatToBottom, 150),
+      setTimeout(scrollChatToBottom, 300),
+      setTimeout(scrollChatToBottom, 500),
+      setTimeout(scrollChatToBottom, 800)  // Extra long timeout for slower renderings
+    ];
+    
+    return () => {
+      // Clean up timers
+      timers.forEach(timer => clearTimeout(timer));
+    };
+  }, [isOpen, card.id, chats.length]); // Re-run when modal opens, card changes, or chat messages change
   
   // Poll for status updates when a card is being processed by GPT
   useEffect(() => {

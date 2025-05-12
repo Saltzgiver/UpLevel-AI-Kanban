@@ -186,38 +186,69 @@ export function GPTChat({
     }
   }, []);
   
-  // Initial scroll to bottom when component mounts, and when chat content changes
-  useEffect(() => {
-    const scrollToBottom = () => {
-      if (chatContainerRef.current) {
-        // Scroll to bottom immediately
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
-    };
-    
-    // Scroll immediately on first render
-    scrollToBottom();
-    
-    // Then try again after content has fully rendered with a few attempts
-    // This ensures we catch any dynamic content that might expand
-    setTimeout(scrollToBottom, 50);
-    setTimeout(scrollToBottom, 150);
-    setTimeout(scrollToBottom, 300);
-    
-    // Also add a MutationObserver to detect any changes to the chat container
-    // that might affect its scrollHeight
+  // Scroll to bottom function - used in multiple places
+  const scrollToBottom = () => {
     if (chatContainerRef.current) {
-      const observer = new MutationObserver(scrollToBottom);
-      observer.observe(chatContainerRef.current, { 
-        childList: true, 
-        subtree: true,
-        characterData: true 
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
+
+  // Initial scroll to bottom when component mounts and when messages change
+  useEffect(() => {
+    // For embedded view (in card modal), we want to be aggressive about scrolling to bottom
+    if (embedded) {
+      // Immediate scroll
+      scrollToBottom();
+      
+      // Multiple delayed scrolls to catch any content that renders late
+      const timers = [
+        setTimeout(scrollToBottom, 50),
+        setTimeout(scrollToBottom, 150),
+        setTimeout(scrollToBottom, 300),
+        setTimeout(scrollToBottom, 500),  // Extra long timeout just in case
+      ];
+      
+      return () => {
+        // Clean up timers
+        timers.forEach(timer => clearTimeout(timer));
+      };
+    } else {
+      // For non-embedded view, just do a single scroll
+      scrollToBottom();
+    }
+  }, [chats.length, embedded]);
+  
+  // Use a more aggressive approach with the ResizeObserver and MutationObserver
+  useEffect(() => {
+    if (chatContainerRef.current && embedded) {
+      // MutationObserver watches for DOM changes in the chat container
+      const mutationObserver = new MutationObserver(() => {
+        scrollToBottom();
       });
       
-      // Clean up the observer on unmount
-      return () => observer.disconnect();
+      // ResizeObserver watches for size changes in the chat container
+      const resizeObserver = new ResizeObserver(() => {
+        scrollToBottom();
+      });
+      
+      // Observe the chat container for changes
+      mutationObserver.observe(chatContainerRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+      });
+      
+      // Observe for size changes too
+      resizeObserver.observe(chatContainerRef.current);
+      
+      // Clean up observers on unmount
+      return () => {
+        mutationObserver.disconnect();
+        resizeObserver.disconnect();
+      };
     }
-  }, [chats.length]); // Re-run this effect when the number of chat messages changes
+  }, [embedded]);
   
   // Auto-scroll to bottom when messages change, but only in specific cases:
   // 1. When new messages arrive AND user hasn't manually scrolled up
@@ -828,7 +859,7 @@ export function GPTChat({
       
       <div 
         ref={chatContainerRef}
-        className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
+        className="flex-1 px-4 py-3 flex flex-col scroll-smooth chat-message-container"
       >
         <ChatMessages />
       </div>
@@ -882,7 +913,7 @@ export function GPTChat({
       <div className="flex flex-col">
         <div 
           ref={chatContainerRef}
-          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
+          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth chat-message-container"
         >
           <ChatMessages />
         </div>
