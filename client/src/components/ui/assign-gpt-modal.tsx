@@ -484,10 +484,10 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden p-4">
       <div 
         ref={modalRef}
-        className="bg-white rounded-lg shadow-xl flex flex-col w-full max-w-3xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-xl shadow-xl flex flex-col w-full max-w-5xl h-[85vh] overflow-hidden"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
