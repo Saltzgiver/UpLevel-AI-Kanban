@@ -205,7 +205,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
     systemContent += `Card Description: ${card.description || "No description provided."}\n\n`;
     
     // Get card attachments
-    const attachments = await storage.getCardAttachments(cardId);
+    const attachments = await storage.getAttachmentsByCardId(cardId);
     console.log(`Card ${cardId} has ${attachments.length} attachments`);
     
     // Add information about attachments to system content
@@ -234,7 +234,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
     }
     
     // Get existing chats for context
-    const chats = await storage.getCardChats(cardId);
+    const chats = await storage.getChatsByCardId(cardId);
     const chatHistory: ChatCompletionMessageParam[] = [];
     
     // Process previous chats
