@@ -577,13 +577,14 @@ export async function processChat(cardId: number, userMessage: string, column: C
         });
         
         // Add a message from the assistant with the image
-        // Use "Generated image" as the alt text for better compatibility with image renderer
+        // Use "Generated image" as the alt text and a more reliable attachment link format
+        const attachmentUrl = `/api/attachments/${attachment.id}`;
         await storage.createChat({
           cardId,
           role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](attachment:${attachment.id})`,
-          gptName: column.gptName || "AI Assistant",
-          gptColor: column.gptColor
+          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](${attachmentUrl})`,
+          gptName: column.gptName || "Image Stylist",
+          gptColor: column.gptColor || "Peach"
         });
         
         // Mark the card as not processing anymore since we've completed the image generation
@@ -866,24 +867,29 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     console.log(`Using image generation model: ${modelToUse}`);
     
     // Build the request parameters based on the model
-    const requestParams: any = {
-      model: modelToUse,
-      prompt,
-      n: 1,
-      size: "1024x1024", // Standard size compatible with both models
-    };
+    let requestParams: any;
     
-    // Add model-specific parameters
     if (modelToUse === "gpt-image-1") {
-      // gpt-image-1 specific options
-      requestParams.response_format = "url"; // Can be "url" or omitted for base64 (b64_json)
-      requestParams.detail = "high"; // Can be "standard" or "high"
-      
-      // Moderation level (less restrictive filtering)
-      requestParams.moderation = "low"; // Options: "low" or "auto"
+      // gpt-image-1 specific options with correct types
+      requestParams = {
+        model: "gpt-image-1" as const,
+        prompt,
+        n: 1,
+        size: "1024x1024" as const, // Standard size compatible with both models
+        response_format: "url" as const, // Can be "url" or omitted for base64 (b64_json)
+        detail: "high" as const, // Can be "standard" or "high"
+        moderation: "low" as const // Options: "low" or "auto"
+      };
     } else {
-      // dall-e-3 specific options
-      requestParams.quality = "standard"; // Can be "standard" or "hd"
+      // dall-e-3 specific options with correct types
+      requestParams = {
+        model: "dall-e-3" as const,
+        prompt,
+        n: 1,
+        size: "1024x1024" as const,
+        quality: "standard" as const,
+        response_format: "url" as const
+      };
     }
     
     console.log(`Generating image with params:`, JSON.stringify(requestParams, null, 2));
@@ -919,13 +925,13 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       const openai = getOpenAIClient(apiKey);
       
       // Fallback to dall-e-3 with appropriate params
-      const fallbackParams = {
-        model: "dall-e-3",
+      const fallbackParams = { 
+        model: "dall-e-3" as const,
         prompt,
         n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        response_format: "url" // dall-e-3 works better with URL format
+        size: "1024x1024" as const,
+        quality: "standard" as const, 
+        response_format: "url" as const // dall-e-3 works better with URL format
       };
       
       console.log(`Generating fallback image with params:`, JSON.stringify(fallbackParams, null, 2));

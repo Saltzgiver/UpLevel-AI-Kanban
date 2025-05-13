@@ -587,25 +587,34 @@ export function GPTChat({
       }
       
       // Check if this is an attachment reference using includes to capture all possible formats
-      if (src && src.includes('attachment:')) {
+      if (src && (src.includes('attachment:') || src.includes('/api/attachments/'))) {
         // Extract attachment ID from various potential formats
         let attachmentId: number | undefined = undefined;
         
-        // Try to extract the attachment ID with a regex pattern to handle all cases
-        // This pattern matches both "attachment:123" and "(attachment:123)"
-        const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
-        
-        if (match && match[1]) {
-          attachmentId = parseInt(match[1]);
-          console.log("Extracted attachment ID:", attachmentId, "from src:", src);
+        // First check if it's a direct API URL
+        if (src.includes('/api/attachments/')) {
+          const apiMatch = src.match(/\/api\/attachments\/(\d+)/);
+          if (apiMatch && apiMatch[1]) {
+            attachmentId = parseInt(apiMatch[1]);
+            console.log("Extracted attachment ID from API URL:", attachmentId);
+          }
         } else {
-          // Fallback to direct parsing if the regex didn't work
-          if (src.startsWith('attachment:')) {
-            // Direct format: attachment:123
-            attachmentId = parseInt(src.substring('attachment:'.length));
-          } else if (src.startsWith('(attachment:') && src.endsWith(')')) {
-            // Markdown link format: (attachment:123)
-            attachmentId = parseInt(src.substring('(attachment:'.length, src.length - 1));
+          // Try to extract the attachment ID with a regex pattern to handle all cases
+          // This pattern matches both "attachment:123" and "(attachment:123)"
+          const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
+          
+          if (match && match[1]) {
+            attachmentId = parseInt(match[1]);
+            console.log("Extracted attachment ID:", attachmentId, "from src:", src);
+          } else {
+            // Fallback to direct parsing if the regex didn't work
+            if (src.startsWith('attachment:')) {
+              // Direct format: attachment:123
+              attachmentId = parseInt(src.substring('attachment:'.length));
+            } else if (src.startsWith('(attachment:') && src.endsWith(')')) {
+              // Markdown link format: (attachment:123)
+              attachmentId = parseInt(src.substring('(attachment:'.length, src.length - 1));
+            }
           }
         }
         
