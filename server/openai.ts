@@ -560,21 +560,63 @@ export async function processChat(cardId: number, userMessage: string, column: C
         }
         
         // Fetch the image and convert to base64
-        const response = await fetch(imageUrl);
-        const imageBuffer = await response.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        console.log(`[IMAGE-HANDLING] Fetching image from URL: ${imageUrl.substring(0, 30)}...`);
         
-        // Create a descriptive filename
-        const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-        const filename = `dalle_${safePrompt}_${Date.now()}.png`;
+        let attachment;
+        try {
+          const response = await fetch(imageUrl);
+          
+          if (!response.ok) {
+            console.error(`[IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText}`);
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+          }
+          
+          const contentType = response.headers.get('content-type');
+          console.log(`[IMAGE-HANDLING] Content-Type from response: ${contentType}`);
+          
+          const imageBuffer = await response.arrayBuffer();
+          console.log(`[IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes`);
+          
+          const base64Image = Buffer.from(imageBuffer).toString('base64');
+          console.log(`[IMAGE-HANDLING] Base64 length: ${base64Image.length}`);
+          console.log(`[IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...`);
+          
+          // Validate base64 content
+          if (!base64Image || base64Image.length < 100) {
+            console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${base64Image.length} chars)`);
+            throw new Error("Invalid base64 image content");
+          }
+          
+          // Determine file type from content-type or default to png
+          let fileType = 'image/png';
+          if (contentType) {
+            fileType = contentType;
+            console.log(`[IMAGE-HANDLING] Using file type from content-type: ${fileType}`);
+          }
+          
+          // Create a descriptive filename with correct extension
+          const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+          const extension = fileType.split('/')[1] || 'png';
+          const filename = `dalle_${safePrompt}_${Date.now()}.${extension}`;
+          console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${fileType}`);
+          
+          // Create attachment
+          attachment = await storage.createAttachment({
+            cardId,
+            filename,
+            fileType,
+            content: base64Image
+          });
+          
+          console.log(`[IMAGE-HANDLING] Attachment created successfully with ID: ${attachment.id}`);
+        } catch (fetchError) {
+          console.error(`[IMAGE-HANDLING] Error processing image: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+          throw fetchError;
+        }
         
-        // Create attachment
-        const attachment = await storage.createAttachment({
-          cardId,
-          filename,
-          fileType: 'image/png',
-          content: base64Image
-        });
+        if (!attachment) {
+          throw new Error("Failed to create attachment");
+        }
         
         // Add a message from the assistant with the image
         // Use "Generated image" as the alt text and a more reliable attachment link format
@@ -858,13 +900,13 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     const openai = getOpenAIClient(apiKey);
     
     // Log useful information for debugging
-    console.log(`Generating image with prompt: "${prompt.substring(0, 50)}..."`);
-    console.log(`Using API key source: ${apiKey ? 'column-specific key' : 'environment variable'}`);
+    console.log(`[IMAGE-GEN] Generating image with prompt: "${prompt.substring(0, 50)}..."`);
+    console.log(`[IMAGE-GEN] Using API key source: ${apiKey ? 'column-specific key' : 'environment variable'}`);
     
     // Use the new gpt-image-1 model by default (latest model as of May 2025)
     const modelToUse = "gpt-image-1"; // OpenAI's newest image model that replaced DALL-E 3
     
-    console.log(`Using image generation model: ${modelToUse}`);
+    console.log(`[IMAGE-GEN] Using image generation model: ${modelToUse}`);
     
     // Build the request parameters based on the model
     let requestParams: any;
@@ -892,18 +934,23 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       };
     }
     
-    console.log(`Generating image with params:`, JSON.stringify(requestParams, null, 2));
+    console.log(`[IMAGE-GEN] Generating image with params:`, JSON.stringify(requestParams, null, 2));
     const response = await openai.images.generate(requestParams);
 
-    console.log(`Successfully generated image with ${modelToUse}`);
+    console.log(`[IMAGE-GEN] Successfully generated image with ${modelToUse}`);
+    console.log(`[IMAGE-GEN] Full response structure: ${JSON.stringify(Object.keys(response))}`);
+    console.log(`[IMAGE-GEN] Response data format: ${JSON.stringify(response.data ? Object.keys(response.data[0]) : 'No data')}`);
     
     // Handle gpt-image-1 output format which has data as optional field
     if (!response.data || response.data.length === 0) {
+      console.error(`[IMAGE-GEN] No data in response: ${JSON.stringify(response)}`);
       throw new Error("No image data returned from API");
     }
     
     // For gpt-image-1 with response_format=url
     if (response.data[0].url) {
+      console.log(`[IMAGE-GEN] URL format detected, URL length: ${response.data[0].url.length}`);
+      console.log(`[IMAGE-GEN] URL starts with: ${response.data[0].url.substring(0, 30)}...`);
       return response.data[0].url;
     }
     
@@ -911,17 +958,20 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     if (response.data[0].b64_json) {
       // Convert base64 to URL by creating a temporary object URL
       const base64Image = response.data[0].b64_json;
+      console.log(`[IMAGE-GEN] Base64 format detected, length: ${base64Image.length}`);
+      console.log(`[IMAGE-GEN] Base64 starts with: ${base64Image.substring(0, 30)}...`);
       // Return the base64 string with data URL prefix for direct embedding
       return `data:image/png;base64,${base64Image}`;
     }
     
+    console.error(`[IMAGE-GEN] Unknown response format: ${JSON.stringify(response.data[0])}`);
     throw new Error("No valid image format found in API response");
   } catch (error) {
-    console.error(`Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error(`[IMAGE-GEN] Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     
     // If the gpt-image-1 model fails, attempt to fall back to dall-e-3
     try {
-      console.log("Attempting fallback to dall-e-3 model...");
+      console.log("[IMAGE-GEN] Attempting fallback to dall-e-3 model...");
       const openai = getOpenAIClient(apiKey);
       
       // Fallback to dall-e-3 with appropriate params
@@ -934,30 +984,38 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
         response_format: "url" as const // dall-e-3 works better with URL format
       };
       
-      console.log(`Generating fallback image with params:`, JSON.stringify(fallbackParams, null, 2));
+      console.log(`[IMAGE-GEN] Generating fallback image with params:`, JSON.stringify(fallbackParams, null, 2));
       const response = await openai.images.generate(fallbackParams);
       
-      console.log("Successfully generated image with dall-e-3 fallback");
+      console.log("[IMAGE-GEN] Successfully generated image with dall-e-3 fallback");
+      console.log(`[IMAGE-GEN] Fallback response structure: ${JSON.stringify(Object.keys(response))}`);
+      console.log(`[IMAGE-GEN] Fallback data format: ${JSON.stringify(response.data ? Object.keys(response.data[0]) : 'No data')}`);
       
       // Handle dall-e-3 output format
       if (!response.data || response.data.length === 0) {
+        console.error(`[IMAGE-GEN] No data in fallback response: ${JSON.stringify(response)}`);
         throw new Error("No image data returned from API in fallback");
       }
       
       // dall-e-3 uses URL format by default
       if (response.data[0].url) {
+        console.log(`[IMAGE-GEN] Fallback URL format detected, URL length: ${response.data[0].url.length}`);
+        console.log(`[IMAGE-GEN] Fallback URL starts with: ${response.data[0].url.substring(0, 30)}...`);
         return response.data[0].url;
       }
       
       // Handle b64_json if response_format was set to that
       if (response.data[0].b64_json) {
         const base64Image = response.data[0].b64_json;
+        console.log(`[IMAGE-GEN] Fallback Base64 format detected, length: ${base64Image.length}`);
+        console.log(`[IMAGE-GEN] Fallback Base64 starts with: ${base64Image.substring(0, 30)}...`);
         return `data:image/png;base64,${base64Image}`;
       }
       
+      console.error(`[IMAGE-GEN] Unknown fallback response format: ${JSON.stringify(response.data[0])}`);
       throw new Error("No valid image format found in fallback API response");
     } catch (fallbackError) {
-      console.error("Error with fallback image generation:", fallbackError);
+      console.error("[IMAGE-GEN] Error with fallback image generation:", fallbackError);
       throw error; // Throw the original error
     }
   }
