@@ -1,0 +1,148 @@
+﻿Image Handling Fix 1: Enhance Server-Side Image Processing
+Product Requirements Document
+1. Introduction
+This document outlines the requirements for improving the server-side handling of image data received from the OpenAI API in the UpLevel AI Task Management application. The primary goal is to address inconsistencies and errors encountered when processing and storing image data, particularly base64 encoded images, to ensure reliable display and download of generated images.
+2. Objectives
+* Increase the reliability of image generation and storage by improving base64 validation and cleanup.
+* Ensure accurate file type detection for generated images regardless of the API response format (URL or base64).
+* Reduce instances of "Invalid base64 image_url" errors and corrupted downloaded images.
+3. Scope
+This PRD covers modifications to the server/openai.ts file, specifically within the generateImage and handleFileGeneration functions, and potentially helper functions like base64ToDataURL. It focuses on the processing and initial storage of image data received from the OpenAI API. Changes to how images are served or displayed in the frontend are covered in subsequent PRDs.
+4. Requirements
+4.1 Robust Base64 Validation and Cleanup
+* The system SHALL implement more comprehensive validation of base64 strings received from the API (b64_json).
+* The system SHALL clean up invalid characters and ensure correct padding for base64 strings.
+* The system SHOULD log the length of the original and cleaned base64 strings for debugging.
+* The system SHALL include checks for a minimum valid base64 string length.
+4.2 Accurate MIME Type Detection
+* The system SHALL attempt to infer the image MIME type from the image data itself (e.g., by checking file signatures) if the content-type header from a URL response is unreliable or missing.
+* The system SHALL prioritize inferred type from data over unreliable headers or generic defaults.
+* The system SHALL log the detected MIME type and the method used for detection (e.g., from header, inferred from data, default).
+* The system SHALL default to a safe, non-image MIME type (e.g., application/octet-stream) if the image type cannot be reliably determined from headers or data signature. This prevents saving potentially non-image data as an image type.
+4.3 Consistent Data Storage
+* The system SHALL ensure that image content is consistently stored as a validated base64 string in the content field of the attachments table.
+* The system SHALL ensure the accurately detected MIME type is stored in the fileType field of the attachments table.
+4.4 Enhanced Logging
+* The system SHALL add detailed logging within generateImage and handleFileGeneration to track:
+   * The model used for generation.
+   * The type of response received (URL or base64).
+   * The length of raw and cleaned base64 strings.
+   * The MIME type detected and the method of detection.
+   * The size of the fetched image buffer (for URL responses).
+   * Any errors encountered during base64 processing, URL fetching, or type detection.
+5. Out of Scope
+* Changes to the OpenAI API key handling or model selection logic (already addressed in previous iterations).
+* Modifications to the /api/attachments/:id endpoint for serving files (covered in Fix 2).
+* Changes to how images are displayed in the frontend chat or attachment list components (covered in Fix 3).
+* Handling of image variations or edits.
+6. Success Metrics
+* Reduction in "Invalid base64 image_url" errors in server logs.
+* Generated images consistently display correctly in the frontend after processing completes.
+* Downloaded image files are consistently openable and not corrupted.
+* Logs provide clear information about image processing steps and errors.
+Implementation Plan
+Target Audience: Replit Agent
+This plan details the steps to enhance the server-side handling of image data in server/openai.ts to improve reliability and address base64 and file type issues.
+1. Code Modifications (server/openai.ts)
+Modify the generateImage and handleFileGeneration functions to implement the required validation, cleanup, and type detection logic.
+1.1 Enhance generateImage (Base64 Handling)
+* Locate the section that handles response.data[0].b64_json.
+* Before returning the base64 string, add more robust validation and cleanup:
+   * Trim whitespace: base64Image = base64Image.trim().replace(/\s/g, '');
+   * Remove non-base64 characters: base64Image = base64Image.replace(/[^A-Za-z0-9+/=]/g, '');
+   * Ensure correct padding (=): Check base64Image.length % 4 and append = if needed.
+   * Add a check for a minimum length (e.g., > 100 characters) after cleanup. Log a warning or throw an error if the length is suspicious.
+   * Add logging for original length, cleaned length, and maybe the first/last 20 characters of the cleaned base64 string.
+* Update the base64ToDataURL helper if necessary to ensure it handles potentially cleaned base64 correctly and logs the MIME type it constructs.
+1.2 Enhance handleFileGeneration (File Type Detection and Storage)
+* Locate the section where image URLs are fetched (fetch(imageUrl)).
+* After fetching the image buffer, implement improved MIME type detection:
+   * Prioritize the content-type header if it's present and starts with image/.
+   * If the header is unreliable, attempt to infer the type from the first few bytes of the imageBuffer (e.g., check for PNG signature 89 50 4E 47, JPEG signature FF D8 FF, etc.). Use a helper function for this.
+   * If inference fails, default to application/octet-stream or throw a specific error if it's clearly not valid image data (e.g., buffer size too small).
+   * Log the detected MIME type and the method used (header, inference, default).
+* Ensure the storage.createAttachment call uses the accurately detected fileType and the validated/cleaned base64 content.
+* Add logging before calling storage.createAttachment with the filename, detected file type, and base64 content length.
+1.3 Implement MIME Type Inference Helper (New Function)
+* Create a new helper function (e.g., inferMimeTypeFromBuffer) that takes an ArrayBuffer and attempts to determine the MIME type by checking file signatures. Return the inferred MIME type string or null if detection fails.
+// Example helper function (add this to server/openai.ts)
+function inferMimeTypeFromBuffer(buffer: ArrayBuffer): string | null {
+ if (buffer.byteLength < 4) {
+   return null; // Need at least 4 bytes for common signatures
+ }
+ const bytes = new Uint8Array(buffer);
+ 
+ // Check for PNG signature (89 50 4E 47)
+ if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+   return 'image/png';
+ }
+ // Check for JPEG signature (FF D8 FF)
+ if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+   return 'image/jpeg';
+ }
+ // Check for GIF signature (GIF87a or GIF89a)
+ if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38 && (bytes[4] === 0x37 || bytes[4] === 0x39) && bytes[5] === 0x61) {
+    return 'image/gif';
+ }
+ // Check for WebP signature (RIFF....WEBP) - WEBP is at offset 8
+ if (buffer.byteLength >= 12 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+     return 'image/webp';
+ }
+ // Add other common image formats if necessary (BMP, TIFF, etc.)
+ 
+ return null; // Could not infer type
+}
+
+2. Logging
+Add detailed console.log statements at the following points:
+* In generateImage:
+   * console.log([IMAGE-GEN] Generating image with prompt: "${prompt.substring(0, 50)}...");
+   * console.log([IMAGE-GEN] Using API key source: ${apiKey ? 'column-specific key' : 'environment variable'});
+   * console.log([IMAGE-GEN] Using image generation model: ${modelToUse} (fallback preference: ${preferFallback ? 'enabled' : 'disabled'}));
+   * console.log([IMAGE-GEN] Generating image with params:, JSON.stringify(requestParams, null, 2));
+   * console.log([IMAGE-GEN] Successfully generated image with ${modelToUse});
+   * console.log([IMAGE-GEN] Response data format: ${JSON.stringify(response.data ? Object.keys(response.data[0]) : 'No data')});
+   * If URL format: console.log([IMAGE-GEN] URL format detected, URL length: ${response.data[0].url.length}); console.log([IMAGE-GEN] URL starts with: ${response.data[0].url.substring(0, 30)}...);
+   * If Base64 format: console.log([IMAGE-GEN] Base64 format detected, length: ${base64Image.length}); console.log([IMAGE-GEN] Base64 starts with: ${base64Image.substring(0, 30)}...);
+   * During base64 cleanup: console.log([IMAGE-GEN] Fixed base64 padding in response);, console.warn([IMAGE-GEN] Base64 content contains invalid characters, cleaning up);, console.error([IMAGE-GEN] Invalid base64 content: too short (${base64Image.length} chars));
+   * After base64 cleanup: console.log([IMAGE-GEN] Final base64 length after cleanup: ${base64Image.length});
+   * After MIME type inference from base64: console.log([IMAGE-GEN] Detected ${imageFormat} format from base64 signature);, console.log([IMAGE-GEN] Could not detect image format, using default (png));
+   * Before returning final result: console.log([IMAGE-GEN] Final image format: ${imageFormat}, base64 length: ${base64Image.length});
+   * In the catch block: console.error([IMAGE-GEN] Error generating image: ${errorMessage});, console.log("[IMAGE-GEN] The gpt-image-1 model requires organization verification with OpenAI");, console.log([IMAGE-GEN] Attempting fallback to dall-e-3 model... (Reason: ${fallbackReason}));
+* In handleFileGeneration:
+   * console.log([IMAGE-HANDLING] Handling image from source: ${imageUrl.substring(0, 30)}...);
+   * If data URL: console.log([IMAGE-HANDLING] Detected data URL format, processing directly);, console.log([IMAGE-HANDLING] Content-Type from data URL: ${dataContentType});, console.log([IMAGE-HANDLING] Base64 length: ${dataBase64.length});
+   * During data URL base64 validation: console.error([IMAGE-HANDLING] Invalid base64 content: too short (${dataBase64.length} chars));
+   * During data URL filename creation: console.log([IMAGE-HANDLING] Created filename: ${filename} with type ${dataContentType});
+   * If HTTP URL: console.log([IMAGE-HANDLING] Fetching image from URL: ${imageUrl.substring(0, 30)}...);
+   * After fetch: console.log([IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText});, console.log([IMAGE-HANDLING] Retrying fetch, attempt ${retryCount} of ${maxRetries});
+   * After successful fetch: console.log([IMAGE-HANDLING] Content-Type from response: ${contentType || 'not provided'});
+   * During MIME type inference from URL: console.log([IMAGE-HANDLING] Inferred content type from URL: ${contentType});, console.log([IMAGE-HANDLING] Using default content type: ${contentType});
+   * After getting buffer: console.log([IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes);
+   * During base64 conversion from buffer: console.log([IMAGE-HANDLING] Base64 length: ${base64Image.length}); console.log([IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...);
+   * During URL base64 cleanup: console.warn([IMAGE-HANDLING] Base64 content contains invalid characters, cleaning up);, console.error([IMAGE-HANDLING] Cleaned base64 is too short: ${base64Image.length} chars);
+   * During URL filename creation: console.log([IMAGE-HANDLING] Created filename: ${filename} with type ${fileType});
+   * Before storage.createAttachment: console.log([IMAGE-HANDLING] Creating attachment for card cardId:filename={filename}, fileType=fileType,contentlength={processedContent.length});
+   * After storage.createAttachment: console.log([IMAGE-HANDLING] Attachment created successfully with ID: ${attachment.id});
+   * In catch blocks: console.error([IMAGE-HANDLING] Error processing image: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'});
+3. Test Steps
+1. Restart the application to ensure changes are loaded.
+2. Create a new card in an "Image Stylist" or GPT-enabled column configured for image generation.
+3. Send a message requesting an image (e.g., "Generate a detailed image of a cat sitting on a fence").
+4. Monitor the server logs for the new detailed logging messages added in step 2.
+   * Verify the correct model is used or fallback occurs as expected.
+   * Check the logs for base64 processing (if applicable), MIME type detection, and successful attachment creation.
+   * Look for logs indicating base64 cleanup or MIME type inference.
+5. Observe the chat interface for the generated image preview.
+6. Attempt to download the image from the attachment list in the card modal.
+7. Open the downloaded image file to ensure it is not corrupted.
+8. Repeat steps 2-7 with a different prompt to ensure consistency.
+9. Repeat steps 2-7 using a column configured to prefer DALL-E 3 fallback (PREFER_DALLE_FALLBACK=true in .env).
+10. Manually create a chat message with an image markdown tag pointing to an invalid attachment:id or /api/attachments/invalid-id to test error handling and logging.
+4. Expected Outcomes
+* The server logs will show detailed steps of image generation, processing, and storage, including validation and type detection results.
+* The "Invalid base64 image_url" error should be significantly reduced or eliminated.
+* Generated images should consistently appear as previews in the frontend after processing completes.
+* Downloaded image files should be valid and openable.
+* The MIME type and filename stored in the database for the attachment should accurately reflect the generated image format.
+* Logs will indicate when base64 cleanup or MIME type inference from buffer is performed.
