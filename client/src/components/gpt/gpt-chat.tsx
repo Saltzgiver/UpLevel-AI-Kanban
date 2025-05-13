@@ -586,6 +586,48 @@ export function GPTChat({
         }
       }
       
+      // Check if this is a data URL (base64 embedded image)
+      if (src && (src.startsWith('data:image/'))) {
+        console.log("Rendering data URL image:", src.substring(0, 30) + "...");
+        return (
+          <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+            <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+              AI Generated
+            </div>
+            <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+              <Maximize2 className="h-3 w-3 mr-1" />
+              <span>Click to expand</span>
+            </div>
+            <div 
+              className="cursor-pointer" 
+              onClick={() => setSelectedImage({ src, alt: alt || 'AI Generated Image' })}
+            >
+              <img 
+                src={src}
+                alt={alt || 'AI Generated Image'} 
+                className="max-w-full object-cover h-48 w-auto"
+                onLoad={(e) => {
+                  console.log("Data URL image successfully loaded");
+                }}
+                onError={(e) => {
+                  console.error("Data URL image failed to load");
+                  // Replace with error message on load failure
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-red-500 text-xs p-2';
+                    errorDiv.textContent = `Failed to load data URL image`;
+                    parent.appendChild(errorDiv);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        );
+      }
+      
       // Check if this is an attachment reference using includes to capture all possible formats
       if (src && (src.includes('attachment:') || src.includes('/api/attachments/'))) {
         // Extract attachment ID from various potential formats
@@ -736,6 +778,9 @@ export function GPTChat({
       console.log("Rendering regular image URL:", src);
       return (
         <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+          <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+            AI Generated
+          </div>
           <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
             <Maximize2 className="h-3 w-3 mr-1" />
             <span>Click to expand</span>
@@ -748,8 +793,21 @@ export function GPTChat({
               src={src} 
               alt={alt} 
               className="max-w-full h-48 w-auto object-cover rounded-lg"
+              onLoad={(e) => {
+                console.log("Regular image URL successfully loaded");
+              }}
               onError={(e) => {
                 console.error("Regular image failed to load:", src);
+                // Replace with error message on load failure
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const errorDiv = document.createElement('div');
+                  errorDiv.className = 'text-red-500 text-xs p-2';
+                  errorDiv.textContent = `Failed to load image URL`;
+                  parent.appendChild(errorDiv);
+                }
               }}
             />
           </div>
