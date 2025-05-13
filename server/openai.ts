@@ -913,14 +913,15 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     
     if (modelToUse === "gpt-image-1") {
       // gpt-image-1 specific options with correct types
+      // Based on error logs, gpt-image-1 does not support response_format parameter
       requestParams = {
         model: "gpt-image-1" as const,
         prompt,
         n: 1,
         size: "1024x1024" as const, // Standard size compatible with both models
-        response_format: "url" as const, // Can be "url" or omitted for base64 (b64_json)
         detail: "high" as const, // Can be "standard" or "high"
         moderation: "low" as const // Options: "low" or "auto"
+        // response_format has been removed as it's not supported by this model
       };
     } else {
       // dall-e-3 specific options with correct types
