@@ -1059,8 +1059,10 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
         else {
           console.log(`[IMAGE-GEN] Could not detect image format, using default (png)`);
         }
-      } catch (error) {
-        console.error(`[IMAGE-GEN] Error detecting image format from base64: ${error.message}`);
+      } catch (err: any) {
+        // Type assertion for the error
+        const errorMessage = err?.message || 'Unknown error';
+        console.error(`[IMAGE-GEN] Error detecting image format from base64: ${errorMessage}`);
       }
       
       // Return the base64 string with data URL prefix for direct embedding
@@ -1155,8 +1157,10 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
           else {
             console.log(`[IMAGE-GEN] Could not detect image format from fallback base64, using default (png)`);
           }
-        } catch (error) {
-          console.error(`[IMAGE-GEN] Error detecting image format from fallback base64: ${error.message}`);
+        } catch (err: any) {
+          // Type assertion for the error
+          const errorMessage = err?.message || 'Unknown error';
+          console.error(`[IMAGE-GEN] Error detecting image format from fallback base64: ${errorMessage}`);
         }
         
         return `data:image/${imageFormat};base64,${base64Image}`;
