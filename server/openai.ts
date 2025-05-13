@@ -586,17 +586,57 @@ export async function processChat(cardId: number, userMessage: string, column: C
             
             // Create a descriptive filename with correct extension from content type
             const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-            const extension = dataContentType.split('/')[1] || 'png';
-            const filename = `gpt_image_${safePrompt}_${Date.now()}.${extension}`;
+            let extension = dataContentType.split('/')[1] || 'png';
             
+            // Ensure we have proper file extension
+            if (extension === 'jpeg') {
+              extension = 'jpg'; // Convert to more common extension
+            } else if (extension.includes('+')) {
+              // Handle unusual formats like image/svg+xml
+              extension = extension.split('+')[0];
+            }
+            
+            // Ensure extension is lowercase and trim
+            extension = extension.toLowerCase().trim();
+            
+            const filename = `gpt_image_${safePrompt}_${Date.now()}.${extension}`;
             console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${dataContentType}`);
             
-            // Create attachment directly from the base64 data
+            // For PNG files from base64 data, validate and fix any malformed content
+            let processedContent = dataBase64;
+            if (extension === 'png') {
+              console.log(`[IMAGE-HANDLING] Validating PNG data...`);
+              try {
+                // Check if we need to fix common issues with data:
+                
+                // 1. Remove padding or whitespace
+                processedContent = processedContent.trim();
+                
+                // 2. Ensure the data is properly padded for base64
+                const remainder = processedContent.length % 4;
+                if (remainder > 0) {
+                  processedContent += '='.repeat(4 - remainder);
+                  console.log(`[IMAGE-HANDLING] Fixed base64 padding`);
+                }
+                
+                // 3. Check if the data starts with PNG signature (validate as best we can)
+                const byteSignature = Buffer.from(processedContent.substring(0, 32), 'base64');
+                if (!(byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
+                    byteSignature[2] === 0x4E && byteSignature[3] === 0x47)) {
+                  console.warn(`[IMAGE-HANDLING] PNG data does not seem to have correct signature`);
+                }
+              } catch (err: any) {
+                console.error(`[IMAGE-HANDLING] Error checking PNG data: ${err?.message}`);
+                // Continue despite error - we'll try with the original data
+              }
+            }
+            
+            // Create attachment with potentially fixed content
             attachment = await storage.createAttachment({
               cardId,
               filename,
               fileType: dataContentType,
-              content: dataBase64
+              content: processedContent
             });
           } else {
             // Handle standard HTTP URL
@@ -659,16 +699,75 @@ export async function processChat(cardId: number, userMessage: string, column: C
             
             // Create a descriptive filename with correct extension
             const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-            const extension = fileType.split('/')[1] || 'png';
+            let extension = fileType.split('/')[1] || 'png';
+            
+            // Ensure we have proper file extension
+            if (extension === 'jpeg') {
+              extension = 'jpg'; // Convert to more common extension
+            } else if (extension.includes('+')) {
+              // Handle unusual formats like image/svg+xml
+              extension = extension.split('+')[0];
+            }
+            
+            // Ensure extension is lowercase and trim
+            extension = extension.toLowerCase().trim();
+                
             const filename = `dalle_${safePrompt}_${Date.now()}.${extension}`;
             console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${fileType}`);
             
-            // Create attachment
+            // For PNG files, validate and fix any malformed content
+            let processedContent = base64Image;
+            if (extension === 'png') {
+              console.log(`[IMAGE-HANDLING] Validating PNG data from URL...`);
+              try {
+                // Check if we need to fix common issues with data:
+                
+                // 1. Remove padding or whitespace
+                processedContent = processedContent.trim();
+                
+                // 2. Ensure the data is properly padded for base64
+                const remainder = processedContent.length % 4;
+                if (remainder > 0) {
+                  processedContent += '='.repeat(4 - remainder);
+                  console.log(`[IMAGE-HANDLING] Fixed base64 padding`);
+                }
+                
+                // 3. Check if the data starts with PNG signature (validate as best we can)
+                const byteSignature = Buffer.from(processedContent.substring(0, 32), 'base64');
+                if (!(byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
+                    byteSignature[2] === 0x4E && byteSignature[3] === 0x47)) {
+                  console.warn(`[IMAGE-HANDLING] PNG data from URL does not seem to have correct signature`);
+                  
+                  // This is a serious issue - try to re-fetch the image as binary and re-encode
+                  console.log(`[IMAGE-HANDLING] Attempting to re-fetch image as binary...`);
+                  const binaryResponse = await fetch(imageUrl);
+                  if (binaryResponse.ok) {
+                    const buffer = await binaryResponse.arrayBuffer();
+                    if (buffer.byteLength > 100) {
+                      processedContent = Buffer.from(buffer).toString('base64');
+                      console.log(`[IMAGE-HANDLING] Re-encoded image from binary, new size: ${processedContent.length}`);
+                    }
+                  }
+                }
+              } catch (err: any) {
+                console.error(`[IMAGE-HANDLING] Error checking PNG data from URL: ${err?.message}`);
+                // Continue despite error - we'll try with the original data
+              }
+            }
+            
+            // Ensure we have a valid MIME type
+            const cleanFileType = fileType.trim().toLowerCase();
+            if (!cleanFileType.startsWith('image/')) {
+              fileType = `image/${extension}`;
+              console.log(`[IMAGE-HANDLING] Fixed invalid MIME type to: ${fileType}`);
+            }
+            
+            // Create attachment with potentially fixed content
             attachment = await storage.createAttachment({
               cardId,
               filename,
               fileType,
-              content: base64Image
+              content: processedContent
             });
           }
           
