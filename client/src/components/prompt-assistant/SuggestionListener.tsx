@@ -158,6 +158,25 @@ export function SuggestionListener() {
       });
       window.dispatchEvent(invalidateEvent);
       
+      // If an "suggestionAccepted" event listener exists in the app, trigger it to update UI
+      const acceptedEvent = new CustomEvent('suggestionAccepted', {
+        detail: { columnId, cardId }
+      });
+      window.dispatchEvent(acceptedEvent);
+      console.log(`[SuggestionListener] Dispatched suggestionAccepted event for column ${columnId}, card ${cardId}`);
+      
+      // Notify React Query to invalidate the suggestion state
+      const invalidateSuggestionEvent = new CustomEvent('invalidateQueries', {
+        detail: { queryKey: [`/api/columns/${columnId}/prompt-suggestion`] }
+      });
+      window.dispatchEvent(invalidateSuggestionEvent);
+      
+      // Close any open suggestion modal
+      const closeModalEvent = new CustomEvent('closeSuggestionModal', {
+        detail: { columnId, cardId }
+      });
+      window.dispatchEvent(closeModalEvent);
+      
       // Show success toast
       toast({
         title: `${column.name} AI Updated`,

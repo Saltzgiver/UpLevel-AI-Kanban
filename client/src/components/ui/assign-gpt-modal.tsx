@@ -204,6 +204,51 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     }
   }, [isOpen, column.gptAssigned, column.gptColor]);
   
+  // Listen for suggestionAccepted events
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleSuggestionAccepted = (e: Event) => {
+      const event = e as CustomEvent<{ columnId: number; cardId: number }>;
+      const { columnId, cardId } = event.detail;
+      
+      // Check if this event is relevant to our current state
+      if (modalState.isSuggestionMode && 
+          modalState.columnId === columnId &&
+          modalState.cardId === cardId) {
+        console.log(`[AssignGPTModal] Received suggestionAccepted event for column ${columnId}, card ${cardId}`);
+        
+        // Close the modal
+        onClose();
+      }
+    };
+    
+    const handleCloseModal = (e: Event) => {
+      const event = e as CustomEvent<{ columnId: number; cardId: number }>;
+      const { columnId, cardId } = event.detail;
+      
+      // Check if this event is relevant to our current state
+      if (modalState.isSuggestionMode && 
+          modalState.columnId === columnId &&
+          modalState.cardId === cardId) {
+        console.log(`[AssignGPTModal] Received closeSuggestionModal event for column ${columnId}, card ${cardId}`);
+        
+        // Close the modal
+        onClose();
+      }
+    };
+    
+    // Add event listeners
+    window.addEventListener('suggestionAccepted', handleSuggestionAccepted);
+    window.addEventListener('closeSuggestionModal', handleCloseModal);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('suggestionAccepted', handleSuggestionAccepted);
+      window.removeEventListener('closeSuggestionModal', handleCloseModal);
+    };
+  }, [isOpen, modalState, onClose]);
+  
   // Reset form state when modal opens and fetch suggestion if in suggestion mode
   useEffect(() => {
     if (!isOpen) return;
@@ -393,6 +438,7 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
     setIsSubmitting(true);
     
     try {
+      // Update the column with the new settings
       await apiRequest("PATCH", `/api/columns/${column.id}/assign-gpt`, {
         gptAssigned: true,
         gptName,
@@ -401,13 +447,44 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
         autoTrigger
       });
       
+      // If this is a suggestion, mark it as accepted
+      if (modalState.isSuggestionMode && modalState.columnId && modalState.cardId) {
+        console.log(`[AssignGPTModal] Automatically marking suggestion as accepted during save`);
+        
+        try {
+          const acceptResponse = await fetch(`/api/columns/${modalState.columnId}/prompt-suggestion/accept/${modalState.cardId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (acceptResponse.ok) {
+            console.log(`[AssignGPTModal] Successfully marked suggestion as accepted during save`);
+            
+            // Fire suggestion accepted event
+            const acceptedEvent = new CustomEvent('suggestionAccepted', {
+              detail: { columnId: modalState.columnId, cardId: modalState.cardId }
+            });
+            window.dispatchEvent(acceptedEvent);
+          } else {
+            console.warn(`[AssignGPTModal] Failed to mark suggestion as accepted during save: ${acceptResponse.status}`);
+          }
+        } catch (acceptError) {
+          console.error('[AssignGPTModal] Error marking suggestion as accepted:', acceptError);
+        }
+      }
+      
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
       
+      // Notify the user
       toast({
         title: "Success",
         description: `GPT assigned to ${column.name}`,
       });
       
+      // Close the modal
       onClose();
     } catch (error) {
       toast({
@@ -421,22 +498,74 @@ export function AssignGPTModal({ column, isOpen, onClose, isSuggestionMode, card
   };
 
   // Additional handlers for suggestion mode
-  const handleApplySuggestion = () => {
-    if (suggestion && suggestion.suggestedInstructions) {
-      // Update the instructions with the suggestion
-      const suggestedText = suggestion.suggestedInstructions;
-      setInstructions(suggestedText);
-      
-      // Parse the suggestion into dos and donts
-      const { dos, donts } = parseInstructions(suggestedText);
-      setDosList(dos);
-      setDontsList(donts);
-      
-      toast({
-        title: "Suggestion Applied",
-        description: "The suggested instructions have been applied",
-        variant: "default"
-      });
+  const handleApplySuggestion = async () => {
+    if (suggestion && suggestion.suggestedInstructions && modalState.cardId) {
+      try {
+        setIsSubmitting(true);
+        
+        // Update the instructions with the suggestion
+        const suggestedText = suggestion.suggestedInstructions;
+        setInstructions(suggestedText);
+        
+        // Parse the suggestion into dos and donts
+        const { dos, donts } = parseInstructions(suggestedText);
+        setDosList(dos);
+        setDontsList(donts);
+        
+        // Mark the suggestion as accepted in the backend
+        if (modalState.columnId && modalState.cardId) {
+          console.log(`[AssignGPTModal] Marking suggestion as accepted for column ${modalState.columnId}, card ${modalState.cardId}`);
+          
+          const acceptResponse = await fetch(`/api/columns/${modalState.columnId}/prompt-suggestion/accept/${modalState.cardId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (acceptResponse.ok) {
+            console.log(`[AssignGPTModal] Successfully marked suggestion as accepted`);
+            
+            // Clear suggestion state in UI
+            setSuggestion(null);
+            setShowingSuggestion(false);
+            
+            // Fire suggestion accepted event
+            const acceptedEvent = new CustomEvent('suggestionAccepted', {
+              detail: { columnId: modalState.columnId, cardId: modalState.cardId }
+            });
+            window.dispatchEvent(acceptedEvent);
+            
+            // Invalidate queries
+            const invalidateEvent = new CustomEvent('invalidateQueries', { 
+              detail: { queryKey: ['/api/boards'] } 
+            });
+            window.dispatchEvent(invalidateEvent);
+            
+            toast({
+              title: "Suggestion Applied",
+              description: "The suggested instructions have been applied",
+              variant: "default"
+            });
+          } else {
+            console.error(`[AssignGPTModal] Failed to mark suggestion as accepted: ${acceptResponse.status}`);
+            toast({
+              title: "Warning",
+              description: "The suggestion was applied but not properly recorded",
+              variant: "default"
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[AssignGPTModal] Error applying suggestion:', error);
+        toast({
+          title: "Error",
+          description: "Failed to apply suggestion",
+          variant: "destructive"
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
   
