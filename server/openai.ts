@@ -844,7 +844,8 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
 }
 
 /**
- * Generates an image with DALL-E based on prompt
+ * Generates an image with OpenAI's latest image generation model
+ * Support both gpt-image-1 (latest) and dall-e-3
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
   try {
@@ -856,22 +857,46 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     const openai = getOpenAIClient(apiKey);
     
     // Log useful information for debugging
-    console.log(`Generating image with DALL-E for prompt: "${prompt.substring(0, 50)}..."`);
+    console.log(`Generating image with prompt: "${prompt.substring(0, 50)}..."`);
     console.log(`Using API key source: ${apiKey ? 'column-specific key' : 'environment variable'}`);
     
+    // Use the new gpt-image-1 model by default (latest model as of May 2025)
+    const modelToUse = "gpt-image-1"; // OpenAI's newest image model that replaced DALL-E 3
+    
+    console.log(`Using image generation model: ${modelToUse}`);
+    
     const response = await openai.images.generate({
-      model: "dall-e-3",
+      model: modelToUse,
       prompt,
       n: 1,
-      size: "1024x1024",
+      size: "1024x1024", // Standard size compatible with both models
       quality: "standard",
     });
 
-    console.log(`Successfully generated image with DALL-E`);
-    return response.data[0].url || "";
+    console.log(`Successfully generated image with ${modelToUse}`);
+    return response.data?.[0]?.url || "";
   } catch (error) {
-    console.error("Error generating image with DALL-E:", error);
-    throw error;
+    console.error(`Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    // If the gpt-image-1 model fails, attempt to fall back to dall-e-3
+    try {
+      console.log("Attempting fallback to dall-e-3 model...");
+      const openai = getOpenAIClient(apiKey);
+      
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      });
+      
+      console.log("Successfully generated image with dall-e-3 fallback");
+      return response.data[0].url || "";
+    } catch (fallbackError) {
+      console.error("Error with fallback image generation:", fallbackError);
+      throw error; // Throw the original error
+    }
   }
 }
 
