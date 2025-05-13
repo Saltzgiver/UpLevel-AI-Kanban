@@ -80,7 +80,7 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
   
   try {
     // Get card details
-    const card = await storage.getCard(cardId);
+    const card = await storage.getCardById(cardId);
     if (!card) {
       console.error(`Card ${cardId} not found`);
       return;
@@ -180,7 +180,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
   
   try {
     // Get card details
-    const card = await storage.getCard(cardId);
+    const card = await storage.getCardById(cardId);
     if (!card) {
       console.error(`Card ${cardId} not found`);
       return;
