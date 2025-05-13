@@ -157,6 +157,16 @@ export function CardModal({
           setLocalGptOutput(data.gptOutput);
           card.gptOutput = data.gptOutput;
         }
+        
+        // Update attachments if they're available
+        if (data.attachments && Array.isArray(data.attachments)) {
+          // Check if the attachments array has changed in length
+          if (data.attachments.length !== attachments.length) {
+            console.log('Updating attachments in card modal with new data from API');
+            // Update the card attachments reference
+            card.attachments = data.attachments;
+          }
+        }
       } catch (error) {
         console.error("Error checking processing status:", error);
       }
@@ -468,7 +478,7 @@ export function CardModal({
               {attachments.map((attachment) => (
                 <a
                   key={attachment.id}
-                  href={`/api/files/${attachment.id}`}
+                  href={`/api/attachments/${attachment.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
