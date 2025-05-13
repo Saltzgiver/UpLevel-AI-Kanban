@@ -560,53 +560,117 @@ export async function processChat(cardId: number, userMessage: string, column: C
         }
         
         // Fetch the image and convert to base64
-        console.log(`[IMAGE-HANDLING] Fetching image from URL: ${imageUrl.substring(0, 30)}...`);
+        console.log(`[IMAGE-HANDLING] Handling image from source: ${imageUrl.substring(0, 30)}...`);
         
         let attachment;
         try {
-          const response = await fetch(imageUrl);
-          
-          if (!response.ok) {
-            console.error(`[IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText}`);
-            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+          // Check if the URL is a data URL (base64 encoded image)
+          if (imageUrl.startsWith('data:image/')) {
+            console.log(`[IMAGE-HANDLING] Detected data URL format, processing directly`);
+            
+            // Parse the data URL to extract content type and base64 content
+            const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+            if (!matches || matches.length !== 3) {
+              throw new Error("Invalid data URL format");
+            }
+            
+            const [_, dataContentType, dataBase64] = matches;
+            console.log(`[IMAGE-HANDLING] Content-Type from data URL: ${dataContentType}`);
+            console.log(`[IMAGE-HANDLING] Base64 length: ${dataBase64.length}`);
+            
+            // Validate base64 content
+            if (!dataBase64 || dataBase64.length < 100) {
+              console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${dataBase64.length} chars)`);
+              throw new Error("Invalid base64 image content");
+            }
+            
+            // Create a descriptive filename with correct extension from content type
+            const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+            const extension = dataContentType.split('/')[1] || 'png';
+            const filename = `gpt_image_${safePrompt}_${Date.now()}.${extension}`;
+            
+            console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${dataContentType}`);
+            
+            // Create attachment directly from the base64 data
+            attachment = await storage.createAttachment({
+              cardId,
+              filename,
+              fileType: dataContentType,
+              content: dataBase64
+            });
+          } else {
+            // Handle standard HTTP URL
+            console.log(`[IMAGE-HANDLING] Fetching image from URL: ${imageUrl.substring(0, 30)}...`);
+            
+            const response = await fetch(imageUrl);
+            
+            if (!response.ok) {
+              console.error(`[IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText}`);
+              throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+            }
+            
+            // Get content type, with robust fallbacks
+            let contentType = response.headers.get('content-type');
+            console.log(`[IMAGE-HANDLING] Content-Type from response: ${contentType}`);
+            
+            // If no content type or invalid content type, attempt to infer from URL
+            if (!contentType || !contentType.startsWith('image/')) {
+              // Try to infer from URL extension
+              if (imageUrl.includes('.png')) {
+                contentType = 'image/png';
+              } else if (imageUrl.includes('.jpg') || imageUrl.includes('.jpeg')) {
+                contentType = 'image/jpeg';
+              } else if (imageUrl.includes('.webp')) {
+                contentType = 'image/webp';
+              } else {
+                // Default to PNG as safest option
+                contentType = 'image/png';
+              }
+              console.log(`[IMAGE-HANDLING] Inferred content type: ${contentType}`);
+            }
+            
+            const imageBuffer = await response.arrayBuffer();
+            console.log(`[IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes`);
+            
+            // Check for valid image data
+            if (imageBuffer.byteLength < 100) {
+              console.error(`[IMAGE-HANDLING] Invalid image data: too small (${imageBuffer.byteLength} bytes)`);
+              throw new Error("Invalid image data received");
+            }
+            
+            const base64Image = Buffer.from(imageBuffer).toString('base64');
+            console.log(`[IMAGE-HANDLING] Base64 length: ${base64Image.length}`);
+            console.log(`[IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...`);
+            
+            // Validate base64 content
+            if (!base64Image || base64Image.length < 100) {
+              console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${base64Image.length} chars)`);
+              throw new Error("Invalid base64 image content");
+            }
+            
+            // Clean up content type and ensure it's valid
+            // Make sure we have a valid image content type
+            let fileType = contentType.trim();
+            
+            if (!fileType.startsWith('image/')) {
+              fileType = 'image/png'; // Default to PNG for safety
+              console.log(`[IMAGE-HANDLING] Fixing invalid content type, using: ${fileType}`);
+            }
+            
+            // Create a descriptive filename with correct extension
+            const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+            const extension = fileType.split('/')[1] || 'png';
+            const filename = `dalle_${safePrompt}_${Date.now()}.${extension}`;
+            console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${fileType}`);
+            
+            // Create attachment
+            attachment = await storage.createAttachment({
+              cardId,
+              filename,
+              fileType,
+              content: base64Image
+            });
           }
-          
-          const contentType = response.headers.get('content-type');
-          console.log(`[IMAGE-HANDLING] Content-Type from response: ${contentType}`);
-          
-          const imageBuffer = await response.arrayBuffer();
-          console.log(`[IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes`);
-          
-          const base64Image = Buffer.from(imageBuffer).toString('base64');
-          console.log(`[IMAGE-HANDLING] Base64 length: ${base64Image.length}`);
-          console.log(`[IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...`);
-          
-          // Validate base64 content
-          if (!base64Image || base64Image.length < 100) {
-            console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${base64Image.length} chars)`);
-            throw new Error("Invalid base64 image content");
-          }
-          
-          // Determine file type from content-type or default to png
-          let fileType = 'image/png';
-          if (contentType) {
-            fileType = contentType;
-            console.log(`[IMAGE-HANDLING] Using file type from content-type: ${fileType}`);
-          }
-          
-          // Create a descriptive filename with correct extension
-          const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-          const extension = fileType.split('/')[1] || 'png';
-          const filename = `dalle_${safePrompt}_${Date.now()}.${extension}`;
-          console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${fileType}`);
-          
-          // Create attachment
-          attachment = await storage.createAttachment({
-            cardId,
-            filename,
-            fileType,
-            content: base64Image
-          });
           
           console.log(`[IMAGE-HANDLING] Attachment created successfully with ID: ${attachment.id}`);
         } catch (fetchError) {
@@ -965,8 +1029,42 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       const base64Image = response.data[0].b64_json;
       console.log(`[IMAGE-GEN] Base64 format detected, length: ${base64Image.length}`);
       console.log(`[IMAGE-GEN] Base64 starts with: ${base64Image.substring(0, 30)}...`);
+      
+      // Detect image format from the base64 data if possible
+      let imageFormat = 'png'; // Default
+      
+      // Check for image format signature in the first few bytes after decoding part of base64
+      try {
+        const byteSignature = Buffer.from(base64Image.substring(0, 24), 'base64');
+        
+        // Check for JPEG signature: starts with FF D8 FF
+        if (byteSignature[0] === 0xFF && byteSignature[1] === 0xD8 && byteSignature[2] === 0xFF) {
+          imageFormat = 'jpeg';
+          console.log(`[IMAGE-GEN] Detected JPEG format from base64 signature`);
+        }
+        // Check for PNG signature: starts with 89 50 4E 47 (PNG in ASCII)
+        else if (byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
+                 byteSignature[2] === 0x4E && byteSignature[3] === 0x47) {
+          imageFormat = 'png';
+          console.log(`[IMAGE-GEN] Detected PNG format from base64 signature`);
+        }
+        // Check for WebP: "WEBP" string occurs around position 8
+        else if (byteSignature.length > 12 && 
+                 byteSignature[8] === 0x57 && byteSignature[9] === 0x45 && 
+                 byteSignature[10] === 0x42 && byteSignature[11] === 0x50) {
+          imageFormat = 'webp';
+          console.log(`[IMAGE-GEN] Detected WebP format from base64 signature`);
+        }
+        // Default
+        else {
+          console.log(`[IMAGE-GEN] Could not detect image format, using default (png)`);
+        }
+      } catch (error) {
+        console.error(`[IMAGE-GEN] Error detecting image format from base64: ${error.message}`);
+      }
+      
       // Return the base64 string with data URL prefix for direct embedding
-      return `data:image/png;base64,${base64Image}`;
+      return `data:image/${imageFormat};base64,${base64Image}`;
     }
     
     console.error(`[IMAGE-GEN] Unknown response format: ${JSON.stringify(response.data[0])}`);
@@ -1027,7 +1125,41 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
         const base64Image = response.data[0].b64_json;
         console.log(`[IMAGE-GEN] Fallback Base64 format detected, length: ${base64Image.length}`);
         console.log(`[IMAGE-GEN] Fallback Base64 starts with: ${base64Image.substring(0, 30)}...`);
-        return `data:image/png;base64,${base64Image}`;
+        
+        // Detect image format from the base64 data if possible
+        let imageFormat = 'png'; // Default
+        
+        // Check for image format signature in the first few bytes after decoding part of base64
+        try {
+          const byteSignature = Buffer.from(base64Image.substring(0, 24), 'base64');
+          
+          // Check for JPEG signature: starts with FF D8 FF
+          if (byteSignature[0] === 0xFF && byteSignature[1] === 0xD8 && byteSignature[2] === 0xFF) {
+            imageFormat = 'jpeg';
+            console.log(`[IMAGE-GEN] Detected JPEG format from fallback base64 signature`);
+          }
+          // Check for PNG signature: starts with 89 50 4E 47 (PNG in ASCII)
+          else if (byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
+                  byteSignature[2] === 0x4E && byteSignature[3] === 0x47) {
+            imageFormat = 'png';
+            console.log(`[IMAGE-GEN] Detected PNG format from fallback base64 signature`);
+          }
+          // Check for WebP: "WEBP" string occurs around position 8
+          else if (byteSignature.length > 12 && 
+                  byteSignature[8] === 0x57 && byteSignature[9] === 0x45 && 
+                  byteSignature[10] === 0x42 && byteSignature[11] === 0x50) {
+            imageFormat = 'webp';
+            console.log(`[IMAGE-GEN] Detected WebP format from fallback base64 signature`);
+          }
+          // Default
+          else {
+            console.log(`[IMAGE-GEN] Could not detect image format from fallback base64, using default (png)`);
+          }
+        } catch (error) {
+          console.error(`[IMAGE-GEN] Error detecting image format from fallback base64: ${error.message}`);
+        }
+        
+        return `data:image/${imageFormat};base64,${base64Image}`;
       }
       
       console.error(`[IMAGE-GEN] Unknown fallback response format: ${JSON.stringify(response.data[0])}`);
