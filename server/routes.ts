@@ -229,6 +229,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // COLUMN ROUTES
+  app.get("/api/columns/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const column = await storage.getColumnById(id);
+      
+      if (!column) {
+        return res.status(404).json({ message: "Column not found" });
+      }
+      
+      return res.json(column);
+    } catch (error) {
+      console.error("Error retrieving column:", error);
+      return res.status(500).json({ message: "Error retrieving column" });
+    }
+  });
+
   app.post("/api/columns", async (req, res) => {
     try {
       const data = insertColumnSchema.parse({

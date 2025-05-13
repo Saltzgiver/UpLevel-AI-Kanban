@@ -94,8 +94,9 @@ export function GPTBanner({ column }: GPTBannerProps) {
     };
   }, [column.id]);
 
+  // Make sure we have a valid column to display
   // Use the updatedColumn if available, otherwise fall back to the original column
-  const displayColumn = updatedColumn || column;
+  const displayColumn = updatedColumn && Object.keys(updatedColumn).length > 0 ? updatedColumn : column;
   
   if (displayColumn.gptAssigned) {
     const colorStyle = getColorStyle(displayColumn.gptColor);

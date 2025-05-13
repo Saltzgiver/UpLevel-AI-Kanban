@@ -152,24 +152,34 @@ export function SuggestionListener() {
         console.log(`[SuggestionListener] Successfully marked suggestion as accepted in cache`);
       }
       
-      // Invalidate cache (the same way assign-gpt-modal does)
+      // More thorough cache invalidation to ensure all components refresh
+      // 1. Invalidate the boards data first
       const invalidateEvent = new CustomEvent('invalidateQueries', { 
         detail: { queryKey: ['/api/boards'] } 
       });
       window.dispatchEvent(invalidateEvent);
+      console.log(`[SuggestionListener] Received invalidate queries event:`, { queryKey: ['/api/boards'] });
       
-      // If an "suggestionAccepted" event listener exists in the app, trigger it to update UI
+      // 2. Trigger the suggestionAccepted event to update UI components listening for it
       const acceptedEvent = new CustomEvent('suggestionAccepted', {
         detail: { columnId, cardId }
       });
       window.dispatchEvent(acceptedEvent);
       console.log(`[SuggestionListener] Dispatched suggestionAccepted event for column ${columnId}, card ${cardId}`);
       
-      // Notify React Query to invalidate the suggestion state
+      // 3. Invalidate the specific column data
+      const invalidateColumnEvent = new CustomEvent('invalidateQueries', {
+        detail: { queryKey: [`/api/columns/${columnId}`] }
+      });
+      window.dispatchEvent(invalidateColumnEvent);
+      console.log(`[SuggestionListener] Invalidating column queries:`, { queryKey: [`/api/columns/${columnId}`] });
+      
+      // 4. Invalidate suggestion state
       const invalidateSuggestionEvent = new CustomEvent('invalidateQueries', {
         detail: { queryKey: [`/api/columns/${columnId}/prompt-suggestion`] }
       });
       window.dispatchEvent(invalidateSuggestionEvent);
+      console.log(`[SuggestionListener] Received invalidate queries event:`, { queryKey: [`/api/columns/${columnId}/prompt-suggestion`] });
       
       // Close any open suggestion modal
       const closeModalEvent = new CustomEvent('closeSuggestionModal', {
