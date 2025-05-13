@@ -1,9 +1,11 @@
 import { Sparkles, Edit, ChevronDown, ChevronUp, ListChecks, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AssignGPTModal } from "@/components/ui/assign-gpt-modal";
 import { Column } from "@shared/schema";
 import { parseInstructions } from "../ui/assign-gpt-modal";
+import { queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -63,10 +65,41 @@ interface GPTBannerProps {
 export function GPTBanner({ column }: GPTBannerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Fetch real-time column data to ensure we have the latest instructions
+  const { data: updatedColumn } = useQuery<Column>({
+    queryKey: [`/api/columns/${column.id}`],
+    enabled: !!column.id,
+  });
+  
+  // Listen for suggestion accepted events to refresh the data
+  useEffect(() => {
+    const handleSuggestionAccepted = (event: CustomEvent) => {
+      const { columnId } = event.detail;
+      if (columnId === column.id) {
+        console.log(`[GPTBanner] Detected suggestion acceptance for column ${columnId}, refreshing data`);
+        // Force refresh column data when a suggestion is accepted for this column
+        queryClient.invalidateQueries({ queryKey: [`/api/columns/${column.id}`] });
+        // Also refresh the boards data
+        queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      }
+    };
+    
+    // Add event listener for suggestion accepted events
+    window.addEventListener('suggestionAccepted', handleSuggestionAccepted as EventListener);
+    
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('suggestionAccepted', handleSuggestionAccepted as EventListener);
+    };
+  }, [column.id]);
 
-  if (column.gptAssigned) {
-    const colorStyle = getColorStyle(column.gptColor);
-    const { dos, donts } = parseInstructions(column.gptInstructions || "");
+  // Use the updatedColumn if available, otherwise fall back to the original column
+  const displayColumn = updatedColumn || column;
+  
+  if (displayColumn.gptAssigned) {
+    const colorStyle = getColorStyle(displayColumn.gptColor);
+    const { dos, donts } = parseInstructions(displayColumn.gptInstructions || "");
     
     return (
       <div className={`bg-gradient-to-r ${colorStyle.bgGradient} ${colorStyle.borderColor} rounded-lg mb-3 p-3 text-sm shadow-sm transition-all duration-200`}>
@@ -75,7 +108,7 @@ export function GPTBanner({ column }: GPTBannerProps) {
           <div className="flex items-center">
             <Sparkles className={`h-5 w-5 mr-2 ${colorStyle.iconColor}`} />
             <span className={`font-semibold ${colorStyle.textColor}`}>
-              {column.gptName || "GPT Assistant"}
+              {displayColumn.gptName || "GPT Assistant"}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -107,9 +140,9 @@ export function GPTBanner({ column }: GPTBannerProps) {
         {/* Collapsed view shows just the summary */}
         {!isExpanded && (
           <div className="mt-1 pl-7 text-xs text-gray-600">
-            {column.gptInstructions && column.gptInstructions.length > 60 
-              ? column.gptInstructions.substring(0, 60) + "..."
-              : column.gptInstructions || "Write a paragraph about this"}
+            {displayColumn.gptInstructions && displayColumn.gptInstructions.length > 60 
+              ? displayColumn.gptInstructions.substring(0, 60) + "..."
+              : displayColumn.gptInstructions || "Write a paragraph about this"}
           </div>
         )}
         
@@ -155,7 +188,7 @@ export function GPTBanner({ column }: GPTBannerProps) {
         )}
         
         <AssignGPTModal
-          column={column}
+          column={displayColumn}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
@@ -181,7 +214,7 @@ export function GPTBanner({ column }: GPTBannerProps) {
       </div>
       
       <AssignGPTModal
-        column={column}
+        column={displayColumn}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
