@@ -865,16 +865,51 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     
     console.log(`Using image generation model: ${modelToUse}`);
     
-    const response = await openai.images.generate({
+    // Build the request parameters based on the model
+    const requestParams: any = {
       model: modelToUse,
       prompt,
       n: 1,
       size: "1024x1024", // Standard size compatible with both models
-      quality: "standard",
-    });
+    };
+    
+    // Add model-specific parameters
+    if (modelToUse === "gpt-image-1") {
+      // gpt-image-1 specific options
+      requestParams.response_format = "url"; // Can be "url" or omitted for base64 (b64_json)
+      requestParams.detail = "high"; // Can be "standard" or "high"
+      
+      // Moderation level (less restrictive filtering)
+      requestParams.moderation = "low"; // Options: "low" or "auto"
+    } else {
+      // dall-e-3 specific options
+      requestParams.quality = "standard"; // Can be "standard" or "hd"
+    }
+    
+    console.log(`Generating image with params:`, JSON.stringify(requestParams, null, 2));
+    const response = await openai.images.generate(requestParams);
 
     console.log(`Successfully generated image with ${modelToUse}`);
-    return response.data?.[0]?.url || "";
+    
+    // Handle gpt-image-1 output format which has data as optional field
+    if (!response.data || response.data.length === 0) {
+      throw new Error("No image data returned from API");
+    }
+    
+    // For gpt-image-1 with response_format=url
+    if (response.data[0].url) {
+      return response.data[0].url;
+    }
+    
+    // For gpt-image-1 with default b64_json format
+    if (response.data[0].b64_json) {
+      // Convert base64 to URL by creating a temporary object URL
+      const base64Image = response.data[0].b64_json;
+      // Return the base64 string with data URL prefix for direct embedding
+      return `data:image/png;base64,${base64Image}`;
+    }
+    
+    throw new Error("No valid image format found in API response");
   } catch (error) {
     console.error(`Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     
@@ -883,16 +918,38 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       console.log("Attempting fallback to dall-e-3 model...");
       const openai = getOpenAIClient(apiKey);
       
-      const response = await openai.images.generate({
+      // Fallback to dall-e-3 with appropriate params
+      const fallbackParams = {
         model: "dall-e-3",
         prompt,
         n: 1,
         size: "1024x1024",
         quality: "standard",
-      });
+        response_format: "url" // dall-e-3 works better with URL format
+      };
+      
+      console.log(`Generating fallback image with params:`, JSON.stringify(fallbackParams, null, 2));
+      const response = await openai.images.generate(fallbackParams);
       
       console.log("Successfully generated image with dall-e-3 fallback");
-      return response.data[0].url || "";
+      
+      // Handle dall-e-3 output format
+      if (!response.data || response.data.length === 0) {
+        throw new Error("No image data returned from API in fallback");
+      }
+      
+      // dall-e-3 uses URL format by default
+      if (response.data[0].url) {
+        return response.data[0].url;
+      }
+      
+      // Handle b64_json if response_format was set to that
+      if (response.data[0].b64_json) {
+        const base64Image = response.data[0].b64_json;
+        return `data:image/png;base64,${base64Image}`;
+      }
+      
+      throw new Error("No valid image format found in fallback API response");
     } catch (fallbackError) {
       console.error("Error with fallback image generation:", fallbackError);
       throw error; // Throw the original error
