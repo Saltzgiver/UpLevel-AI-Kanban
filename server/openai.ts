@@ -108,7 +108,7 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     systemContent += `Card Description: ${card.description || "No description provided."}\n\n`;
     
     // Get existing chats for context
-    const chats = await storage.getCardChats(cardId);
+    const chats = await storage.getChatsByCardId(cardId);
     if (chats && chats.length > 0) {
       systemContent += `Previous interactions:\n`;
       chats.forEach(chat => {
