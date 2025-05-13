@@ -904,24 +904,28 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     console.log(`[IMAGE-GEN] Using API key source: ${apiKey ? 'column-specific key' : 'environment variable'}`);
     
     // Use the new gpt-image-1 model by default (latest model as of May 2025)
-    const modelToUse = "gpt-image-1"; // OpenAI's newest image model that replaced DALL-E 3
+    // Try to use gpt-image-1 first, with fallback to dall-e-3
+    // Default to false for preferFallback unless explicitly set to true
+    const preferFallback = process.env.PREFER_DALLE_FALLBACK === 'true';
     
-    console.log(`[IMAGE-GEN] Using image generation model: ${modelToUse}`);
+    // Select the initial model to try
+    const modelToUse = preferFallback ? "dall-e-3" : "gpt-image-1";
+    
+    console.log(`[IMAGE-GEN] Using image generation model: ${modelToUse} (fallback preference: ${preferFallback ? 'enabled' : 'disabled'})`);
     
     // Build the request parameters based on the model
     let requestParams: any;
     
     if (modelToUse === "gpt-image-1") {
       // gpt-image-1 specific options with correct types
-      // Based on error logs, gpt-image-1 does not support response_format parameter
+      // Based on error logs, keep only the parameters that are documented to work with this model
+      // Removed: response_format, detail, moderation which all resulted in errors
       requestParams = {
         model: "gpt-image-1" as const,
         prompt,
         n: 1,
-        size: "1024x1024" as const, // Standard size compatible with both models
-        detail: "high" as const, // Can be "standard" or "high"
-        moderation: "low" as const // Options: "low" or "auto"
-        // response_format has been removed as it's not supported by this model
+        size: "1024x1024" as const // Standard size compatible with both models
+        // Keeping only the essential parameters to avoid errors
       };
     } else {
       // dall-e-3 specific options with correct types
@@ -968,11 +972,24 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     console.error(`[IMAGE-GEN] Unknown response format: ${JSON.stringify(response.data[0])}`);
     throw new Error("No valid image format found in API response");
   } catch (error) {
-    console.error(`[IMAGE-GEN] Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Format error message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[IMAGE-GEN] Error generating image: ${errorMessage}`);
+    
+    // Add specific handling for common gpt-image-1 errors
+    let fallbackReason = "Error with primary model";
+    if (errorMessage.includes("organization must be verified")) {
+      fallbackReason = "Organization verification required for gpt-image-1";
+      console.log("[IMAGE-GEN] The gpt-image-1 model requires organization verification with OpenAI");
+    } else if (errorMessage.includes("Unknown parameter")) {
+      fallbackReason = "Incompatible parameter for gpt-image-1";
+    } else if (errorMessage.includes("Maximum context length")) {
+      fallbackReason = "Prompt too long for gpt-image-1";
+    }
     
     // If the gpt-image-1 model fails, attempt to fall back to dall-e-3
     try {
-      console.log("[IMAGE-GEN] Attempting fallback to dall-e-3 model...");
+      console.log(`[IMAGE-GEN] Attempting fallback to dall-e-3 model... (Reason: ${fallbackReason})`);
       const openai = getOpenAIClient(apiKey);
       
       // Fallback to dall-e-3 with appropriate params
