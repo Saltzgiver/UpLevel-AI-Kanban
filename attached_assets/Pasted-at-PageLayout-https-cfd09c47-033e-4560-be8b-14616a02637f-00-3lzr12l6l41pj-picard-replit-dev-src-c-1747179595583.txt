@@ -1,0 +1,36 @@
+at PageLayout (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/layout/page-layout.tsx:18:30)
+    at component
+    at Route (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=60c432e7:265:16)
+    at CustomRoute (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/App.tsx?v=jSyNhPEqhktDqqwrEAegl:36:35)
+    at Switch (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=60c432e7:321:17)
+    at Router
+    at DndProvider (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/board/board.tsx:28:31)
+    at ModalProvider (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/contexts/ModalContext.tsx:26:33)
+    at QueryClientProvider (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=60c432e7:2805:3)
+    at App
+at div
+at div
+at img (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:975:63)
+at p
+at p
+at Markdown (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-markdown.js?v=60c432e7:7079:21)
+at div
+at div
+at div
+at div
+at ChatMessages (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:352:5)
+at div
+at div
+at GPTChat (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:156:3)
+at div
+at div
+at div
+at div
+at div
+at CardModal (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/ui/card-modal.tsx:41:3)
+at div
+at BoardComponent (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/board/board.tsx:41:34)
+at div
+at main
+at div
+at Home (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/pages/home.tsx:28:21)

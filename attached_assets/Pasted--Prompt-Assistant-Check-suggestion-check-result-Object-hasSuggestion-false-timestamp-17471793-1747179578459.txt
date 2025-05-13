@@ -1,0 +1,47 @@
+[Prompt Assistant] Check suggestion check result: 
+Object {hasSuggestion: false, timestamp: 1747179347283, cardId: 108, columnId: 65}
+[Prompt Assistant] Suggestion not found on attempt 3/5, trying again...
+[Prompt Assistant] Waiting 3000ms before next attempt
+[Prompt Assistant] Checking for suggestion (attempt 4/5)
+[Prompt Assistant] Trying /check/ endpoint first...
+[Prompt Assistant] Check suggestion check result: 
+Object {hasSuggestion: false, timestamp: 1747179350338, cardId: 108, columnId: 65}
+[Prompt Assistant] Suggestion not found on attempt 4/5, trying again...
+[Prompt Assistant] Waiting 4000ms before next attempt
+[Prompt Assistant] Checking for suggestion (attempt 5/5)
+[Prompt Assistant] Trying /check/ endpoint first...
+[Prompt Assistant] Check suggestion check result: 
+Object {hasSuggestion: false, timestamp: 1747179354389, cardId: 108, columnId: 65}
+[Prompt Assistant] Suggestion not found on attempt 5/5
+[Prompt Assistant] No suggestion found after 5 attempts
+Image source received: 
+Using most recent attachment for generic image reference: 3198
+Warning: validateDOMNesting(...): <div> cannot appear as a descendant of &lt;p&gt;.
+    at div
+    at div
+    at img (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:975:63)
+    at p
+    at p
+    at Markdown (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-markdown.js?v=60c432e7:7079:21)
+    at div
+    at div
+    at div
+    at div
+    at ChatMessages (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:352:5)
+    at div
+    at div
+    at GPTChat (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:156:3)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at CardModal (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/ui/card-modal.tsx:41:3)
+    at div
+    at BoardComponent (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/board/board.tsx:41:34)
+    at div
+    at main
+    at div
+    at Home (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/pages/home.tsx:28:21)
+    at main
+    at div
