@@ -13,44 +13,94 @@
         // Create a global function to check suggestions and show toast
         window.checkSuggestionAndShowToast = async function(sourceColumnId, cardId, sourceColumnName) {
           try {
-            console.log(`[Prompt Assistant] Checking for suggestion for column ${sourceColumnId}, card ${cardId}`);
+            console.log(`[Prompt Assistant] Checking for suggestion for column ${sourceColumnId}, card ${cardId}, name: ${sourceColumnName || 'Unknown'}`);
+            
+            // Validate parameters
+            if (!sourceColumnId || isNaN(parseInt(sourceColumnId)) || !cardId || isNaN(parseInt(cardId))) {
+              console.error(`[Prompt Assistant] Invalid parameters: sourceColumnId=${sourceColumnId}, cardId=${cardId}`);
+              return;
+            }
+            
+            // Convert to integers to ensure consistency
+            const columnId = parseInt(sourceColumnId);
+            const parsedCardId = parseInt(cardId);
             
             // Maximum attempts to check for suggestion
             const maxAttempts = 5;
             
-            // Function to check suggestion status
+            // Function to check suggestion status with enhanced error handling
             const checkSuggestion = async (attempt) => {
               console.log(`[Prompt Assistant] Checking for suggestion (attempt ${attempt}/${maxAttempts})`);
               
               try {
-                // Check if a suggestion is available using the API
-                const response = await originalFetch(`/api/columns/${sourceColumnId}/prompt-suggestion/status/${cardId}`);
-                const data = await response.json();
+                // First, try the /check/ endpoint which is more reliable
+                console.log(`[Prompt Assistant] Trying /check/ endpoint first...`);
+                const checkUrl = `/api/columns/${columnId}/prompt-suggestion/check/${parsedCardId}`;
+                const checkResponse = await originalFetch(checkUrl);
                 
-                console.log(`[Prompt Assistant] Suggestion check result:`, data);
-                
-                if (data && data.hasSuggestion) {
-                  // We need to wait for React to be fully initialized before we can access the toast function
-                  // This event will be picked up by a listener in a React component
-                  console.log(`[Prompt Assistant] Dispatching custom event with columnId: ${sourceColumnId}, cardId: ${cardId}, columnName: ${sourceColumnName || 'Column'}`);
+                if (!checkResponse.ok) {
+                  console.error(`[Prompt Assistant] Check endpoint returned status ${checkResponse.status}`);
                   
-                  const event = new CustomEvent('promptAssistantSuggestion', { 
-                    detail: { 
-                      columnId: sourceColumnId, 
-                      cardId: cardId,
-                      columnName: sourceColumnName || 'Column' 
-                    } 
-                  });
+                  // Fall back to status endpoint
+                  console.log(`[Prompt Assistant] Falling back to /status/ endpoint...`);
+                  const statusUrl = `/api/columns/${columnId}/prompt-suggestion/status/${parsedCardId}`;
+                  const statusResponse = await originalFetch(statusUrl);
                   
-                  window.dispatchEvent(event);
-                  console.log('[Prompt Assistant] Custom event dispatched');
-                  return true;
+                  if (!statusResponse.ok) {
+                    console.error(`[Prompt Assistant] Status endpoint returned status ${statusResponse.status}`);
+                    return false;
+                  }
+                  
+                  // Process status response
+                  const statusText = await statusResponse.text();
+                  try {
+                    const data = JSON.parse(statusText);
+                    console.log(`[Prompt Assistant] Status suggestion check result:`, data);
+                    return processResult(data);
+                  } catch (jsonError) {
+                    console.error('[Prompt Assistant] Error parsing status response JSON:', jsonError);
+                    console.log('[Prompt Assistant] Status response text:', statusText);
+                    return false;
+                  }
                 }
-                return false;
+                
+                // Process check response
+                const checkText = await checkResponse.text();
+                try {
+                  const data = JSON.parse(checkText);
+                  console.log(`[Prompt Assistant] Check suggestion check result:`, data);
+                  return processResult(data);
+                } catch (jsonError) {
+                  console.error('[Prompt Assistant] Error parsing check response JSON:', jsonError);
+                  console.log('[Prompt Assistant] Check response text:', checkText);
+                  return false;
+                }
               } catch (error) {
-                console.error('[Prompt Assistant] Error checking for suggestion:', error);
+                console.error('[Prompt Assistant] Network error checking for suggestion:', error);
                 return false;
               }
+            };
+            
+            // Process API result and dispatch event if suggestion exists
+            const processResult = (data) => {
+              if (data && data.hasSuggestion) {
+                // We need to wait for React to be fully initialized before we can access the toast function
+                // This event will be picked up by a listener in a React component
+                console.log(`[Prompt Assistant] SUGGESTION FOUND! Dispatching custom event with columnId: ${columnId}, cardId: ${parsedCardId}, columnName: ${sourceColumnName || 'Column'}`);
+                
+                const event = new CustomEvent('promptAssistantSuggestion', { 
+                  detail: { 
+                    columnId: columnId, 
+                    cardId: parsedCardId,
+                    columnName: sourceColumnName || 'Column' 
+                  } 
+                });
+                
+                window.dispatchEvent(event);
+                console.log('[Prompt Assistant] Custom event dispatched successfully');
+                return true;
+              }
+              return false;
             };
             
             // Start checking with a delay to allow backend processing to complete
@@ -60,12 +110,23 @@
               // Try multiple times with delays between attempts
               for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 suggestionFound = await checkSuggestion(attempt);
-                if (suggestionFound) break;
+                if (suggestionFound) {
+                  console.log(`[Prompt Assistant] Suggestion found on attempt ${attempt}/${maxAttempts}`);
+                  break;
+                }
+                
+                console.log(`[Prompt Assistant] Suggestion not found on attempt ${attempt}/${maxAttempts}${attempt < maxAttempts ? ", trying again..." : ""}`);
                 
                 // Wait between attempts (increasing delay)
                 if (attempt < maxAttempts) {
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  const delay = 1000 * attempt; // Increase delay with each attempt
+                  console.log(`[Prompt Assistant] Waiting ${delay}ms before next attempt`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
                 }
+              }
+              
+              if (!suggestionFound) {
+                console.log(`[Prompt Assistant] No suggestion found after ${maxAttempts} attempts`);
               }
             }, 2000); // Initial delay to let the backend process
             
@@ -107,18 +168,33 @@
                     if (requestData.sourceColumnId) {
                       const sourceColumnId = requestData.sourceColumnId;
                       
-                      // Try to get column name from the response (our enhanced response)
-                      responseClone.json().then(responseData => {
-                        // Get column name from the enhanced response if available
-                        const sourceColumnName = responseData.sourceColumnName || requestData.sourceColumnName || null;
-                        
-                        console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId}${sourceColumnName ? ` (${sourceColumnName})` : ''}`);
-                        console.log(`[Prompt Assistant] Response data:`, responseData);
-                        
-                        // Call the global function to check for suggestions
-                        window.checkSuggestionAndShowToast(sourceColumnId, cardId, sourceColumnName);
+                      // More robust parsing of the response
+                      responseClone.text().then(responseText => {
+                        try {
+                          // Try to parse as JSON
+                          const responseData = JSON.parse(responseText);
+                          
+                          // Get column name from the enhanced response if available
+                          const sourceColumnName = responseData.sourceColumnName || requestData.sourceColumnName || null;
+                          
+                          console.log(`[Prompt Assistant] Card ${cardId} moved from column ${sourceColumnId}${sourceColumnName ? ` (${sourceColumnName})` : ''}`);
+                          console.log(`[Prompt Assistant] Response data:`, responseData);
+                          
+                          // Call the global function to check for suggestions
+                          window.checkSuggestionAndShowToast(sourceColumnId, cardId, sourceColumnName);
+                        } catch (jsonError) {
+                          console.error('[Prompt Assistant] Error parsing response JSON:', jsonError);
+                          console.log('[Prompt Assistant] Response text (first 100 chars):', responseText.substring(0, 100));
+                          
+                          // Fallback to using the source column name from the request if available
+                          const fallbackColumnName = requestData.sourceColumnName || null;
+                          
+                          // Still call the suggestion check function even if we can't parse the response
+                          console.log('[Prompt Assistant] Using fallback to check for suggestions');
+                          window.checkSuggestionAndShowToast(sourceColumnId, cardId, fallbackColumnName);
+                        }
                       }).catch(error => {
-                        console.error('[Prompt Assistant] Error parsing response:', error);
+                        console.error('[Prompt Assistant] Error reading response text:', error);
                         // Fallback to using the source column name from the request if available
                         const fallbackColumnName = requestData.sourceColumnName || null;
                         window.checkSuggestionAndShowToast(sourceColumnId, cardId, fallbackColumnName);

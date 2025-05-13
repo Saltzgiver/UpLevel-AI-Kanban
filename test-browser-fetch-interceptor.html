@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fetch Interceptor Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .log-container {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .log-entry.success { color: green; }
+    .log-entry.error { color: red; }
+    .log-entry.warning { color: orange; }
+    .log-entry.info { color: blue; }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .status {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .success-msg { color: green; }
+    .error-msg { color: red; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Prompt Assistant Fetch Interceptor Test</h1>
+    
+    <div class="card">
+      <h2>Test 1: Create Suggestion</h2>
+      <p>First, we'll create a test suggestion for a column and card.</p>
+      <div>
+        <label>Column ID: <input type="number" id="create-column-id" value="66"></label>
+        <label>Card ID: <input type="number" id="create-card-id" value="100"></label>
+      </div>
+      <button id="create-suggestion">Create Test Suggestion</button>
+      <div id="create-status" class="status"></div>
+    </div>
+    
+    <div class="card">
+      <h2>Test 2: Simulate Card Move</h2>
+      <p>Next, we'll simulate a card move operation to trigger the fetch interceptor.</p>
+      <div>
+        <label>Card ID: <input type="number" id="move-card-id" value="100"></label>
+        <label>Source Column ID: <input type="number" id="source-column-id" value="66"></label>
+        <label>Destination Column ID: <input type="number" id="dest-column-id" value="67"></label>
+      </div>
+      <button id="move-card">Simulate Card Move</button>
+      <div id="move-status" class="status"></div>
+    </div>
+    
+    <div class="card">
+      <h2>Test 3: Custom Event</h2>
+      <p>Let's also directly dispatch a custom event to test the event handling.</p>
+      <div>
+        <label>Column ID: <input type="number" id="event-column-id" value="66"></label>
+        <label>Card ID: <input type="number" id="event-card-id" value="100"></label>
+        <label>Column Name: <input type="text" id="event-column-name" value="Test Column"></label>
+      </div>
+      <button id="dispatch-event">Dispatch Custom Event</button>
+      <div id="event-status" class="status"></div>
+    </div>
+    
+    <h2>Log Output:</h2>
+    <div id="log" class="log-container"></div>
+  </div>
+
+  <script>
+    // Function to log messages to the log container
+    function log(message, type = 'info') {
+      const logContainer = document.getElementById('log');
+      const logEntry = document.createElement('div');
+      logEntry.classList.add('log-entry', type);
+      
+      // Add timestamp
+      const now = new Date();
+      const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
+      
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      logContainer.appendChild(logEntry);
+      
+      // Auto-scroll to bottom
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    // Function to make API requests
+    async function makeRequest(endpoint, method = 'GET', body = null) {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+      
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      
+      try {
+        log(`Making ${method} request to ${endpoint}`, 'info');
+        const response = await fetch(endpoint, options);
+        
+        if (!response.ok) {
+          log(`Request failed with status ${response.status}`, 'error');
+          return null;
+        }
+        
+        const data = await response.json();
+        log(`Response received: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
+        return data;
+      } catch (error) {
+        log(`Error making request: ${error.message}`, 'error');
+        return null;
+      }
+    }
+    
+    // Event listener for the Create Suggestion button
+    document.getElementById('create-suggestion').addEventListener('click', async () => {
+      const columnId = document.getElementById('create-column-id').value;
+      const cardId = document.getElementById('create-card-id').value;
+      const statusElement = document.getElementById('create-status');
+      
+      log(`Creating test suggestion for column ${columnId}, card ${cardId}`);
+      
+      const testSuggestion = {
+        suggestion: {
+          rationale: "This is a test rationale for prompt improvement",
+          suggestedInstructions: "As an AI assistant, your task is to:\n\n1. Analyze requests\n2. Provide structured responses\n3. Include examples\n4. Be helpful and conversational"
+        }
+      };
+      
+      const result = await makeRequest(
+        `/api/columns/${columnId}/prompt-suggestion/create-test/${cardId}`,
+        'POST',
+        testSuggestion
+      );
+      
+      if (result) {
+        statusElement.textContent = 'Suggestion created successfully!';
+        statusElement.className = 'status success-msg';
+      } else {
+        statusElement.textContent = 'Failed to create suggestion.';
+        statusElement.className = 'status error-msg';
+      }
+    });
+    
+    // Event listener for the Move Card button
+    document.getElementById('move-card').addEventListener('click', async () => {
+      const cardId = document.getElementById('move-card-id').value;
+      const sourceColumnId = document.getElementById('source-column-id').value;
+      const destColumnId = document.getElementById('dest-column-id').value;
+      const statusElement = document.getElementById('move-status');
+      
+      log(`Simulating move of card ${cardId} from column ${sourceColumnId} to ${destColumnId}`);
+      
+      // Add an event listener for the custom event first
+      log('Setting up event listener for promptAssistantSuggestion event');
+      const eventListener = (event) => {
+        const detail = event.detail;
+        log(`CUSTOM EVENT RECEIVED! promptAssistantSuggestion event with data: ${JSON.stringify(detail)}`, 'success');
+        window.removeEventListener('promptAssistantSuggestion', eventListener);
+      };
+      
+      window.addEventListener('promptAssistantSuggestion', eventListener);
+      
+      // Make the move request
+      const result = await makeRequest(
+        `/api/cards/${cardId}/move`,
+        'PATCH',
+        {
+          sourceColumnId: parseInt(sourceColumnId),
+          destinationColumnId: parseInt(destColumnId),
+          position: 0
+        }
+      );
+      
+      if (result) {
+        statusElement.textContent = 'Card moved successfully! Watching for events...';
+        statusElement.className = 'status success-msg';
+        
+        // Start checking whether the event was dispatched
+        log('Waiting 5 seconds to see if the custom event is dispatched...');
+        setTimeout(() => {
+          log('5 seconds passed. If you didn\'t see a CUSTOM EVENT RECEIVED message above, the event was not dispatched.', 'warning');
+        }, 5000);
+      } else {
+        statusElement.textContent = 'Failed to move card.';
+        statusElement.className = 'status error-msg';
+      }
+    });
+    
+    // Event listener for the Dispatch Custom Event button
+    document.getElementById('dispatch-event').addEventListener('click', () => {
+      const columnId = document.getElementById('event-column-id').value;
+      const cardId = document.getElementById('event-card-id').value;
+      const columnName = document.getElementById('event-column-name').value;
+      const statusElement = document.getElementById('event-status');
+      
+      log(`Manually dispatching promptAssistantSuggestion event with columnId: ${columnId}, cardId: ${cardId}`);
+      
+      const event = new CustomEvent('promptAssistantSuggestion', { 
+        detail: { 
+          columnId: parseInt(columnId), 
+          cardId: parseInt(cardId),
+          columnName: columnName 
+        } 
+      });
+      
+      window.dispatchEvent(event);
+      
+      statusElement.textContent = 'Custom event dispatched!';
+      statusElement.className = 'status success-msg';
+      
+      log('Custom event dispatched. Check the application to see if it was handled.', 'success');
+    });
+    
+    // Initialize
+    window.addEventListener('load', () => {
+      log('Test page loaded. Ready to run tests.', 'info');
+      
+      // Check if there's already a suggestion
+      const columnId = document.getElementById('create-column-id').value;
+      const cardId = document.getElementById('create-card-id').value;
+      
+      makeRequest(`/api/columns/${columnId}/prompt-suggestion/check/${cardId}`)
+        .then(result => {
+          if (result && result.hasSuggestion) {
+            log(`A suggestion already exists for column ${columnId}, card ${cardId}`, 'info');
+          } else {
+            log(`No existing suggestion found for column ${columnId}, card ${cardId}`, 'info');
+          }
+        });
+    });
+  </script>
+</body>
+</html>
