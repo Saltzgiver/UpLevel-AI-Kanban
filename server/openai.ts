@@ -642,50 +642,179 @@ export async function processChat(cardId: number, userMessage: string, column: C
             // Handle standard HTTP URL
             console.log(`[IMAGE-HANDLING] Fetching image from URL: ${imageUrl.substring(0, 30)}...`);
             
-            const response = await fetch(imageUrl);
+            // Add retry logic for transient network errors
+            let response: Response | null = null;
+            let retryCount = 0;
+            const maxRetries = 2;
             
-            if (!response.ok) {
-              console.error(`[IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText}`);
-              throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+            while (retryCount <= maxRetries) {
+              try {
+                // Add validation/clean up for URL
+                // Check for common issues in URLs
+                if (!imageUrl.startsWith('http')) {
+                  throw new Error(`Invalid URL format: ${imageUrl.substring(0, 30)}...`);
+                }
+                
+                // Use more robust fetch with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+                
+                response = await fetch(imageUrl, { 
+                  signal: controller.signal,
+                  headers: { 
+                    'Accept': 'image/*,*/*;q=0.8',
+                    'User-Agent': 'AIKanbanBoard/1.0' 
+                  } 
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                  console.error(`[IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText}`);
+                  if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
+                    // Only retry server errors or rate limits
+                    retryCount++;
+                    console.log(`[IMAGE-HANDLING] Retrying fetch, attempt ${retryCount} of ${maxRetries}`);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+                    continue;
+                  }
+                  throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+                }
+                
+                // Success - break out of retry loop
+                break;
+              } catch (fetchErr: any) {
+                console.error(`[IMAGE-HANDLING] Fetch attempt ${retryCount + 1} failed: ${fetchErr?.message}`);
+                if (retryCount < maxRetries && 
+                    (fetchErr.name === 'AbortError' || fetchErr.message.includes('network'))) {
+                  retryCount++;
+                  console.log(`[IMAGE-HANDLING] Retrying fetch, attempt ${retryCount} of ${maxRetries}`);
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+                  continue;
+                }
+                throw fetchErr; // Re-throw if we're out of retries or it's not a timeout
+              }
+            }
+            
+            // Safety check - should never happen after our while loop
+            if (!response) {
+              throw new Error("Failed to fetch image: No response object");
             }
             
             // Get content type, with robust fallbacks
             let contentType = response.headers.get('content-type');
-            console.log(`[IMAGE-HANDLING] Content-Type from response: ${contentType}`);
+            console.log(`[IMAGE-HANDLING] Content-Type from response: ${contentType || 'not provided'}`);
             
             // If no content type or invalid content type, attempt to infer from URL
             if (!contentType || !contentType.startsWith('image/')) {
-              // Try to infer from URL extension
-              if (imageUrl.includes('.png')) {
+              try {
+                // Try to extract extension from URL (handle query params)
+                const urlPath = imageUrl.split('?')[0];
+                const extension = urlPath.split('.').pop()?.toLowerCase();
+                
+                if (extension === 'png') {
+                  contentType = 'image/png';
+                } else if (extension === 'jpg' || extension === 'jpeg') {
+                  contentType = 'image/jpeg';
+                } else if (extension === 'webp') {
+                  contentType = 'image/webp';
+                } else if (extension === 'svg') {
+                  contentType = 'image/svg+xml';
+                } else if (extension === 'gif') {
+                  contentType = 'image/gif';
+                } else {
+                  // Default to PNG as safest option
+                  contentType = 'image/png';
+                }
+                console.log(`[IMAGE-HANDLING] Inferred content type from URL: ${contentType}`);
+              } catch (urlErr) {
+                // If URL parsing fails, use default
                 contentType = 'image/png';
-              } else if (imageUrl.includes('.jpg') || imageUrl.includes('.jpeg')) {
-                contentType = 'image/jpeg';
-              } else if (imageUrl.includes('.webp')) {
-                contentType = 'image/webp';
-              } else {
-                // Default to PNG as safest option
-                contentType = 'image/png';
+                console.log(`[IMAGE-HANDLING] Using default content type: ${contentType}`);
               }
-              console.log(`[IMAGE-HANDLING] Inferred content type: ${contentType}`);
             }
             
-            const imageBuffer = await response.arrayBuffer();
-            console.log(`[IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes`);
-            
-            // Check for valid image data
-            if (imageBuffer.byteLength < 100) {
-              console.error(`[IMAGE-HANDLING] Invalid image data: too small (${imageBuffer.byteLength} bytes)`);
-              throw new Error("Invalid image data received");
+            // Get image buffer with additional checks
+            let imageBuffer;
+            try {
+              imageBuffer = await response.arrayBuffer();
+              console.log(`[IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes`);
+              
+              // Check for valid image data - validate minimum size
+              if (imageBuffer.byteLength < 100) {
+                console.error(`[IMAGE-HANDLING] Initial image data too small: ${imageBuffer.byteLength} bytes`);
+                
+                // Try a second request with different accept headers as fallback
+                console.log(`[IMAGE-HANDLING] Attempting second fetch with different headers`);
+                const secondResponse = await fetch(imageUrl, {
+                  headers: {
+                    'Accept': 'image/png,image/jpeg,image/*',
+                    'User-Agent': 'AIKanbanBoard/1.0 ImageFallback'
+                  }
+                });
+                
+                if (secondResponse.ok) {
+                  const secondBuffer = await secondResponse.arrayBuffer();
+                  
+                  // Only use the second buffer if it's larger than the first
+                  if (secondBuffer.byteLength > imageBuffer.byteLength) {
+                    console.log(`[IMAGE-HANDLING] Second fetch successful with larger size: ${secondBuffer.byteLength} bytes`);
+                    imageBuffer = secondBuffer;
+                    
+                    // Update content type if available
+                    const secondContentType = secondResponse.headers.get('content-type');
+                    if (secondContentType && secondContentType.startsWith('image/')) {
+                      contentType = secondContentType;
+                      console.log(`[IMAGE-HANDLING] Updated content type from second request: ${contentType}`);
+                    }
+                  }
+                }
+                
+                // Final validation after retry attempt
+                if (imageBuffer.byteLength < 100) {
+                  console.error(`[IMAGE-HANDLING] Invalid image data: too small (${imageBuffer.byteLength} bytes) after retries`);
+                  throw new Error("Invalid image data received - too small");
+                }
+              }
+            } catch (bufferErr: any) {
+              console.error(`[IMAGE-HANDLING] Error getting image buffer: ${bufferErr?.message}`);
+              throw new Error(`Failed to get image data: ${bufferErr?.message}`);
             }
             
-            const base64Image = Buffer.from(imageBuffer).toString('base64');
-            console.log(`[IMAGE-HANDLING] Base64 length: ${base64Image.length}`);
-            console.log(`[IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...`);
-            
-            // Validate base64 content
-            if (!base64Image || base64Image.length < 100) {
-              console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${base64Image.length} chars)`);
-              throw new Error("Invalid base64 image content");
+            // Convert to base64 with robust error handling
+            let base64Image;
+            try {
+              base64Image = Buffer.from(imageBuffer).toString('base64');
+              console.log(`[IMAGE-HANDLING] Base64 length: ${base64Image.length}`);
+              console.log(`[IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...`);
+              
+              // Validate base64 content
+              if (!base64Image || base64Image.length < 100) {
+                console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${base64Image.length} chars)`);
+                throw new Error("Failed to convert image to base64");
+              }
+              
+              // Basic validation - ensure it contains only valid base64 characters
+              if (!/^[A-Za-z0-9+/=]+$/.test(base64Image)) {
+                console.warn(`[IMAGE-HANDLING] Base64 content contains invalid characters, cleaning up`);
+                base64Image = base64Image.replace(/[^A-Za-z0-9+/=]/g, '');
+                
+                // Re-check after cleanup
+                if (base64Image.length < 100) {
+                  console.error(`[IMAGE-HANDLING] Cleaned base64 is too short: ${base64Image.length} chars`);
+                  throw new Error("Base64 conversion resulted in invalid data");
+                }
+              }
+              
+              // Ensure proper padding
+              const remainder = base64Image.length % 4;
+              if (remainder > 0) {
+                base64Image += '='.repeat(4 - remainder);
+                console.log(`[IMAGE-HANDLING] Fixed base64 padding`);
+              }
+            } catch (base64Err: any) {
+              console.error(`[IMAGE-HANDLING] Error converting to base64: ${base64Err?.message}`);
+              throw new Error(`Failed to convert image to base64: ${base64Err?.message}`);
             }
             
             // Clean up content type and ensure it's valid
@@ -1125,26 +1254,55 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
     // For gpt-image-1 with default b64_json format
     if (response.data[0].b64_json) {
       // Convert base64 to URL by creating a temporary object URL
-      const base64Image = response.data[0].b64_json;
+      let base64Image = response.data[0].b64_json;
       console.log(`[IMAGE-GEN] Base64 format detected, length: ${base64Image.length}`);
       console.log(`[IMAGE-GEN] Base64 starts with: ${base64Image.substring(0, 30)}...`);
       
+      // Robust preprocessing of base64 data to fix common issues
+      try {
+        // 1. Remove any whitespace
+        base64Image = base64Image.trim().replace(/\s/g, '');
+        
+        // 2. Ensure proper base64 characters only
+        base64Image = base64Image.replace(/[^A-Za-z0-9+/=]/g, '');
+        
+        // 3. Ensure proper padding - add '=' characters if needed
+        const remainder = base64Image.length % 4;
+        if (remainder > 0) {
+          base64Image += '='.repeat(4 - remainder);
+          console.log(`[IMAGE-GEN] Fixed base64 padding in response`);
+        }
+        
+        // 4. Validate minimum length
+        if (!base64Image || base64Image.length < 100) {
+          console.error(`[IMAGE-GEN] Invalid base64 content: too short (${base64Image.length} chars)`);
+          throw new Error("Invalid base64 image content from API - too short");
+        }
+      } catch (cleanupErr: any) {
+        console.error(`[IMAGE-GEN] Error during base64 cleanup: ${cleanupErr?.message}`);
+        // Continue despite errors in cleanup
+      }
+      
       // Detect image format from the base64 data if possible
       let imageFormat = 'png'; // Default
+      let formatDetected = false;
       
       // Check for image format signature in the first few bytes after decoding part of base64
       try {
-        const byteSignature = Buffer.from(base64Image.substring(0, 24), 'base64');
+        // Try to decode a small portion for signature detection
+        const byteSignature = Buffer.from(base64Image.substring(0, 32), 'base64');
         
         // Check for JPEG signature: starts with FF D8 FF
         if (byteSignature[0] === 0xFF && byteSignature[1] === 0xD8 && byteSignature[2] === 0xFF) {
           imageFormat = 'jpeg';
+          formatDetected = true;
           console.log(`[IMAGE-GEN] Detected JPEG format from base64 signature`);
         }
         // Check for PNG signature: starts with 89 50 4E 47 (PNG in ASCII)
         else if (byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
                  byteSignature[2] === 0x4E && byteSignature[3] === 0x47) {
           imageFormat = 'png';
+          formatDetected = true;
           console.log(`[IMAGE-GEN] Detected PNG format from base64 signature`);
         }
         // Check for WebP: "WEBP" string occurs around position 8
@@ -1152,10 +1310,24 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
                  byteSignature[8] === 0x57 && byteSignature[9] === 0x45 && 
                  byteSignature[10] === 0x42 && byteSignature[11] === 0x50) {
           imageFormat = 'webp';
+          formatDetected = true;
           console.log(`[IMAGE-GEN] Detected WebP format from base64 signature`);
         }
-        // Default
+        // SVG detection (check if the decoded string starts with XML or SVG tag)
         else {
+          try {
+            const possibleTextStart = Buffer.from(base64Image.substring(0, 100), 'base64').toString('utf-8');
+            if (possibleTextStart.includes('<?xml') || possibleTextStart.includes('<svg')) {
+              imageFormat = 'svg+xml';
+              formatDetected = true;
+              console.log(`[IMAGE-GEN] Detected SVG format from base64 content`);
+            }
+          } catch (textErr) {
+            // Ignore text detection errors
+          }
+        }
+        
+        if (!formatDetected) {
           console.log(`[IMAGE-GEN] Could not detect image format, using default (png)`);
         }
       } catch (err: any) {
@@ -1163,6 +1335,28 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
         const errorMessage = err?.message || 'Unknown error';
         console.error(`[IMAGE-GEN] Error detecting image format from base64: ${errorMessage}`);
       }
+      
+      // Try decoding and re-encoding to sanitize the content
+      try {
+        // Only try to re-encode if there's enough data
+        if (base64Image.length > 1000) {
+          const buffer = Buffer.from(base64Image, 'base64');
+          // Only re-encode if we got valid binary data
+          if (buffer.length > 100) {
+            const sanitizedBase64 = buffer.toString('base64');
+            // Only use the sanitized version if it's valid
+            if (sanitizedBase64 && sanitizedBase64.length > 100) {
+              console.log(`[IMAGE-GEN] Sanitized base64 data by re-encoding`);
+              base64Image = sanitizedBase64;
+            }
+          }
+        }
+      } catch (sanitizeErr) {
+        console.error(`[IMAGE-GEN] Error sanitizing base64 data: ${sanitizeErr}`);
+        // Continue with original data if sanitization fails
+      }
+      
+      console.log(`[IMAGE-GEN] Final image format: ${imageFormat}, base64 length: ${base64Image.length}`);
       
       // Return the base64 string with data URL prefix for direct embedding
       return `data:image/${imageFormat};base64,${base64Image}`;
@@ -1223,37 +1417,81 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
       
       // Handle b64_json if response_format was set to that
       if (response.data[0].b64_json) {
-        const base64Image = response.data[0].b64_json;
+        // Convert base64 to URL by creating a temporary object URL
+        let base64Image = response.data[0].b64_json;
         console.log(`[IMAGE-GEN] Fallback Base64 format detected, length: ${base64Image.length}`);
         console.log(`[IMAGE-GEN] Fallback Base64 starts with: ${base64Image.substring(0, 30)}...`);
         
+        // Robust preprocessing of base64 data to fix common issues
+        try {
+          // 1. Remove any whitespace
+          base64Image = base64Image.trim().replace(/\s/g, '');
+          
+          // 2. Ensure proper base64 characters only
+          base64Image = base64Image.replace(/[^A-Za-z0-9+/=]/g, '');
+          
+          // 3. Ensure proper padding - add '=' characters if needed
+          const remainder = base64Image.length % 4;
+          if (remainder > 0) {
+            base64Image += '='.repeat(4 - remainder);
+            console.log(`[IMAGE-GEN] Fixed fallback base64 padding in response`);
+          }
+          
+          // 4. Validate minimum length
+          if (!base64Image || base64Image.length < 100) {
+            console.error(`[IMAGE-GEN] Invalid fallback base64 content: too short (${base64Image.length} chars)`);
+            throw new Error("Invalid fallback base64 image content from API - too short");
+          }
+        } catch (cleanupErr: any) {
+          console.error(`[IMAGE-GEN] Error during fallback base64 cleanup: ${cleanupErr?.message}`);
+          // Continue despite errors in cleanup
+        }
+        
         // Detect image format from the base64 data if possible
         let imageFormat = 'png'; // Default
+        let formatDetected = false;
         
         // Check for image format signature in the first few bytes after decoding part of base64
         try {
-          const byteSignature = Buffer.from(base64Image.substring(0, 24), 'base64');
+          // Try to decode a small portion for signature detection
+          const byteSignature = Buffer.from(base64Image.substring(0, 32), 'base64');
           
           // Check for JPEG signature: starts with FF D8 FF
           if (byteSignature[0] === 0xFF && byteSignature[1] === 0xD8 && byteSignature[2] === 0xFF) {
             imageFormat = 'jpeg';
+            formatDetected = true;
             console.log(`[IMAGE-GEN] Detected JPEG format from fallback base64 signature`);
           }
           // Check for PNG signature: starts with 89 50 4E 47 (PNG in ASCII)
           else if (byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
-                  byteSignature[2] === 0x4E && byteSignature[3] === 0x47) {
+                   byteSignature[2] === 0x4E && byteSignature[3] === 0x47) {
             imageFormat = 'png';
+            formatDetected = true;
             console.log(`[IMAGE-GEN] Detected PNG format from fallback base64 signature`);
           }
           // Check for WebP: "WEBP" string occurs around position 8
           else if (byteSignature.length > 12 && 
-                  byteSignature[8] === 0x57 && byteSignature[9] === 0x45 && 
-                  byteSignature[10] === 0x42 && byteSignature[11] === 0x50) {
+                   byteSignature[8] === 0x57 && byteSignature[9] === 0x45 && 
+                   byteSignature[10] === 0x42 && byteSignature[11] === 0x50) {
             imageFormat = 'webp';
+            formatDetected = true;
             console.log(`[IMAGE-GEN] Detected WebP format from fallback base64 signature`);
           }
-          // Default
+          // SVG detection (check if the decoded string starts with XML or SVG tag)
           else {
+            try {
+              const possibleTextStart = Buffer.from(base64Image.substring(0, 100), 'base64').toString('utf-8');
+              if (possibleTextStart.includes('<?xml') || possibleTextStart.includes('<svg')) {
+                imageFormat = 'svg+xml';
+                formatDetected = true;
+                console.log(`[IMAGE-GEN] Detected SVG format from fallback base64 content`);
+              }
+            } catch (textErr) {
+              // Ignore text detection errors
+            }
+          }
+          
+          if (!formatDetected) {
             console.log(`[IMAGE-GEN] Could not detect image format from fallback base64, using default (png)`);
           }
         } catch (err: any) {
@@ -1262,6 +1500,29 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<st
           console.error(`[IMAGE-GEN] Error detecting image format from fallback base64: ${errorMessage}`);
         }
         
+        // Try decoding and re-encoding to sanitize the content
+        try {
+          // Only try to re-encode if there's enough data
+          if (base64Image.length > 1000) {
+            const buffer = Buffer.from(base64Image, 'base64');
+            // Only re-encode if we got valid binary data
+            if (buffer.length > 100) {
+              const sanitizedBase64 = buffer.toString('base64');
+              // Only use the sanitized version if it's valid
+              if (sanitizedBase64 && sanitizedBase64.length > 100) {
+                console.log(`[IMAGE-GEN] Sanitized fallback base64 data by re-encoding`);
+                base64Image = sanitizedBase64;
+              }
+            }
+          }
+        } catch (sanitizeErr) {
+          console.error(`[IMAGE-GEN] Error sanitizing fallback base64 data: ${sanitizeErr}`);
+          // Continue with original data if sanitization fails
+        }
+        
+        console.log(`[IMAGE-GEN] Final fallback image format: ${imageFormat}, base64 length: ${base64Image.length}`);
+        
+        // Return the base64 string with data URL prefix for direct embedding
         return `data:image/${imageFormat};base64,${base64Image}`;
       }
       
