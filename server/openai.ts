@@ -696,7 +696,19 @@ export async function processChat(cardId: number, userMessage: string, column: C
  * Handle file generation from GPT responses
  * Looks for patterns like ```file:filename.ext,content```
  */
-async function handleFileGeneration(cardId: number, response: string): Promise<void> {
+/**
+ * Handles file generation from GPT responses, including images and CSVs
+ * 
+ * @param cardId - The ID of the card to attach the generated file to
+ * @param response - The text response from GPT that might contain file syntax
+ * @param imageData - Optional object containing image data (base64 or URL)
+ * @returns Promise resolving when all file generation is complete
+ */
+export async function handleFileGeneration(
+  cardId: number, 
+  response: string, 
+  imageData?: { base64?: string, url?: string, fileType?: string }
+): Promise<void> {
   console.log(`=== FILE GENERATION START: Card ${cardId} ===`);
   let attachmentsCreated = 0;
   
@@ -704,6 +716,214 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
   const processedHashes = new Set<string>();
   
   try {
+    // Process image data if provided
+    if (imageData) {
+      console.log(`=== IMAGE PROCESSING START: Card ${cardId} ===`);
+      
+      try {
+        let content = '';
+        let fileType = '';
+        let originalPrompt = 'image request';
+        
+        // Extract the prompt from the response if available
+        const promptMatch = response.match(/generate(?:d)? (?:an? )?image (?:of |for |based on )?"([^"]+)"/i);
+        if (promptMatch && promptMatch[1]) {
+          originalPrompt = promptMatch[1];
+          console.log(`[IMAGE-PROCESS] Extracted original prompt: "${originalPrompt}"`);
+        }
+        
+        // Handle base64-encoded image data from gpt-image-1
+        if (imageData.base64) {
+          console.log(`[IMAGE-PROCESS] Processing base64-encoded image data with length: ${imageData.base64.length}`);
+          
+          // Clean and validate the base64 data
+          const cleanedBase64 = cleanBase64(imageData.base64);
+          console.log(`[IMAGE-PROCESS] Cleaned base64 data, new length: ${cleanedBase64.length}`);
+          
+          // Convert base64 to buffer for MIME type detection
+          const buffer = Buffer.from(cleanedBase64, 'base64');
+          console.log(`[IMAGE-PROCESS] Converted base64 to buffer with size: ${buffer.length} bytes`);
+          
+          // Determine the file type using the inferMimeTypeFromBuffer helper
+          const inferredType = inferMimeTypeFromBuffer(buffer);
+          
+          if (inferredType) {
+            fileType = inferredType;
+            console.log(`[IMAGE-PROCESS] Using inferred MIME type: ${fileType}`);
+          } else if (imageData.fileType) {
+            fileType = imageData.fileType;
+            console.log(`[IMAGE-PROCESS] Using provided MIME type: ${fileType}`);
+          } else {
+            fileType = 'image/png'; // Default to PNG
+            console.log(`[IMAGE-PROCESS] Using default MIME type: ${fileType}`);
+          }
+          
+          content = cleanedBase64;
+        }
+        // Handle URL-based image data from DALL-E 3 fallback
+        else if (imageData.url) {
+          console.log(`[IMAGE-PROCESS] Processing image URL: ${imageData.url}`);
+          
+          try {
+            // Fetch image data from URL with retry logic
+            const fetch = await import('node-fetch');
+            let response = null;
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            while (retryCount < maxRetries) {
+              try {
+                console.log(`[IMAGE-PROCESS] Fetching image, attempt ${retryCount + 1}/${maxRetries}`);
+                response = await fetch.default(imageData.url);
+                
+                if (response.ok) {
+                  break;
+                } else {
+                  console.log(`[IMAGE-PROCESS] Fetch failed with status: ${response.status}`);
+                  retryCount++;
+                  if (retryCount < maxRetries) {
+                    const delay = 1000 * retryCount; // Increasing delay between retries
+                    console.log(`[IMAGE-PROCESS] Retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                  }
+                }
+              } catch (error) {
+                console.error(`[IMAGE-PROCESS] Fetch attempt ${retryCount + 1} failed:`, error);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                  const delay = 1000 * retryCount;
+                  console.log(`[IMAGE-PROCESS] Retrying in ${delay}ms...`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                }
+              }
+            }
+            
+            if (!response || !response.ok) {
+              throw new Error(`Failed to fetch image after ${maxRetries} attempts`);
+            }
+            
+            // Get the content type from the response headers if available
+            const contentType = response.headers.get('content-type');
+            console.log(`[IMAGE-PROCESS] Content-Type from response: ${contentType || 'not available'}`);
+            
+            // Get the image data as array buffer
+            const imageBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(imageBuffer);
+            console.log(`[IMAGE-PROCESS] Downloaded image, size: ${buffer.length} bytes`);
+            
+            // Determine the file type
+            // First try to use the Content-Type header
+            if (contentType && contentType.startsWith('image/')) {
+              fileType = contentType;
+              console.log(`[IMAGE-PROCESS] Using Content-Type header for MIME type: ${fileType}`);
+            } else {
+              // Otherwise, try to infer from buffer
+              const inferredType = inferMimeTypeFromBuffer(buffer);
+              
+              if (inferredType) {
+                fileType = inferredType;
+                console.log(`[IMAGE-PROCESS] Using inferred MIME type: ${fileType}`);
+              } else if (imageData.fileType) {
+                fileType = imageData.fileType;
+                console.log(`[IMAGE-PROCESS] Using provided MIME type: ${fileType}`);
+              } else {
+                fileType = 'image/png'; // Default to PNG
+                console.log(`[IMAGE-PROCESS] Using default MIME type: ${fileType}`);
+              }
+            }
+            
+            // Convert buffer to base64
+            const rawBase64 = buffer.toString('base64');
+            console.log(`[IMAGE-PROCESS] Converted image to base64, length: ${rawBase64.length}`);
+            
+            // Clean the base64 data
+            content = cleanBase64(rawBase64);
+            console.log(`[IMAGE-PROCESS] Cleaned base64 data, final length: ${content.length}`);
+            
+          } catch (error) {
+            const fetchError = error as Error;
+            console.error(`[IMAGE-PROCESS] Error fetching image from URL:`, fetchError);
+            throw new Error(`Failed to fetch image: ${fetchError.message}`);
+          }
+        } else {
+          console.warn(`[IMAGE-PROCESS] No base64 or URL provided in imageData, skipping image processing`);
+          throw new Error('Missing required image data (base64 or URL)');
+        }
+        
+        if (!content || !fileType) {
+          console.error(`[IMAGE-PROCESS] Missing content or fileType after processing`);
+          throw new Error('Failed to process image data properly');
+        }
+        
+        // Generate a descriptive filename
+        const modelPart = imageData.url ? 'dalle' : 'gpt-image';
+        const promptPart = originalPrompt
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/_+/g, '_')
+          .substring(0, 30);
+        const timestamp = Date.now();
+        const extension = fileType.split('/')[1] || 'png';
+        
+        const filename = `${modelPart}_${promptPart}_${timestamp}.${extension}`;
+        console.log(`[IMAGE-PROCESS] Generated filename: ${filename}`);
+        
+        // Create attachment in the database
+        console.log(`[IMAGE-PROCESS] Creating attachment: cardId=${cardId}, fileType=${fileType}, filename=${filename}, content length=${content.length}`);
+        const attachment = await storage.createAttachment({
+          cardId,
+          filename,
+          fileType,
+          content
+        });
+        
+        console.log(`[IMAGE-PROCESS] Successfully created image attachment with ID: ${attachment.id}`);
+        attachmentsCreated++;
+        
+        // Create a confirmation chat message with baseline values
+        const chatMessage: {
+          cardId: number;
+          role: string;
+          content: string;
+          gptName?: string;
+          gptColor?: string;
+        } = {
+          cardId,
+          role: "assistant",
+          content: `✨ Generated an image based on your request: "${originalPrompt}".\n\n![Generated image](/api/attachments/${attachment.id})`
+        };
+        
+        // Add the column's GPT name and color if available
+        try {
+          // Get the card to find its column ID
+          const card = await storage.getCardById(cardId);
+          if (card) {
+            const column = await storage.getColumnById(card.columnId);
+            if (column) {
+              // Only set these properties if they have non-empty values
+              if (column.gptName) {
+                chatMessage.gptName = column.gptName;
+              }
+              if (column.gptColor) {
+                chatMessage.gptColor = column.gptColor;
+              }
+            }
+          }
+        } catch (columnError) {
+          console.warn(`[IMAGE-PROCESS] Error getting column details:`, columnError);
+        }
+        
+        // Create the confirmation chat message
+        await storage.createChat(chatMessage);
+        console.log(`[IMAGE-PROCESS] Created confirmation chat message for image generation`);
+        
+      } catch (imageError) {
+        console.error(`[IMAGE-PROCESS] Error processing image:`, imageError);
+      }
+      
+      console.log(`=== IMAGE PROCESSING END ===`);
+    }
+    
     // Function to create CSV attachment and track for uniqueness
     const createCSVIfUnique = async (content: string, filename: string): Promise<boolean> => {
       // Create a simple hash of the content to check for duplicates
