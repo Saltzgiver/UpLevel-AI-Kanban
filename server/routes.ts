@@ -127,6 +127,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quality = "auto"
       } = req.body;
       
+      // Log full request body for debugging
+      console.log(`[IMAGE-TEST] FULL REQUEST BODY: ${JSON.stringify(req.body)}`);
+      
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
       }
@@ -162,26 +165,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate the image
       console.log(`[IMAGE-TEST] Calling generateImage function at ${new Date().toISOString()}`);
+      console.log(`[IMAGE-TEST] API PARAMETERS: prompt="${prompt.substring(0, 20)}...", size=${size}, model=${model}, quality=${quality}`); 
+      
       const result = await generateImage(prompt, apiKey, size, model as "gpt-image-1" | "dall-e-3" | "auto", quality as "low" | "medium" | "high" | "auto");
       
-      // Log timing for performance analysis
+      // Log timing and result details
       const endTime = Date.now();
       const responseTime = (endTime - startTime) / 1000;
       console.log(`[IMAGE-TEST] Image generation completed in ${responseTime.toFixed(2)} seconds`);
+      console.log(`[IMAGE-TEST] Generated using model: ${result.model}`);
+      console.log(`[IMAGE-TEST] Result base64 length: ${result.base64?.length || 0}`);
+      console.log(`[IMAGE-TEST] Result fileType: ${result.fileType}`);
+
+      // Log if we got proper results
+      const hasValidBase64 = result.base64 && result.base64.length > 100;
+      console.log(`[IMAGE-TEST] Has valid base64 data: ${hasValidBase64}`);
       
-      // Return the image data
+      // Return the image data with detailed debug info
       console.log(`[IMAGE-TEST] Sending successful response`);
       return res.json({
-        base64: `data:image/${result.fileType};base64,${result.base64}`,
+        base64: `data:${result.fileType};base64,${result.base64}`,
+        url: `data:${result.fileType};base64,${result.base64}`,
         fileType: result.fileType,
         responseTimeSeconds: responseTime,
-        model: "dall-e-3", // Adding the model info
-        size: size
+        model: result.model,
+        size: size,
+        debugInfo: {
+          requestedModel: model,
+          actualModel: result.model,
+          requestedQuality: quality,
+          requestedSize: size,
+          base64Length: result.base64?.length || 0
+        }
       });
     } catch (error) {
       console.error("[IMAGE-TEST] Error generating image:", error);
-      return res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error occurred during image generation" 
+      
+      // Return more detailed error information
+      return res.status(400).json({
+        error: error instanceof Error ? error.message : "Unknown error generating image",
+        details: error instanceof Error ? (error.stack || "No stack trace available") : "Unknown error type",
+        requestDetails: {
+          model: req.body.model,
+          quality: req.body.quality,
+          size: req.body.size
+        }
       });
     }
   });

@@ -1267,12 +1267,29 @@ export async function generateImage(
       }
       
       // For gpt-image-1, we'll get a URL instead of base64 data
+      console.log(`[IMAGE-GEN] Full Imagen result data: ${JSON.stringify(imagenResult.data)}`);
+      
       const imageData = imagenResult.data[0];
-      if (!imageData || !imageData.url) {
-        throw new Error("No image URL returned from API");
+      console.log(`[IMAGE-GEN] First image data item: ${JSON.stringify(imageData)}`);
+      
+      // Check for URL in different formats - OpenAI sometimes changes response format
+      let imageUrl = null;
+      if (imageData && imageData.url) {
+        imageUrl = imageData.url;
+      } else if (imageData && typeof imageData === 'object') {
+        // Try to find URL in any property
+        const possibleUrls = Object.values(imageData).filter(
+          val => typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))
+        );
+        if (possibleUrls.length > 0) {
+          imageUrl = possibleUrls[0] as string;
+        }
       }
       
-      const imageUrl = imageData.url;      
+      if (!imageUrl) {
+        throw new Error("No image URL found in API response: " + JSON.stringify(imageData));
+      }
+      
       console.log(`[IMAGE-GEN] Successfully received image URL from gpt-image-1: ${imageUrl.substring(0, 80)}...`);
       
       try {

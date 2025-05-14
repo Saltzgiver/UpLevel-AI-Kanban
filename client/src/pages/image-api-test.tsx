@@ -66,19 +66,34 @@ export default function ImageApiTest() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate image");
+        console.log("API Error Details:", errorData);
+        
+        // Show more detailed error information
+        const errorDetails = errorData.details ? 
+          `\nDetails: ${errorData.details.substring(0, 150)}` : '';
+        const requestInfo = errorData.requestDetails ? 
+          `\nRequest: Model=${errorData.requestDetails.model}, Quality=${errorData.requestDetails.quality}` : '';
+          
+        throw new Error(`${errorData.error || "Failed to generate image"}${errorDetails}${requestInfo}`);
       }
 
       const data = await response.json();
+      console.log("API Success Response:", data);
+      console.log("API Debug Info:", data.debugInfo);
       
       // Set result data
       setImageUrl(data.url || data.base64);
       setModelInfo(data.model || "unknown");
       setResultType("success");
       
+      // Show more detailed success information
+      const modelUsed = data.model || "unknown";
+      const requestedModel = data.debugInfo?.requestedModel || selectedModel;
+      const actualModel = data.debugInfo?.actualModel || modelUsed;
+      
       toast({
         title: "Success",
-        description: `Image generated in ${timeElapsed.toFixed(1)} seconds using ${data.model}`,
+        description: `Image generated in ${timeElapsed.toFixed(1)} seconds using ${actualModel} ${requestedModel !== actualModel ? `(requested: ${requestedModel})` : ''}`,
       });
     } catch (err) {
       console.error("Image generation error:", err);
