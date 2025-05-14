@@ -324,7 +324,13 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           {/* Square Image Preview */}
           <div 
             className="relative cursor-pointer aspect-square" 
-            onClick={() => setShowPreview(true)}
+            onClick={() => {
+              console.log(`🖱️ [AttachmentItem] Image preview clicked for:`, {
+                id: attachment.id,
+                filename: attachment.filename
+              });
+              setShowPreview(true);
+            }}
           >
             {/* Expand Button */}
             <div className="absolute top-0 left-0 z-10 bg-black/60 text-white px-0.5 py-px text-[8px] rounded-br flex items-center">
@@ -348,11 +354,35 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
               )}
             </div>
             
-            <img 
-              src={getAttachmentUrl()} 
-              alt={attachment.filename} 
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            {imageLoadError ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="text-center p-2">
+                  <Image className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+                  <p className="text-xs text-gray-500">Error loading image</p>
+                </div>
+              </div>
+            ) : (
+              <img 
+                src={getAttachmentUrl()} 
+                alt={attachment.filename} 
+                className="absolute inset-0 w-full h-full object-cover"
+                onLoad={() => {
+                  console.log(`✅ [AttachmentItem] Image loaded successfully:`, {
+                    id: attachment.id,
+                    filename: attachment.filename
+                  });
+                  setImageLoadError(false);
+                }}
+                onError={(e) => {
+                  console.error(`❌ [AttachmentItem] Error loading image:`, {
+                    id: attachment.id,
+                    filename: attachment.filename,
+                    error: e
+                  });
+                  setImageLoadError(true);
+                }}
+              />
+            )}
           </div>
           
           {/* File Info & Actions - Simplified version to fit in grid */}
@@ -383,7 +413,14 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
         // Ultra minimal horizontal layout with icons directly next to filename
         <div 
           className="flex items-center gap-2 py-1 w-full cursor-pointer hover:bg-gray-50 rounded px-1"
-          onClick={() => setShowPreview(true)}
+          onClick={() => {
+            console.log(`🖱️ [AttachmentItem] Non-image file clicked for preview:`, {
+              id: attachment.id,
+              filename: attachment.filename,
+              fileType: attachment.fileType
+            });
+            setShowPreview(true);
+          }}
         >
           {/* File icon - more minimal and simplified */}
           <div className="flex-shrink-0">
@@ -392,53 +429,100 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
           
           {/* Filename with icons placed directly after it */}
           <div className="flex items-center flex-1">
-            <span className="text-sm text-gray-700 mr-2">
+            <span className="text-sm text-gray-700 mr-2 truncate max-w-[200px]" title={attachment.filename}>
               {attachment.filename}
             </span>
             
+            {/* File type badge for CSV */}
+            {isCSV && (
+              <span className="text-xs bg-green-100 text-green-800 rounded-full px-2 py-0.5 mr-1">
+                CSV
+              </span>
+            )}
+            
             {/* Actions - immediately after filename */}
-            <button
-              className="text-gray-400 hover:text-gray-700 mx-1"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent opening the preview
-                handleDownload();
-              }}
-              title="Download"
-            >
-              <Download className="h-4 w-4" />
-            </button>
-            <button
-              className="text-gray-400 hover:text-red-600 mx-1"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent opening the preview
-                handleDelete();
-              }}
-              disabled={isDeleting}
-              title="Delete"
-            >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </button>
+            <div className="flex ml-auto">
+              <button
+                className="text-gray-400 hover:text-gray-700 mx-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent opening the preview
+                  handleDownload();
+                }}
+                title="Download"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+              <button
+                className="text-gray-400 hover:text-red-600 mx-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 rounded p-1"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent opening the preview
+                  handleDelete();
+                }}
+                disabled={isDeleting}
+                title="Delete"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
       
       {/* Preview Modal for Images and CSV Files using Dialog component */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+      <Dialog 
+        open={showPreview} 
+        onOpenChange={(open) => {
+          console.log(`🖼️ [AttachmentItem] Preview dialog ${open ? 'opened' : 'closed'} for:`, {
+            id: attachment.id,
+            filename: attachment.filename,
+            type: isImage ? 'image' : isCSV ? 'CSV' : 'other'
+          });
+          setShowPreview(open);
+        }}
+      >
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{attachment.filename}</DialogTitle>
+            <DialogTitle>
+              <div className="flex items-center">
+                {renderIcon()}
+                <span className="ml-2">{attachment.filename}</span>
+              </div>
+            </DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center bg-black/5 min-h-[300px] p-6">
             {isImage && (
-              <img 
-                src={getAttachmentUrl()} 
-                alt={attachment.filename} 
-                className="max-w-full max-h-[70vh] object-contain" 
-              />
+              imageLoadError ? (
+                <div className="text-center p-4">
+                  <Image className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Error loading image.</p>
+                  <p className="text-gray-500 text-sm mt-2">Try downloading the file instead.</p>
+                </div>
+              ) : (
+                <img 
+                  src={getAttachmentUrl()} 
+                  alt={attachment.filename} 
+                  className="max-w-full max-h-[70vh] object-contain" 
+                  onLoad={() => {
+                    console.log(`✅ [AttachmentItem] Preview image loaded successfully:`, {
+                      id: attachment.id,
+                      filename: attachment.filename
+                    });
+                    setImageLoadError(false);
+                  }}
+                  onError={(e) => {
+                    console.error(`❌ [AttachmentItem] Error loading preview image:`, {
+                      id: attachment.id,
+                      filename: attachment.filename,
+                      error: e
+                    });
+                    setImageLoadError(true);
+                  }}
+                />
+              )
             )}
             {isCSV && (
               <CSVViewer content={getCSVContent()} maxRows={100} />
@@ -455,15 +539,34 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
             <span className="text-xs text-gray-500">
               Press Escape to close
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Download
-            </Button>
+            <div className="flex gap-2">
+              {isImage && (
+                <a 
+                  href={getAttachmentUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+                  onClick={() => {
+                    console.log(`🔗 [AttachmentItem] Opening image in new tab:`, {
+                      id: attachment.id,
+                      filename: attachment.filename
+                    });
+                  }}
+                >
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  View full size
+                </a>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDownload}
+                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
