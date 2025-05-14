@@ -41,11 +41,34 @@
             color: red;
             font-weight: bold;
         }
+        .section-header {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            border-left: 5px solid #333;
+        }
+        .known-issues {
+            background-color: #fff8dc;
+            padding: 10px;
+            border: 1px solid #e6d9a3;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>Image Attachment Display Test</h1>
     <p>This page tests direct display of image attachments via the updated API endpoint.</p>
+    
+    <div class="known-issues">
+        <h3>Issues Identified:</h3>
+        <p>1. Some image attachments in the database contain invalid or corrupted data</p>
+        <p>2. Base64 decode/encode process might be causing issues with image data</p>
+    </div>
+    
+    <div class="section-header">
+        <h2>Original Images (Known Issues)</h2>
+    </div>
     
     <div class="image-container">
         <h2>Image Attachment ID: 3207</h2>
@@ -66,20 +89,51 @@
     </div>
     
     <div class="image-container">
-        <h2>Image Attachment ID: 3210 (NEW TEST IMAGE)</h2>
+        <h2>Image Attachment ID: 3210</h2>
         <p>Using direct API endpoint:</p>
         <img src="/api/attachments/3210" alt="Image Attachment 3210">
         <div class="status">
-            Status: <span class="valid">Valid test image with proper data</span>
+            Status: <span class="invalid">Empty or corrupted data</span>
         </div>
+    </div>
+    
+    <div class="section-header">
+        <h2>Simple Test Image</h2>
+    </div>
+    
+    <div class="image-container">
+        <h2>Image Attachment ID: 3211 (RED PIXEL TEST)</h2>
+        <p>Using direct API endpoint:</p>
+        <img src="/api/attachments/3211" alt="Image Attachment 3211" style="border: 2px solid red; background: #eee; padding: 10px;">
+        <div class="status">
+            Status: <span class="valid">Simple 1x1 red pixel PNG image</span>
+        </div>
+    </div>
+    
+    <div class="section-header">
+        <h2>Reference Images (Not from API)</h2>
+    </div>
+    
+    <div class="image-container">
+        <h2>Direct Base64 Image Test</h2>
+        <p>Using inline base64 data:</p>
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" alt="Red Pixel" style="border: 2px solid green; background: #eee; padding: 10px;">
+        <div class="status">
+            Status: <span class="valid">This is the same 1x1 red pixel (direct base64)</span>
+        </div>
+    </div>
+    
+    <div class="section-header">
+        <h2>Download Tests</h2>
     </div>
     
     <div class="image-container">
         <h2>Download Links Test</h2>
         <p>The following links should trigger downloads:</p>
-        <p><a href="/api/attachments/3207" download>Download Image 3207</a></p>
-        <p><a href="/api/attachments/3208" download>Download Image 3208</a></p>
-        <p><a href="/api/attachments/3210" download>Download Image 3210 (NEW TEST IMAGE)</a></p>
+        <p><a href="/api/attachments/3207" download>Download Image 3207 (1x1 transparent)</a></p>
+        <p><a href="/api/attachments/3208" download>Download Image 3208 (corrupted)</a></p>
+        <p><a href="/api/attachments/3210" download>Download Image 3210 (corrupted)</a></p>
+        <p><a href="/api/attachments/3211" download>Download Image 3211 (1x1 red pixel)</a></p>
     </div>
 </body>
 </html>
