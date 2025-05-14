@@ -1187,6 +1187,10 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
   console.log(`[IMAGE-GEN] Starting image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
   console.log(`[IMAGE-GEN] API key source: ${apiKey ? 'custom key provided' : 'using environment variable'}`);
   
+  // Debug environment variable to confirm the OpenAI API key is available
+  const apiKeyEnv = process.env.OPENAI_API_KEY || 'not found';
+  console.log(`[IMAGE-GEN] API key environment status: ${apiKeyEnv ? `available (length: ${apiKeyEnv.length})` : 'not set'}`);
+  
   // Initialize OpenAI client
   const openai = getOpenAIClient(apiKey);
   
@@ -1247,6 +1251,8 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       fileType: mimeType
     };
   } catch (error) {
+    console.error(`[IMAGE-GEN] Error with dalle-3:`, error);
+  
     // If there's an error with dall-e-3, try a fallback approach
     try {
       // Try generating an image with different parameters
