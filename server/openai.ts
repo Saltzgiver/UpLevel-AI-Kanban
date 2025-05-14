@@ -807,9 +807,16 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
     if (model === "gpt-image-1" && !preferDalleFallback) {
       // Check for specific errors that indicate we should try DALL-E 3
       const errorMsg = error instanceof Error ? error.message : String(error);
+      // Check for various error patterns that would indicate we should fallback
       const shouldFallback = errorMsg.includes("organization verification") || 
                             errorMsg.includes("not available") ||
-                            errorMsg.includes("access to gpt-image-1");
+                            errorMsg.includes("access to gpt-image-1") ||
+                            errorMsg.includes("must be verified") ||
+                            errorMsg.includes("Your organization");
+      
+      console.log(`[IMAGE-GEN] Checking for fallback conditions...`);
+      console.log(`[IMAGE-GEN] Error message: "${errorMsg}"`);
+      console.log(`[IMAGE-GEN] Should fallback: ${shouldFallback}`);
       
       if (shouldFallback) {
         console.log(`[IMAGE-GEN] Attempting fallback to DALL-E 3 due to error: ${errorMsg}`);
@@ -821,7 +828,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
             prompt,
             n: 1,
             size: "1024x1024",
-            quality: "high" as "high", // Explicitly typed as the literal type 'high'
+            quality: "standard" as "standard", // DALL-E 3 uses 'standard' or 'hd'
             response_format: "url" as "url"
           };
           
