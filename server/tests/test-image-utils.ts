@@ -5,21 +5,13 @@
  * - cleanBase64
  * - inferMimeTypeFromBuffer
  * 
- * To run: node server/tests/test-image-utils.js
+ * To run: npx tsx test-image-utils.ts
  */
 
-// Import required modules
-import fs from 'fs';
-import path from 'path';
-import { cleanBase64, inferMimeTypeFromBuffer } from '../openai.ts';
-
-// Mock Buffer.from for testing
-const base64ToBuffer = (base64) => {
-  return Buffer.from(base64, 'base64');
-};
+import { cleanBase64, inferMimeTypeFromBuffer } from './server/openai';
 
 // Create sample data
-const createTestPNG = () => {
+const createTestPNG = (): Buffer => {
   // PNG signature: 89 50 4E 47
   const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
   // Add some dummy IHDR data to make it look more real
@@ -28,21 +20,21 @@ const createTestPNG = () => {
   return Buffer.concat([signature, ihdr]);
 };
 
-const createTestJPEG = () => {
+const createTestJPEG = (): Buffer => {
   // JPEG signature: FF D8 FF
   const signature = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46]);
   
   return signature;
 };
 
-const createTestGIF = () => {
+const createTestGIF = (): Buffer => {
   // GIF89a signature: 47 49 46 38 39 61
   const signature = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
   
   return signature;
 };
 
-const createTestWebP = () => {
+const createTestWebP = (): Buffer => {
   // WebP signature: RIFF + 4 bytes + WEBP
   const riff = Buffer.from([0x52, 0x49, 0x46, 0x46]);
   const fourBytes = Buffer.from([0x00, 0x00, 0x00, 0x00]); // Size placeholder
@@ -52,7 +44,7 @@ const createTestWebP = () => {
 };
 
 /**
- * Simple test for cleanBase64 function
+ * Test for cleanBase64 function
  */
 const testCleanBase64 = () => {
   console.log('=== Testing cleanBase64 ===');
@@ -62,95 +54,95 @@ const testCleanBase64 = () => {
   console.log(`Valid base64 input: ${validBase64}`);
   const cleanedValid = cleanBase64(validBase64);
   console.log(`Cleaned result: ${cleanedValid}`);
-  console.log(`Test passed: ${cleanedValid === validBase64}`);
+  console.log(`Test passed: ${cleanedValid === validBase64}\n`);
   
   // Base64 with whitespace
   const whitespaceBase64 = ' SGVs bG8g V29y bGQ= ';
-  console.log(`\nWhitespace base64 input: ${whitespaceBase64}`);
+  console.log(`Whitespace base64 input: "${whitespaceBase64}"`);
   const cleanedWhitespace = cleanBase64(whitespaceBase64);
   console.log(`Cleaned result: ${cleanedWhitespace}`);
-  console.log(`Test passed: ${cleanedWhitespace === validBase64}`);
+  console.log(`Test passed: ${cleanedWhitespace === validBase64}\n`);
   
   // Base64 with invalid characters
   const invalidCharsBase64 = 'SGVs!bG8g*V29y@bGQ=';
-  console.log(`\nInvalid chars base64 input: ${invalidCharsBase64}`);
+  console.log(`Invalid chars base64 input: "${invalidCharsBase64}"`);
   const cleanedInvalidChars = cleanBase64(invalidCharsBase64);
   console.log(`Cleaned result: ${cleanedInvalidChars}`);
-  console.log(`Test passed: ${cleanedInvalidChars === validBase64}`);
+  console.log(`Test passed: ${cleanedInvalidChars === validBase64}\n`);
   
   // Base64 with incorrect padding
   const incorrectPaddingBase64 = 'SGVsbG8gV29ybGQ';
-  console.log(`\nIncorrect padding base64 input: ${incorrectPaddingBase64}`);
+  console.log(`Incorrect padding base64 input: "${incorrectPaddingBase64}"`);
   const cleanedIncorrectPadding = cleanBase64(incorrectPaddingBase64);
   console.log(`Cleaned result: ${cleanedIncorrectPadding}`);
-  console.log(`Test passed: ${cleanedIncorrectPadding === validBase64}`);
+  console.log(`Test passed: ${cleanedIncorrectPadding === validBase64}\n`);
   
   // Very short base64 (should trigger minimum length warning)
   const shortBase64 = 'SGk='; // "Hi" in base64
-  console.log(`\nShort base64 input: ${shortBase64}`);
+  console.log(`Short base64 input: "${shortBase64}"`);
   const cleanedShort = cleanBase64(shortBase64);
   console.log(`Cleaned result: ${cleanedShort}`);
-  console.log(`Test completed (should have shown a warning)`);
+  console.log(`Test completed (should have shown a warning)\n`);
 };
 
 /**
- * Simple test for inferMimeTypeFromBuffer function
+ * Test for inferMimeTypeFromBuffer function
  */
 const testInferMimeTypeFromBuffer = () => {
-  console.log('\n=== Testing inferMimeTypeFromBuffer ===');
+  console.log('=== Testing inferMimeTypeFromBuffer ===');
   
   // Test PNG detection
   const pngBuffer = createTestPNG();
-  console.log(`\nTesting PNG detection with ${pngBuffer.length} bytes`);
+  console.log(`Testing PNG detection with ${pngBuffer.length} bytes`);
   const pngMimeType = inferMimeTypeFromBuffer(pngBuffer);
   console.log(`Detected MIME type: ${pngMimeType}`);
-  console.log(`Test passed: ${pngMimeType === 'image/png'}`);
+  console.log(`Test passed: ${pngMimeType === 'image/png'}\n`);
   
   // Test JPEG detection
   const jpegBuffer = createTestJPEG();
-  console.log(`\nTesting JPEG detection with ${jpegBuffer.length} bytes`);
+  console.log(`Testing JPEG detection with ${jpegBuffer.length} bytes`);
   const jpegMimeType = inferMimeTypeFromBuffer(jpegBuffer);
   console.log(`Detected MIME type: ${jpegMimeType}`);
-  console.log(`Test passed: ${jpegMimeType === 'image/jpeg'}`);
+  console.log(`Test passed: ${jpegMimeType === 'image/jpeg'}\n`);
   
   // Test GIF detection
   const gifBuffer = createTestGIF();
-  console.log(`\nTesting GIF detection with ${gifBuffer.length} bytes`);
+  console.log(`Testing GIF detection with ${gifBuffer.length} bytes`);
   const gifMimeType = inferMimeTypeFromBuffer(gifBuffer);
   console.log(`Detected MIME type: ${gifMimeType}`);
-  console.log(`Test passed: ${gifMimeType === 'image/gif'}`);
+  console.log(`Test passed: ${gifMimeType === 'image/gif'}\n`);
   
   // Test WebP detection
   const webpBuffer = createTestWebP();
-  console.log(`\nTesting WebP detection with ${webpBuffer.length} bytes`);
+  console.log(`Testing WebP detection with ${webpBuffer.length} bytes`);
   const webpMimeType = inferMimeTypeFromBuffer(webpBuffer);
   console.log(`Detected MIME type: ${webpMimeType}`);
-  console.log(`Test passed: ${webpMimeType === 'image/webp'}`);
+  console.log(`Test passed: ${webpMimeType === 'image/webp'}\n`);
   
   // Test unknown format
   const unknownBuffer = Buffer.from([0x00, 0x01, 0x02, 0x03]);
-  console.log(`\nTesting unknown format with ${unknownBuffer.length} bytes`);
+  console.log(`Testing unknown format with ${unknownBuffer.length} bytes`);
   const unknownMimeType = inferMimeTypeFromBuffer(unknownBuffer);
   console.log(`Detected MIME type: ${unknownMimeType === null ? 'null' : unknownMimeType}`);
-  console.log(`Test passed: ${unknownMimeType === null}`);
+  console.log(`Test passed: ${unknownMimeType === null}\n`);
   
   // Test empty buffer
   const emptyBuffer = Buffer.alloc(0);
-  console.log(`\nTesting empty buffer`);
+  console.log(`Testing empty buffer`);
   const emptyMimeType = inferMimeTypeFromBuffer(emptyBuffer);
   console.log(`Detected MIME type: ${emptyMimeType === null ? 'null' : emptyMimeType}`);
-  console.log(`Test passed: ${emptyMimeType === null}`);
+  console.log(`Test passed: ${emptyMimeType === null}\n`);
 };
 
 // Execute tests
 try {
   console.log('=== IMAGE UTILS TEST SCRIPT ===');
   
-  // Run the tests with the imported functions
+  // Run the tests
   testCleanBase64();
   testInferMimeTypeFromBuffer();
   
-  console.log('\n=== IMAGE UTILS TEST SCRIPT COMPLETE ===');
+  console.log('=== IMAGE UTILS TEST SCRIPT COMPLETE ===');
 } catch (error) {
   console.error('Unexpected error running tests:', error);
 }
