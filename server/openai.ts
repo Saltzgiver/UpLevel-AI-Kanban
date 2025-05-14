@@ -153,7 +153,9 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
     // Step 6: Handle file generation if needed
     await handleFileGeneration(cardId, responseContent);
     
-    console.log(`Completed GPT processing for card ${cardId}`);
+    // Step 7: Mark card as no longer processing
+    await storage.updateCard(cardId, { processing: false });
+    console.log(`Completed GPT processing for card ${cardId} and set processing flag to false`);
     
   } catch (error) {
     console.error(`Error processing card ${cardId} with GPT:`, error);
@@ -168,6 +170,14 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       });
     } catch (chatError) {
       console.error(`Failed to create error chat message:`, chatError);
+    }
+    
+    // Make sure to mark card as not processing even in case of error
+    try {
+      await storage.updateCard(cardId, { processing: false });
+      console.log(`Set processing flag to false after error for card ${cardId}`);
+    } catch (updateError) {
+      console.error(`Failed to update processing flag after error:`, updateError);
     }
   }
 }
@@ -385,6 +395,10 @@ export async function processChat(cardId: number, userMessage: string, column: C
     // Handle any special processing like generating files
     await handleFileGeneration(cardId, responseContent);
     
+    // Make sure to reset the processing flag after completion
+    await storage.updateCard(cardId, { processing: false });
+    console.log(`Completed chat processing for card ${cardId} and set processing flag to false`);
+    
   } catch (error) {
     console.error(`Error processing chat message for card ${cardId}:`, error);
     
@@ -398,6 +412,14 @@ export async function processChat(cardId: number, userMessage: string, column: C
       });
     } catch (chatError) {
       console.error(`Failed to create error chat message:`, chatError);
+    }
+    
+    // Make sure to reset the processing flag even after error
+    try {
+      await storage.updateCard(cardId, { processing: false });
+      console.log(`Set processing flag to false after chat error for card ${cardId}`);
+    } catch (updateError) {
+      console.error(`Failed to update processing flag after chat error:`, updateError);
     }
   }
 }
