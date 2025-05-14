@@ -114,6 +114,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image generation test API endpoint (direct access for testing)
+  app.post('/api/image-generation/test', async (req, res) => {
+    const startTime = Date.now();
+    console.log(`[IMAGE-TEST] Received test image generation request at ${new Date().toISOString()}`);
+    
+    try {
+      const { prompt, size = "1024x1024" } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      
+      console.log(`[IMAGE-TEST] Testing image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
+      console.log(`[IMAGE-TEST] Selected size: ${size}`);
+      
+      // Get API key from environment
+      const apiKey = process.env.OPENAI_API_KEY;
+      
+      if (!apiKey) {
+        console.error("[IMAGE-TEST] No OpenAI API key found in environment");
+        return res.status(500).json({ 
+          error: "OpenAI API key not configured. Please add your API key to the environment variables." 
+        });
+      }
+
+      // Generate the image
+      console.log(`[IMAGE-TEST] Calling generateImage function at ${new Date().toISOString()}`);
+      const result = await generateImage(prompt, apiKey);
+      
+      // Log timing for performance analysis
+      const endTime = Date.now();
+      const responseTime = (endTime - startTime) / 1000;
+      console.log(`[IMAGE-TEST] Image generation completed in ${responseTime.toFixed(2)} seconds`);
+      
+      // Return the image data
+      console.log(`[IMAGE-TEST] Sending successful response`);
+      return res.json({
+        base64: `data:image/${result.fileType};base64,${result.base64}`,
+        fileType: result.fileType,
+        responseTimeSeconds: responseTime
+      });
+    } catch (error) {
+      console.error("[IMAGE-TEST] Error generating image:", error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error occurred during image generation" 
+      });
+    }
+  });
+
   // BOARD ROUTES
   app.get("/api/boards", async (req, res) => {
     try {

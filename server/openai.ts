@@ -1181,9 +1181,10 @@ export async function handleFileGeneration(
  * 
  * @param prompt Text prompt to generate the image from
  * @param apiKey Optional API key, if not provided will use environment variable
+ * @param size Optional size parameter, defaults to 1024x1024
  * @returns Object containing base64 image data and file type
  */
-export async function generateImage(prompt: string, apiKey?: string): Promise<{ base64: string, fileType: string }> {
+export async function generateImage(prompt: string, apiKey?: string, size: string = "1024x1024"): Promise<{ base64: string, fileType: string }> {
   // Add stack trace logging to see where this function is being called from
   const stackTrace = new Error().stack;
   console.log(`[IMAGE-GEN] CALL STACK: generateImage called from:\n${stackTrace}`);
@@ -1210,11 +1211,12 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
     console.log(`[IMAGE-GEN] Starting API call at: ${new Date().toISOString()}`);
     
     // Call OpenAI API with dall-e-3 model
+    console.log(`[IMAGE-GEN] Using size: ${size}`);
     const dalleResult = await openai.images.generate({
       model: "dall-e-3",
       prompt: prompt,
       n: 1,
-      size: "1024x1024",
+      size: size,
       response_format: "b64_json"
     });
     
