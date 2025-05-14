@@ -1002,7 +1002,25 @@ export async function handleFileGeneration(
           .replace(/_+/g, '_')
           .substring(0, 30);
         const timestamp = Date.now();
-        const extension = fileType.split('/')[1] || 'png';
+        let extension = fileType.split('/')[1] || 'png';
+        
+        // Ensure proper image extensions for images
+        if (fileType.startsWith('image/')) {
+          // Force specific extensions for common image types to ensure proper display
+          if (fileType === 'image/png') {
+            extension = 'png';
+          } else if (fileType === 'image/jpeg' || fileType === 'image/jpg') {
+            extension = 'jpg';
+          } else if (fileType === 'image/webp') {
+            extension = 'webp';
+          } else if (fileType === 'image/gif') {
+            extension = 'gif';
+          }
+          
+          console.log(`[IMAGE-PROCESS] Using image extension: ${extension} for MIME type: ${fileType}`);
+        } else {
+          console.log(`[IMAGE-PROCESS] Using default extension: ${extension} for MIME type: ${fileType}`);
+        }
         
         const filename = `${modelPart}_${promptPart}_${timestamp}.${extension}`;
         console.log(`[IMAGE-PROCESS] Generated filename: ${filename}`);
