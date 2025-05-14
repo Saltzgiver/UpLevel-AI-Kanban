@@ -718,12 +718,133 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
 }
 
 /**
- * Placeholder for image generation functionality (removed)
- * This will be reimplemented in the future
+ * Generates an image using OpenAI's image generation models
+ * 
+ * This function uses gpt-image-1 by default, with a fallback to DALL-E 3 
+ * if there are API errors or if explicitly configured via PREFER_DALLE_FALLBACK
+ * 
+ * @param prompt - The text prompt describing the image to generate
+ * @param apiKey - Optional API key (will use environment variable if not provided)
+ * @returns Object containing either a url (DALL-E 3) or base64 (gpt-image-1) and fileType
  */
-export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
-  console.log(`[IMAGE-GEN] Image generation has been disabled for reimplementation`);
-  throw new Error("Image generation functionality has been temporarily removed for reimplementation");
+export async function generateImage(prompt: string, apiKey?: string): Promise<{ url?: string, base64?: string, fileType: string }> {
+  console.log(`[IMAGE-GEN] Starting image generation for prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}", using API key from: ${apiKey ? 'provided parameter' : 'environment variable'}`);
+  
+  // Get OpenAI client
+  const openai = getOpenAIClient(apiKey);
+  
+  // Determine whether to use DALL-E 3 as fallback based on env variable
+  const preferDalleFallback = process.env.PREFER_DALLE_FALLBACK === "true";
+  
+  // Set initial model and response format
+  let model: "gpt-image-1" | "dall-e-3" = "gpt-image-1";
+  let responseFormat: "b64_json" | "url" = "b64_json";
+  
+  // If fallback is preferred, use DALL-E 3 directly
+  if (preferDalleFallback) {
+    console.log(`[IMAGE-GEN] Using DALL-E 3 as preferred model (PREFER_DALLE_FALLBACK=true)`);
+    model = "dall-e-3";
+    responseFormat = "url";
+  } else {
+    console.log(`[IMAGE-GEN] Using gpt-image-1 as primary model`);
+  }
+  
+  try {
+    console.log(`[IMAGE-GEN] Making API call with model: ${model}, response format: ${responseFormat}`);
+    
+    // Make the API call with proper typing
+    const result = await openai.images.generate({
+      model,
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+      response_format: responseFormat as "b64_json" | "url" | null | undefined,
+    });
+    
+    console.log(`[IMAGE-GEN] API call successful with model: ${model}`);
+    
+    // Safely check if we have data in the response
+    if (!result || !result.data || result.data.length === 0) {
+      throw new Error("API response did not contain any image data");
+    }
+    
+    const imageData = result.data[0];
+    
+    // Process the response based on the format
+    if (imageData && 'url' in imageData && imageData.url) {
+      // URL response (likely from DALL-E 3)
+      console.log(`[IMAGE-GEN] Received URL response (length: ${imageData.url.length})`);
+      return { 
+        url: imageData.url, 
+        fileType: 'image/png' 
+      };
+    } else if (imageData && 'b64_json' in imageData && imageData.b64_json) {
+      // Base64 response (likely from gpt-image-1)
+      console.log(`[IMAGE-GEN] Received base64 response (length: ${imageData.b64_json.length})`);
+      return { 
+        base64: imageData.b64_json, 
+        fileType: 'image/png' 
+      };
+    } else {
+      throw new Error("API response contained neither URL nor base64 data");
+    }
+  } catch (error) {
+    console.error(`[IMAGE-GEN] Error generating image:`, error);
+    
+    // Check if using gpt-image-1 and should try DALL-E 3 fallback
+    if (model === "gpt-image-1" && !preferDalleFallback) {
+      // Check for specific errors that indicate we should try DALL-E 3
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const shouldFallback = errorMsg.includes("organization verification") || 
+                            errorMsg.includes("not available") ||
+                            errorMsg.includes("access to gpt-image-1");
+      
+      if (shouldFallback) {
+        console.log(`[IMAGE-GEN] Attempting fallback to DALL-E 3 due to error: ${errorMsg}`);
+        
+        try {
+          // Attempt with DALL-E 3
+          const fallbackResult = await openai.images.generate({
+            model: "dall-e-3",
+            prompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "standard",
+            response_format: "url" as "url",
+          });
+          
+          console.log(`[IMAGE-GEN] Fallback to DALL-E 3 successful`);
+          
+          // Safely check if we have data in the fallback response
+          if (!fallbackResult || !fallbackResult.data || fallbackResult.data.length === 0) {
+            throw new Error("Fallback API response did not contain any image data");
+          }
+          
+          const fallbackImageData = fallbackResult.data[0];
+          
+          if (fallbackImageData && 'url' in fallbackImageData && fallbackImageData.url) {
+            console.log(`[IMAGE-GEN] Received URL from DALL-E 3 fallback (length: ${fallbackImageData.url.length})`);
+            return { 
+              url: fallbackImageData.url, 
+              fileType: 'image/png' 
+            };
+          } else {
+            throw new Error("DALL-E 3 fallback response did not contain a URL");
+          }
+        } catch (fallbackError) {
+          console.error(`[IMAGE-GEN] Fallback to DALL-E 3 also failed:`, fallbackError);
+          throw fallbackError; // Re-throw the fallback error
+        }
+      } else {
+        // If it's not an error that warrants a fallback, rethrow original error
+        throw error;
+      }
+    } else {
+      // If already using DALL-E 3 or fallback not appropriate, rethrow original error
+      throw error;
+    }
+  }
 }
 
 /**
