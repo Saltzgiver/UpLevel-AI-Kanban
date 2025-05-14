@@ -1,0 +1,69 @@
+﻿Phase 3, Chunk 3.3: Update AttachmentItem for Image and File Display
+This document outlines the next step in the frontend implementation: updating the AttachmentItem component to correctly display different types of attachments, particularly images, within the attachments list in the card modal.
+Goal: Modify the AttachmentItem component (client/src/components/gpt/attachment-item.tsx) to render appropriate icons or previews for different file types (especially images) and ensure the download and preview actions work correctly.
+Context:
+* The file to modify is client/src/components/gpt/attachment-item.tsx.
+* This component is responsible for rendering individual items in the list of attachments within the card modal (and potentially elsewhere).
+* Each attachment item receives data including filename, fileType, and id.
+* Image attachments now have a fileType starting with "image/" and are served via the /api/attachments/:id endpoint.
+* The component needs to visually distinguish between different file types.
+* The download functionality should use the correct endpoint.
+* Preview functionality should trigger the appropriate viewer (image modal, CSV viewer, etc.).
+* Detailed logging (client-side) is required.
+Implementation Plan:
+1. Open client/src/components/gpt/attachment-item.tsx: Access and open the client/src/components/gpt/attachment-item.tsx file.
+2. Receive Attachment Data: Ensure the component receives the necessary attachment data as props, including id, filename, and fileType.
+3. Conditional Rendering based on File Type:
+   * Implement logic to check the fileType prop.
+   * If fileType starts with "image/":
+      * Display an image icon (you might use an icon library like lucide-react or a simple SVG/emoji).
+      * Display the filename.
+      * Consider adding a small thumbnail preview of the image. This might involve rendering a small <img> tag with the src set to /api/attachments/${attachment.id} and appropriate styling for size. Be mindful of performance if there are many image attachments.
+   * If fileType is "text/csv":
+      * Display a CSV icon.
+      * Display the filename.
+   * For other file types:
+      * Display a generic file icon.
+      * Display the filename.
+4. Implement Download Action:
+   * The component likely has a download button or link.
+   * Ensure the download action uses the correct URL format: /api/attachments/${attachment.id}. The backend endpoint (updated in Phase 2, Chunk 2.3) will handle setting the Content-Disposition: attachment header for non-image files to trigger a download. For images, the browser might display inline or download depending on its settings and the backend's headers, but the URL structure is the same.
+5. Implement Preview Action:
+   * The component likely has a preview button or the item itself is clickable for preview.
+   * Implement logic based on fileType to trigger the correct preview:
+      * If fileType starts with "image/": Call a function (likely passed down as a prop from GPTChat or CardModal) to open the image preview modal (implemented in Chunk 3.2), passing the attachment URL (/api/attachments/${attachment.id}) and filename/alt text.
+      * If fileType is "text/csv": Call a function to open the CSV viewer component (e.g., CSVViewer), passing the attachment ID or URL.
+      * For other file types: Display a message or disable the preview action, as a generic preview might not be available.
+6. Implement Delete Action:
+   * The component likely has a delete button.
+   * Ensure the delete action makes a DELETE request to the backend endpoint: /api/attachments/${attachment.id}.
+   * After a successful delete, update the UI by removing the item from the list and potentially invalidating relevant React Query caches to refetch the attachments list.
+7. Add Detailed Logging: Add console.log statements:
+   * At the start of the component, logging the attachment data received.
+   * When rendering different file types.
+   * When the download action is triggered.
+   * When the preview action is triggered for different types.
+   * When the delete action is triggered.
+   * In any catch blocks for API calls (download, delete), logging frontend errors.
+Testing Plan:
+1. Run Application: Start your application locally.
+2. Open Card with Attachments: Open a card in a GPT-assigned column that has various types of attachments, including a generated image, a manually uploaded image (if possible), and a CSV file.
+3. Verify Attachment List Display: In the card modal, navigate to the attachments section (likely within the chat or a separate tab).
+   * Expected Outcome: Each attachment should be listed with an appropriate icon and its filename. Image attachments should ideally show a small preview or distinct image icon.
+4. Test Download: Click the download button for each attachment type.
+   * Expected Outcome: The corresponding file should be downloaded correctly.
+5. Test Image Preview: Click on the generated image attachment item (or its preview button).
+   * Expected Outcome: The image preview modal (from Chunk 3.2) should open, displaying the full image. Close the modal.
+6. Test CSV Preview: Click on the CSV attachment item (or its preview button).
+   * Expected Outcome: The CSV viewer component should open, displaying the content of the CSV file. Close the viewer.
+7. Test Other File Type Preview: If you have other file types, verify that their preview action is disabled or shows an appropriate message.
+8. Test Delete: Click the delete button for each attachment type. Confirm the deletion if prompted.
+   * Expected Outcome: The attachment item should be removed from the list in the UI. Verify in the backend database that the attachment record is deleted.
+9. Verify Logging: Open your browser's developer console and review the client-side logs to ensure the detailed logging messages from AttachmentItem are present and accurately reflect the component's behavior for different attachment types and actions.
+Upcoming Steps:
+* Phase 3: Frontend - Triggering and Displaying
+   * Chunk 3.4: Display Image Thumbnails in Card Preview (Optional)
+* Phase 4: Testing and Refinement
+   * Chunk 4.1: End-to-End Testing and Debugging
+   * Chunk 4.2: Refinement and Error Handling Polish
+   * Chunk 4.3: Update Documentation
