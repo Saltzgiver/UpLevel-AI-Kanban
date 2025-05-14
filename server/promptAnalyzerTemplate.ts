@@ -80,8 +80,9 @@ RATIONALE: No improvements needed because [your reasoning]
 
 /**
  * Get the current template, creating a default if none exists
+ * @param columnType - Optional column type to tailor the template
  */
-export function getTemplate(): PromptAnalyzerTemplate {
+export function getTemplate(columnType?: string): PromptAnalyzerTemplate {
   try {
     if (fs.existsSync(templateFilePath)) {
       const templateData = fs.readFileSync(templateFilePath, 'utf8');
@@ -114,16 +115,24 @@ export function saveTemplate(newTemplate: PromptAnalyzerTemplate): boolean {
  * Generate a meta-prompt using the template and conversation data
  */
 export function generateMetaPrompt(
-  template: PromptAnalyzerTemplate,
   sourceColumnInstructions: string,
-  cardContext: { 
-    title: string; 
-    description: string | null; 
-    attachments?: { filename: string; fileType: string }[] 
-  },
+  cardTitle: string,
+  cardDescription: string,
   chats: any[],
-  columnType: string = 'unknown'
+  columnType: string = 'unknown',
+  template?: PromptAnalyzerTemplate
 ): string {
+  // If no template provided, get the default
+  if (!template) {
+    template = getTemplate(columnType);
+  }
+  
+  // Create card context object to match old structure
+  const cardContext = {
+    title: cardTitle,
+    description: cardDescription,
+    attachments: []
+  };
   const attachments = cardContext.attachments || [];
   
   // Determine success patterns

@@ -54,7 +54,7 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
   return colorPalette[defaultColor];
 };
 
-// Shared Image Dialog Modal Component to be used by GPTChat
+// Placeholder Image Dialog Modal Component (not used until image functionality is reimplemented)
 function ImageDialogModal({ 
   selectedImage, 
   setSelectedImage 
@@ -62,48 +62,9 @@ function ImageDialogModal({
   selectedImage: {src: string, alt: string} | null, 
   setSelectedImage: (image: {src: string, alt: string} | null) => void 
 }) {
-  return (
-    <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-      <DialogContent 
-        className="max-w-4xl p-0 overflow-hidden"
-        aria-describedby="image-viewer-description"
-      >
-        <DialogHeader className="p-4 bg-gray-50">
-          <DialogTitle className="flex items-center">
-            <span className="text-gray-800 font-medium">
-              {selectedImage?.alt || 'Image Viewer'}
-            </span>
-          </DialogTitle>
-          <p id="image-viewer-description" className="sr-only">
-            Enlarged view of image. Click outside or use the X button to close.
-          </p>
-        </DialogHeader>
-        <div className="p-6 flex items-center justify-center bg-black/5">
-          {selectedImage && (
-            <img 
-              src={selectedImage.src} 
-              alt={selectedImage.alt} 
-              className="max-w-full max-h-[70vh] object-contain" 
-            />
-          )}
-        </div>
-        <div className="p-3 bg-gray-50 flex justify-between border-t">
-          <span className="text-xs text-gray-500">
-            Click outside to close
-          </span>
-          <a 
-            href={selectedImage?.src || '#'} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-xs flex items-center text-blue-600 hover:text-blue-800"
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            Open original
-          </a>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  // This component is currently disabled as part of image functionality removal
+  // It will be reimplemented in the future
+  return null;
 }
 
 export function GPTChat({ 
@@ -477,282 +438,18 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      console.log("Image source received:", src);
+      console.log("[IMAGE-HANDLING] Image rendering requested but functionality is disabled for reimplementation");
       
-      // First, check if we need to handle a generic "Generated image" alt text
-      if (alt === "Generated image" && src === "") {
-        // Find the most recent attachment (which is likely to be the one mentioned in the text)
-        if (attachments && attachments.length > 0) {
-          // Sort attachments by timestamp (descending) to get the most recent first
-          const sortedAttachments = [...attachments].sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          
-          const mostRecentAttachment = sortedAttachments[0];
-          console.log("Using most recent attachment for generic image reference:", mostRecentAttachment?.id);
-          
-          if (mostRecentAttachment) {
-            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
-            return (
-              <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-                <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-                  AI Generated
-                </div>
-                <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-                  <Maximize2 className="h-3 w-3 mr-1" />
-                  <span>Click to expand</span>
-                </div>
-                <div 
-                  className="cursor-pointer" 
-                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
-                >
-                  <img 
-                    src={imageSrc} 
-                    alt={'AI Generated Image'} 
-                    className="max-w-full object-cover h-48 w-auto" 
-                    onLoad={(e) => {
-                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
-                    }}
-                    onError={(e) => {
-                      console.error("Attachment image failed to load:", mostRecentAttachment.id);
-                      // Replace with error message on load failure
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'text-red-500 text-xs p-2';
-                        errorDiv.textContent = `Failed to load image (ID: ${mostRecentAttachment.id})`;
-                        parent.appendChild(errorDiv);
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          }
-        }
-      }
-
-      // Next, check for direct references to attachment IDs in the card's attachments
-      const imageMatch = alt.match(/dalle_.*?_(\d+)\.png$/);
-      if (imageMatch) {
-        // Look for matching attachment in the card's attachments
-        const matchingAttachment = attachments.find(att => 
-          att.filename.includes(alt) || 
-          att.filename.toLowerCase().includes(alt.toLowerCase())
-        );
-        
-        if (matchingAttachment) {
-          const imageSrc = `/api/attachments/${matchingAttachment.id}`;
-          console.log("Found direct matching attachment by filename:", matchingAttachment.id);
-          return (
-            <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-              <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-                AI Generated
-              </div>
-              <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-                <Maximize2 className="h-3 w-3 mr-1" />
-                <span>Click to expand</span>
-              </div>
-              <div 
-                className="cursor-pointer" 
-                onClick={() => setSelectedImage({ src: imageSrc, alt: alt || 'AI Generated Image' })}
-              >
-                <img 
-                  src={imageSrc} 
-                  alt={alt || 'AI Generated Image'} 
-                  className="max-w-full object-cover h-48 w-auto"
-                  onLoad={(e) => {
-                    console.log("Image successfully loaded:", matchingAttachment.id);
-                  }}
-                  onError={(e) => {
-                    console.error("Attachment image failed to load:", matchingAttachment.id);
-                    // Replace with error message on load failure
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const errorDiv = document.createElement('div');
-                      errorDiv.className = 'text-red-500 text-xs p-2';
-                      errorDiv.textContent = `Failed to load image (ID: ${matchingAttachment.id})`;
-                      parent.appendChild(errorDiv);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          );
-        }
-      }
-      
-      // Check if this is an attachment reference using includes to capture all possible formats
-      if (src && (src.includes('attachment:') || src.includes('/api/attachments/'))) {
-        // Extract attachment ID from various potential formats
-        let attachmentId: number | undefined = undefined;
-        
-        // First check if it's a direct API URL
-        if (src.includes('/api/attachments/')) {
-          const apiMatch = src.match(/\/api\/attachments\/(\d+)/);
-          if (apiMatch && apiMatch[1]) {
-            attachmentId = parseInt(apiMatch[1]);
-            console.log("Extracted attachment ID from API URL:", attachmentId);
-          }
-        } else {
-          // Try to extract the attachment ID with a regex pattern to handle all cases
-          // This pattern matches both "attachment:123" and "(attachment:123)"
-          const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
-          
-          if (match && match[1]) {
-            attachmentId = parseInt(match[1]);
-            console.log("Extracted attachment ID:", attachmentId, "from src:", src);
-          } else {
-            // Fallback to direct parsing if the regex didn't work
-            if (src.startsWith('attachment:')) {
-              // Direct format: attachment:123
-              attachmentId = parseInt(src.substring('attachment:'.length));
-            } else if (src.startsWith('(attachment:') && src.endsWith(')')) {
-              // Markdown link format: (attachment:123)
-              attachmentId = parseInt(src.substring('(attachment:'.length, src.length - 1));
-            }
-          }
-        }
-        
-        if (isNaN(attachmentId as number) || attachmentId === undefined) {
-          console.error("Invalid attachment ID:", src);
-          return (
-            <div className="text-red-500 text-xs p-2 border border-red-200 rounded bg-red-50">
-              Invalid image reference: {src}
-            </div>
-          );
-        }
-        
-        console.log("Rendering attachment image:", { src, attachmentId, url: `/api/attachments/${attachmentId as number}` });
-        
-        // Use the attachment ID to create the proper image URL
-        const imageSrc = `/api/attachments/${attachmentId as number}`;
-        return (
-          <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-            <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-              AI Generated
-            </div>
-            <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-              <Maximize2 className="h-3 w-3 mr-1" />
-              <span>Click to expand</span>
-            </div>
-            <div 
-              className="cursor-pointer" 
-              onClick={() => setSelectedImage({ src: imageSrc, alt: alt || 'AI Generated Image' })}
-            >
-              <img 
-                src={imageSrc}
-                alt={alt || 'AI Generated Image'} 
-                className="max-w-full object-cover h-48 w-auto"
-                onLoad={(e) => {
-                  console.log("Image successfully loaded:", attachmentId as number);
-                }}
-                onError={(e) => {
-                  console.error("Attachment image failed to load:", attachmentId as number);
-                  // Replace with error message on load failure
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'text-red-500 text-xs p-2';
-                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
-                    parent.appendChild(errorDiv);
-                  }
-                }}
-              />
-            </div>
-          </div>
-        );
-      } else if (!src || src === '') {
-        // Special case: empty src could be an incomplete markdown
-        console.error("Empty image source in markdown");
-        
-        // Look for an attachment that matches the context of the message
-        // This is a fallback mechanism for generic image references
-        if (attachments && attachments.length > 0) {
-          // First try the latest attachment
-          const sortedAttachments = [...attachments].sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          
-          const mostRecentAttachment = sortedAttachments[0];
-          console.log("Using most recent attachment as fallback for empty src:", mostRecentAttachment?.id);
-          
-          if (mostRecentAttachment) {
-            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
-            return (
-              <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-                <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
-                  AI Generated
-                </div>
-                <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-                  <Maximize2 className="h-3 w-3 mr-1" />
-                  <span>Click to expand</span>
-                </div>
-                <div 
-                  className="cursor-pointer" 
-                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
-                >
-                  <img 
-                    src={imageSrc} 
-                    alt={'AI Generated Image'} 
-                    className="max-w-full object-cover h-48 w-auto"
-                    onLoad={(e) => {
-                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
-                    }}
-                    onError={(e) => {
-                      console.error("Fallback attachment image failed to load:", mostRecentAttachment.id);
-                      // Show the original fallback message
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50';
-                        errorDiv.textContent = `Image reference missing. Refresh may be needed.`;
-                        parent.appendChild(errorDiv);
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          }
-        }
-        
-        return (
-          <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
-            Image reference missing. Refresh may be needed.
-          </div>
-        );
-      }
-      
-      // Regular image URL
-      console.log("Rendering regular image URL:", src);
+      // Display a notice that image functionality is temporarily unavailable
       return (
-        <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
-          <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
-            <Maximize2 className="h-3 w-3 mr-1" />
-            <span>Click to expand</span>
+        <div className="my-2 rounded-lg overflow-hidden border border-amber-200 bg-amber-50 p-4 text-amber-700">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-5 w-5" />
+            <span className="font-medium">Image Generation Temporarily Unavailable</span>
           </div>
-          <div 
-            className="cursor-pointer" 
-            onClick={() => setSelectedImage({ src, alt })}
-          >
-            <img 
-              src={src} 
-              alt={alt} 
-              className="max-w-full h-48 w-auto object-cover rounded-lg"
-              onError={(e) => {
-                console.error("Regular image failed to load:", src);
-              }}
-            />
-          </div>
+          <p className="mt-2 text-sm">
+            The image functionality is currently being reimplemented to provide enhanced capabilities. Regular chat functionality remains available.
+          </p>
         </div>
       );
     };
