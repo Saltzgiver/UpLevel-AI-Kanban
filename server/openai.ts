@@ -654,7 +654,14 @@ export async function processChat(cardId: number, userMessage: string, column: C
         try {
           // Call the generateImage function with the extracted prompt
           console.log(`[IMAGE-HANDLING] Calling generateImage with prompt: "${imagePrompt}"`);
-          const imageResult = await generateImage(imagePrompt, column.apiKey || undefined);
+          // Use gpt-image-1 model with size 1024x1024 and medium quality
+          const imageResult = await generateImage(
+            imagePrompt, 
+            column.apiKey || undefined,
+            "1024x1024", // Size parameter
+            "gpt-image-1", // Model parameter
+            "medium" // Quality parameter
+          );
           console.log(`[IMAGE-HANDLING] Image generation successful, received base64 data of length: ${imageResult.base64.length}`);
           
           // Clear the timeout since we got a successful response
