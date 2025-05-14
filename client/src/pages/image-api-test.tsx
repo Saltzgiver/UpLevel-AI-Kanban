@@ -11,6 +11,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+// Wrapper component with specific padding for the Image API test page
+function ImageApiTestWrapper(props: { children: React.ReactNode }) {
+  return (
+    <div className="px-6">
+      {props.children}
+    </div>
+  );
+}
+
 export default function ImageApiTest() {
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);

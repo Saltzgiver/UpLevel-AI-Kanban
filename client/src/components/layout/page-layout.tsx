@@ -10,7 +10,7 @@ export function PageLayout({ children, showNav = true }: PageLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {showNav && <NavigationBar />}
-      <main className="flex-1 px-6">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }
