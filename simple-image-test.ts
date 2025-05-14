@@ -5,6 +5,12 @@
 
 import { generateImage } from './server/openai';
 
+// Define the type for our image generation result
+type ImageResult = {
+  base64: string;
+  fileType: string;
+};
+
 async function testImageGeneration() {
   try {
     console.log('Starting simple image generation test...');
@@ -14,9 +20,9 @@ async function testImageGeneration() {
     
     console.log(`Using short prompt: "${prompt}"`);
     
-    // Call the generateImage function with a timeout
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Timeout after 30 seconds')), 30000);
+    // Call the generateImage function with a longer timeout for DALL-E
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout after 60 seconds')), 60000);
     });
     
     const generationPromise = generateImage(prompt);
@@ -26,9 +32,11 @@ async function testImageGeneration() {
     
     console.log('Image generation successful!');
     
-    if (result && result.base64) {
-      console.log(`Received base64 data of length: ${result.base64.length}`);
-      console.log(`File type: ${result.fileType}`);
+    // Type guard to ensure we have the right properties
+    if (result && typeof result === 'object' && 'base64' in result) {
+      const imageResult = result as ImageResult;
+      console.log(`Received base64 data of length: ${imageResult.base64.length}`);
+      console.log(`File type: ${imageResult.fileType}`);
       console.log('Test passed!');
     }
     

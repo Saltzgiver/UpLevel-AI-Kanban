@@ -718,19 +718,8 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
 }
 
 /**
- * Placeholder for image generation functionality (removed)
- * This will be reimplemented in the future
- */
-/**
- * Generates an image using OpenAI's gpt-image-1 model
- * 
- * @param prompt Text prompt to generate the image from
- * @param apiKey Optional API key, if not provided will use environment variable
- * @returns Object containing base64 image data and file type
- */
-/**
- * Generates an image using OpenAI's gpt-image-1 model
- * This implementation is simplified to focus solely on gpt-image-1 model without fallbacks
+ * Generates an image using OpenAI's image generation models
+ * This implementation tries gpt-image-1 first, then falls back to dall-e-3 if needed
  * 
  * @param prompt Text prompt to generate the image from
  * @param apiKey Optional API key, if not provided will use environment variable
@@ -744,53 +733,94 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
   const openai = getOpenAIClient(apiKey);
   
   try {
-    console.log(`[IMAGE-GEN] Using gpt-image-1 model for image generation`);
-    console.log(`[IMAGE-GEN] Parameters: model=gpt-image-1, n=1, size=1024x1024`);
-    
-    // Call the OpenAI API to generate the image
-    const result = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1024"
-    });
-    
-    console.log(`[IMAGE-GEN] API call to gpt-image-1 successful`);
-    
-    // Check if we have data in the response
-    if (!result?.data || !Array.isArray(result.data) || result.data.length === 0) {
-      throw new Error("No image data returned from API");
+    // First try with gpt-image-1 model
+    try {
+      console.log(`[IMAGE-GEN] Attempting to use gpt-image-1 model for image generation`);
+      console.log(`[IMAGE-GEN] Parameters: model=gpt-image-1, n=1, size=1024x1024`);
+      
+      // Call the OpenAI API to generate the image with gpt-image-1
+      const result = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024"
+      });
+      
+      console.log(`[IMAGE-GEN] API call to gpt-image-1 successful`);
+      
+      // Check if we have data in the response
+      if (!result?.data || !Array.isArray(result.data) || result.data.length === 0) {
+        throw new Error("No image data returned from API");
+      }
+      
+      // Get the URL from the response
+      const imageUrl = result.data[0]?.url;
+      
+      if (!imageUrl) {
+        throw new Error("No image URL returned from API");
+      }
+      
+      console.log(`[IMAGE-GEN] Successfully received image URL: ${imageUrl}`);
+      
+      // Make a request to download the image
+      console.log(`[IMAGE-GEN] Fetching image from URL to convert to base64`);
+      const fetch = await import('node-fetch');
+      const response = await fetch.default(imageUrl);
+      const imageBuffer = await response.arrayBuffer();
+      
+      // Convert the buffer to base64
+      const base64Data = Buffer.from(imageBuffer).toString('base64');
+      
+      console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${base64Data.length}`);
+      
+      // Return the base64 data and file type
+      return { 
+        base64: base64Data, 
+        fileType: 'image/png' 
+      };
+      
+    } catch (gptImageError) {
+      // If gpt-image-1 fails, fallback to dall-e-3
+      if (gptImageError instanceof Error) {
+        console.log(`[IMAGE-GEN] Error with gpt-image-1: ${gptImageError.message}`);
+      } else {
+        console.log(`[IMAGE-GEN] Unknown error with gpt-image-1`);
+      }
+      
+      console.log(`[IMAGE-GEN] Falling back to dall-e-3 model`);
+      console.log(`[IMAGE-GEN] Parameters: model=dall-e-3, response_format=b64_json, n=1, size=1024x1024`);
+      
+      // Call OpenAI API with dall-e-3 model
+      const dalleResult = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+        response_format: "b64_json"
+      });
+      
+      console.log(`[IMAGE-GEN] API call to dall-e-3 successful`);
+      
+      // Check if we have data in the response
+      if (!dalleResult?.data || !Array.isArray(dalleResult.data) || dalleResult.data.length === 0) {
+        throw new Error("No image data returned from API");
+      }
+      
+      // Get the base64 data from the response
+      const base64Data = dalleResult.data[0]?.b64_json;
+      
+      if (!base64Data) {
+        throw new Error("No base64 image data returned from API");
+      }
+      
+      console.log(`[IMAGE-GEN] Successfully received base64 data from dall-e-3 with length: ${base64Data.length}`);
+      
+      // Return the base64 data and file type
+      return { 
+        base64: base64Data, 
+        fileType: 'image/png' 
+      };
     }
-    
-    // Get the URL from the response
-    const imageUrl = result.data[0]?.url;
-    
-    if (!imageUrl) {
-      throw new Error("No image URL returned from API");
-    }
-    
-    console.log(`[IMAGE-GEN] Successfully received image URL: ${imageUrl}`);
-    
-    // Make a request to download the image
-    console.log(`[IMAGE-GEN] Fetching image from URL to convert to base64`);
-    const fetch = await import('node-fetch');
-    const response = await fetch.default(imageUrl);
-    const imageBuffer = await response.arrayBuffer();
-    
-    // Convert the buffer to base64
-    const base64Data = Buffer.from(imageBuffer).toString('base64');
-    
-    console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${base64Data.length}`);
-    
-    // Return the base64 data and file type
-    const returnObject = { 
-      base64: base64Data, 
-      fileType: 'image/png' 
-    };
-    
-    console.log(`[IMAGE-GEN] Returning base64 image data`);
-    return returnObject;
-    
   } catch (error) {
     console.error(`[IMAGE-GEN] Error generating image:`, error);
     throw error;
