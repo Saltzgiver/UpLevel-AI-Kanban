@@ -29,27 +29,22 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
 
   const handleDownload = () => {
     try {
-      // For CSV files, use direct API endpoint for better browser compatibility
-      if (isCSV) {
-        console.log("Using server API endpoint for CSV download");
-        // Create a direct link to the attachment endpoint
-        const link = document.createElement('a');
-        link.href = `/api/attachments/${attachment.id}`;
-        link.download = attachment.filename;
-        link.target = "_blank"; // Open in new tab to ensure proper download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // For other files, use data URL approach
-        console.log("Using data URL for file download");
-        const link = document.createElement('a');
-        link.href = `data:${attachment.fileType};base64,${attachment.content}`;
-        link.download = attachment.filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      // Use direct API endpoint for all files to ensure consistent behavior
+      console.log("Using server API endpoint for file download");
+      
+      // Create a direct link to the attachment endpoint
+      const link = document.createElement('a');
+      link.href = `/api/attachments/${attachment.id}`;
+      link.download = attachment.filename; // Force download by setting the download attribute
+      
+      // For better download handling, use _blank for images and CSVs
+      if (isImage || isCSV) {
+        link.target = "_blank";
       }
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error("Error downloading attachment:", error);
       alert("Error downloading file. Please try again.");
@@ -126,8 +121,13 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
     }
   };
   
-  // Create a data URL for attachment content
+  // Create a URL for attachment content - either using API endpoint for images or data URL for other types
   const getAttachmentUrl = () => {
+    // Use the direct API endpoint for images to improve performance
+    if (isImage) {
+      return `/api/attachments/${attachment.id}`;
+    }
+    // Fall back to data URL for other content types when needed
     return `data:${attachment.fileType};base64,${attachment.content}`;
   };
   

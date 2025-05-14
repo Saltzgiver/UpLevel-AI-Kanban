@@ -1304,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contentLength: attachment.content ? attachment.content.length : 0
       });
       
-      // Serve file contents for direct download (both images and other files like CSV)
+      // Serve file contents for direct viewing (images) or download (other files)
       try {
         // Verify base64 content is valid before trying to decode
         if (!attachment.content) {
@@ -1315,10 +1315,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Decode base64 content
         let fileBuffer = Buffer.from(attachment.content, 'base64');
         
-        // Set proper headers for direct download
+        // Check if this is an image file
+        const isImage = attachment.fileType.startsWith('image/');
+        
         // Special handling for CSV files
         const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
         
+        // Set Content-Type based on file type
         if (isCSV) {
           // For CSV files, ensure we use UTF-8 encoding explicitly
           res.set('Content-Type', 'text/csv; charset=utf-8');
@@ -1333,20 +1336,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.set('Pragma', 'public');
           console.log(`Serving CSV with UTF-8 encoding and BOM for Excel compatibility`);
         } else {
-          // For non-CSV files, use original content type
+          // For all other files, use original content type
           res.set('Content-Type', attachment.fileType);
         }
         
-        // Force download with Content-Disposition header
-        res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
+        // Set Content-Disposition header based on file type
+        if (isImage) {
+          // For images, use "inline" to display directly in the browser
+          res.set('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.filename)}"`);
+          console.log(`Setting Content-Disposition to inline for image display`);
+        } else {
+          // For non-image files, force download
+          res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.filename)}"`);
+        }
+        
+        // Set Content-Length header
         res.set('Content-Length', fileBuffer.length.toString());
         
         // Different cache settings based on file type
-        if (attachment.fileType.startsWith('image/')) {
-          res.set('Cache-Control', 'public, max-age=86400'); // Cache images for 24 hours
-          console.log(`Serving image attachment: ${attachment.fileType}, size: ${fileBuffer.length} bytes`);
+        if (isImage) {
+          // Cache images for 24 hours
+          res.set('Cache-Control', 'public, max-age=86400');
+          console.log(`Serving image attachment: ${attachment.fileType}, size: ${fileBuffer.length} bytes, for direct display`);
         } else {
-          res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate'); // Don't cache CSVs
+          // Don't cache non-image files
+          res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
           console.log(`Serving ${attachment.fileType} attachment as download, size: ${fileBuffer.length} bytes`);
         }
         
