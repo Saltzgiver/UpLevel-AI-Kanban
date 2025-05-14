@@ -1184,6 +1184,10 @@ export async function handleFileGeneration(
  * @returns Object containing base64 image data and file type
  */
 export async function generateImage(prompt: string, apiKey?: string): Promise<{ base64: string, fileType: string }> {
+  // Add stack trace logging to see where this function is being called from
+  const stackTrace = new Error().stack;
+  console.log(`[IMAGE-GEN] CALL STACK: generateImage called from:\n${stackTrace}`);
+  
   console.log(`[IMAGE-GEN] Starting image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
   console.log(`[IMAGE-GEN] API key source: ${apiKey ? 'custom key provided' : 'using environment variable'}`);
   
@@ -1191,7 +1195,8 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
   const apiKeyEnv = process.env.OPENAI_API_KEY || 'not found';
   console.log(`[IMAGE-GEN] API key environment status: ${apiKeyEnv ? `available (length: ${apiKeyEnv.length})` : 'not set'}`);
   
-  // Initialize OpenAI client
+  // Initialize OpenAI client 
+  console.log('[IMAGE-GEN] About to initialize OpenAI client');
   const openai = getOpenAIClient(apiKey);
   
   try {
@@ -1199,6 +1204,10 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
     // Go straight to DALL-E 3 which is more reliable for image generation
     console.log(`[IMAGE-GEN] Using dall-e-3 model for image generation`);
     console.log(`[IMAGE-GEN] Parameters: model=dall-e-3, response_format=b64_json, n=1, size=1024x1024`);
+    
+    // Mark the start time to measure API response time
+    const startTime = Date.now();
+    console.log(`[IMAGE-GEN] Starting API call at: ${new Date().toISOString()}`);
     
     // Call OpenAI API with dall-e-3 model
     const dalleResult = await openai.images.generate({
@@ -1208,6 +1217,16 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       size: "1024x1024",
       response_format: "b64_json"
     });
+    
+    // Calculate response time
+    const endTime = Date.now();
+    const responseTime = (endTime - startTime) / 1000;
+    console.log(`[IMAGE-GEN] API response received after ${responseTime.toFixed(2)} seconds`);
+    
+    // Log more details about the response structure
+    console.log(`[IMAGE-GEN] API response structure: ${JSON.stringify(Object.keys(dalleResult))}`);
+    console.log(`[IMAGE-GEN] Response data type: ${typeof dalleResult.data}`);
+    console.log(`[IMAGE-GEN] Response data length: ${Array.isArray(dalleResult.data) ? dalleResult.data.length : 'not an array'}`);
     
     console.log(`[IMAGE-GEN] API call to dall-e-3 successful`);
     
