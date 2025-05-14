@@ -1121,18 +1121,24 @@ export async function handleFileGeneration(
       }
     }
     
-    // Check for extracted CSV content from the response
-    const csvResult = extractCSVContent(response);
-    if (csvResult) {
-      try {
-        console.log(`Creating CSV attachment from extracted content, format: ${csvResult.format}`);
-        const success = await createCSVIfUnique(csvResult.content, `${csvResult.format}_${Date.now()}.csv`);
-        if (success) {
-          attachmentsCreated++;
+    // Only check for CSV content if we're not handling an image request
+    // This prevents incorrectly creating CSV files when processing image generation responses
+    if (!imageData) {
+      // Check for extracted CSV content from the response
+      const csvResult = extractCSVContent(response);
+      if (csvResult) {
+        try {
+          console.log(`Creating CSV attachment from extracted content, format: ${csvResult.format}`);
+          const success = await createCSVIfUnique(csvResult.content, `${csvResult.format}_${Date.now()}.csv`);
+          if (success) {
+            attachmentsCreated++;
+          }
+        } catch (error) {
+          console.error("Error creating CSV attachment from extracted content:", error);
         }
-      } catch (error) {
-        console.error("Error creating CSV attachment from extracted content:", error);
       }
+    } else {
+      console.log(`[IMAGE-PROCESS] Skipping CSV extraction for image generation response`);
     }
     
     // Look for the Monthly Average Spending format in plaintext
@@ -1257,7 +1263,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       console.log(`[IMAGE-GEN] Fallback image generation successful`);
       
       // Get the URL from the response
-      const imageUrl = fallbackResult.data[0]?.url;
+      const imageUrl = fallbackResult.data?.[0]?.url;
       
       if (!imageUrl) {
         throw new Error("No image URL returned from API fallback");
@@ -1308,8 +1314,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
  * @param apiKey - Optional OpenAI API key to use for the analysis
  * @returns Promise resolving to an object with rationale and suggestedInstructions, or null if no suggestion
  */
-// Import the test implementation
-import { getTestPromptSuggestion, PromptSuggestion } from "./test-prompt-assistant";
+// Use the imported test implementation for prompt suggestions
 
 /**
  * Generates intelligent prompt improvement suggestions based on card interactions
