@@ -73,16 +73,116 @@ export const getOpenAIClient = (apiKey?: string) => {
   }
 };
 
+/**
+ * Cleans and validates a base64 string
+ * 
+ * This function performs the following:
+ * - Trims leading/trailing whitespace
+ * - Removes invalid base64 characters
+ * - Ensures proper padding with '=' characters
+ * - Checks for minimum valid length
+ * 
+ * @param base64String The base64 string to clean and validate
+ * @returns A cleaned base64 string
+ */
+const cleanBase64 = (base64String: string): string => {
+  console.log(`[BASE64-CLEAN] Original string length: ${base64String.length}`);
+  
+  // Trim leading/trailing whitespace
+  let cleaned = base64String.trim();
+  
+  // Remove any characters that are not valid base64 characters (A-Z, a-z, 0-9, +, /, =)
+  const originalLength = cleaned.length;
+  cleaned = cleaned.replace(/[^A-Za-z0-9+/=]/g, '');
+  console.log(`[BASE64-CLEAN] Removed ${originalLength - cleaned.length} invalid characters`);
+  
+  // Ensure the string length is a multiple of 4 by adding padding (=)
+  while (cleaned.length % 4 !== 0) {
+    cleaned += '=';
+  }
+  
+  console.log(`[BASE64-CLEAN] Final string length: ${cleaned.length}`);
+  
+  // Minimum length check (arbitrarily set to 20 chars as an example)
+  if (cleaned.length < 20) {
+    console.warn(`[BASE64-CLEAN] Warning: Very short base64 string (${cleaned.length} chars), may be invalid`);
+  }
+  
+  // Log a snippet of the cleaned string for debugging
+  console.log(`[BASE64-CLEAN] First 20 chars of cleaned string: ${cleaned.substring(0, 20)}...`);
+  
+  return cleaned;
+};
+
+/**
+ * Infers MIME type from a Buffer by checking file signatures (magic bytes)
+ * 
+ * This function examines the initial bytes of a buffer to determine the file type
+ * by matching against known file signatures.
+ * 
+ * @param buffer A Node.js Buffer containing the file data
+ * @returns The MIME type string or null if not recognized
+ */
+const inferMimeTypeFromBuffer = (buffer: Buffer): string | null => {
+  // Check if buffer is too small to contain a signature
+  if (!buffer || buffer.length < 4) {
+    console.log(`[MIME-INFER] Buffer too small (${buffer?.length || 0} bytes) to contain a signature`);
+    return null;
+  }
+  
+  console.log(`[MIME-INFER] Checking file signature for buffer of length ${buffer.length} bytes`);
+  
+  // Check for PNG signature: 89 50 4E 47 (hex) or [137, 80, 78, 71] (decimal)
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    console.log(`[MIME-INFER] Detected PNG signature`);
+    return 'image/png';
+  }
+  
+  // Check for JPEG signature: FF D8 FF (hex) or [255, 216, 255] (decimal)
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    console.log(`[MIME-INFER] Detected JPEG signature`);
+    return 'image/jpeg';
+  }
+  
+  // Check for GIF signatures: 
+  // GIF87a: 47 49 46 38 37 61 (hex) or [71, 73, 70, 56, 55, 97] (decimal)
+  // GIF89a: 47 49 46 38 39 61 (hex) or [71, 73, 70, 56, 57, 97] (decimal)
+  if (buffer.length >= 6 && 
+      buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && 
+      buffer[3] === 0x38 && 
+      (buffer[4] === 0x37 || buffer[4] === 0x39) && 
+      buffer[5] === 0x61) {
+    console.log(`[MIME-INFER] Detected GIF signature (${buffer[4] === 0x37 ? '87a' : '89a'})`);
+    return 'image/gif';
+  }
+  
+  // Check for WebP signature
+  // WebP has RIFF header (52 49 46 46) followed by "WEBP" at offset 8 (57 45 42 50)
+  if (buffer.length >= 12 && 
+      buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+    console.log(`[MIME-INFER] Detected WebP signature`);
+    return 'image/webp';
+  }
+  
+  // No known signature found
+  console.log(`[MIME-INFER] No known image signature detected`);
+  return null;
+};
+
 // Helper function to convert base64 image to data URL for OpenAI vision API
 const base64ToDataURL = (base64: string, mimeType: string): string => {
   // Remove any existing 'data:' prefixes if they exist
-  const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, '');
+  let rawBase64 = base64.replace(/^data:image\/\w+;base64,/, '');
+  
+  // Clean the base64 data using our helper function
+  const cleanedBase64 = cleanBase64(rawBase64);
   
   // Ensure valid MIME type format
   const validMimeType = mimeType.includes('/') ? mimeType : `image/${mimeType}`;
   
   // Return properly formatted data URL
-  return `data:${validMimeType};base64,${cleanBase64}`;
+  return `data:${validMimeType};base64,${cleanedBase64}`;
 };
 
 // Helper function to create OpenAI chat content with images
@@ -769,14 +869,25 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       const imageBuffer = await response.arrayBuffer();
       
       // Convert the buffer to base64
-      const base64Data = Buffer.from(imageBuffer).toString('base64');
+      const rawBase64Data = Buffer.from(imageBuffer).toString('base64');
       
-      console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${base64Data.length}`);
+      console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${rawBase64Data.length}`);
       
-      // Return the base64 data and file type
+      // Clean the base64 data
+      const cleanedBase64 = cleanBase64(rawBase64Data);
+      
+      // Try to infer MIME type from the buffer
+      const nodeBuffer = Buffer.from(imageBuffer);
+      const inferredType = inferMimeTypeFromBuffer(nodeBuffer);
+      
+      // Use inferred type or default to png
+      const mimeType = inferredType || 'image/png';
+      console.log(`[IMAGE-GEN] Image MIME type: ${mimeType}`);
+      
+      // Return the cleaned base64 data and detected file type
       return { 
-        base64: base64Data, 
-        fileType: 'image/png' 
+        base64: cleanedBase64, 
+        fileType: mimeType 
       };
       
     } catch (gptImageError) {
@@ -815,10 +926,30 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       
       console.log(`[IMAGE-GEN] Successfully received base64 data from dall-e-3 with length: ${base64Data.length}`);
       
-      // Return the base64 data and file type
+      // Clean the base64 data
+      const cleanedBase64 = cleanBase64(base64Data);
+      
+      // Try to infer MIME type from base64 data
+      let mimeType = 'image/png'; // Default MIME type
+      try {
+        // Decode a small portion of the base64 to check the file signature
+        const buffer = Buffer.from(cleanedBase64.substring(0, 100), 'base64');
+        const inferredType = inferMimeTypeFromBuffer(buffer);
+        
+        if (inferredType) {
+          console.log(`[IMAGE-GEN] Using inferred MIME type: ${inferredType}`);
+          mimeType = inferredType;
+        } else {
+          console.log(`[IMAGE-GEN] Could not infer MIME type, using default: ${mimeType}`);
+        }
+      } catch (error) {
+        console.error(`[IMAGE-GEN] Error inferring MIME type:`, error);
+      }
+      
+      // Return the cleaned base64 data and inferred or default file type
       return { 
-        base64: base64Data, 
-        fileType: 'image/png' 
+        base64: cleanedBase64, 
+        fileType: mimeType
       };
     }
   } catch (error) {
