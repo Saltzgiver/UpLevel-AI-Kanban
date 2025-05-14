@@ -613,34 +613,82 @@ export async function processChat(cardId: number, userMessage: string, column: C
           gptColor: column.gptColor
         });
         
-        // Call the generateImage function with the extracted prompt
-        console.log(`[IMAGE-HANDLING] Calling generateImage with prompt: "${imagePrompt}"`);
-        const imageResult = await generateImage(imagePrompt, column.apiKey || undefined);
-        console.log(`[IMAGE-HANDLING] Image generation successful, received base64 data of length: ${imageResult.base64.length}`);
+        // Create a timeout safety mechanism to ensure the card doesn't stay in processing state
+        const processingTimeout = setTimeout(async () => {
+          try {
+            console.log(`[IMAGE-HANDLING] Processing timeout reached for card ${cardId}. Checking status...`);
+            const card = await storage.getCardById(cardId);
+            if (card && card.processing) {
+              console.log(`[IMAGE-HANDLING] Card ${cardId} is still in processing state after timeout. Resetting flag.`);
+              await storage.updateCard(cardId, { processing: false });
+              
+              // Notify the user about the timeout
+              await storage.createChat({
+                cardId,
+                role: "assistant",
+                content: `⚠️ Image generation is taking longer than expected. Please try again or use a simpler prompt.`,
+                gptName: column.gptName || "AI Assistant",
+                gptColor: column.gptColor
+              });
+            }
+          } catch (timeoutError) {
+            console.error(`[IMAGE-HANDLING] Error during timeout handling:`, timeoutError);
+          }
+        }, 180000); // 3 minutes timeout
         
-        // Process the generated image with handleFileGeneration
-        console.log(`[IMAGE-HANDLING] Calling handleFileGeneration to process and save the image`);
-        await handleFileGeneration(cardId, userMessage, {
-          base64: imageResult.base64,
-          fileType: imageResult.fileType
-        });
-        console.log(`[IMAGE-HANDLING] Image processing and saving completed successfully`);
+        try {
+          // Call the generateImage function with the extracted prompt
+          console.log(`[IMAGE-HANDLING] Calling generateImage with prompt: "${imagePrompt}"`);
+          const imageResult = await generateImage(imagePrompt, column.apiKey || undefined);
+          console.log(`[IMAGE-HANDLING] Image generation successful, received base64 data of length: ${imageResult.base64.length}`);
+          
+          // Clear the timeout since we got a successful response
+          clearTimeout(processingTimeout);
+          
+          // Process the generated image with handleFileGeneration
+          console.log(`[IMAGE-HANDLING] Calling handleFileGeneration to process and save the image`);
+          await handleFileGeneration(cardId, userMessage, {
+            base64: imageResult.base64,
+            fileType: imageResult.fileType
+          });
+          console.log(`[IMAGE-HANDLING] Image processing and saving completed successfully`);
+        } catch (error) {
+          // Clear the timeout since we're handling the error already
+          clearTimeout(processingTimeout);
+          throw error; // Re-throw to be caught by the outer try/catch block
+        }
         
       } catch (error) {
         console.error(`[IMAGE-HANDLING] Error during image generation:`, error);
         
         // Create error message for the user
-        let errorMessage = "I couldn't generate that image due to a technical issue.";
+        let errorMessage = "I couldn't generate that image due to a technical issue. Please try again later.";
         if (error instanceof Error) {
+          console.error(`[IMAGE-HANDLING] Error details: ${error.message}`);
+          
           // Add more specific error details based on the type of error
-          if (error.message.includes("content policy") || error.message.includes("safety")) {
-            errorMessage = "I couldn't generate that image because it may violate content safety policies. Please try a different prompt.";
-          } else if (error.message.includes("API key")) {
+          if (error.message.includes("content policy") || 
+              error.message.includes("safety") || 
+              error.message.includes("violates")) {
+            errorMessage = "I couldn't generate that image because it may violate content safety policies. Please try a different prompt that doesn't include sensitive content.";
+          } else if (error.message.includes("API key") || 
+                    error.message.includes("authentication") ||
+                    error.message.includes("unauthorized")) {
             errorMessage = "I couldn't generate the image due to an API authentication error. The API key may be invalid or missing.";
-          } else if (error.message.includes("timeout") || error.message.includes("timed out")) {
-            errorMessage = "The image generation process timed out. Please try again with a simpler prompt.";
+          } else if (error.message.includes("timeout") || 
+                    error.message.includes("timed out") ||
+                    error.message.includes("429") ||
+                    error.message.includes("rate limit")) {
+            errorMessage = "The image generation service is currently busy. Please try again in a few moments or with a simpler prompt.";
+          } else if (error.message.includes("format") ||
+                    error.message.includes("parsing") ||
+                    error.message.includes("invalid")) {
+            errorMessage = "There was an issue with the image format. Please try a different prompt or request.";
           }
         }
+        
+        // Log the user-friendly error message
+        console.log(`[IMAGE-HANDLING] Sending user-friendly error message: ${errorMessage}`);
         
         // Send the error message to the user
         await storage.createChat({
