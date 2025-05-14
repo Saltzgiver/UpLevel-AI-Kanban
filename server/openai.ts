@@ -1242,7 +1242,8 @@ export async function generateImage(
         model: "gpt-image-1",
         prompt: prompt,
         n: 1,
-        size: size
+        size: size,
+        response_format: "b64_json" // This is the key change - gpt-image-1 DOES support b64_json
       };
       
       // Only add quality if it's not auto
@@ -1252,7 +1253,7 @@ export async function generateImage(
       
       console.log(`[IMAGE-GEN] Full API parameters for gpt-image-1: ${JSON.stringify(imagenParams)}`);
       
-      // Call OpenAI API with gpt-image-1 model - note that it doesn't support response_format
+      // Call OpenAI API with gpt-image-1 model with response_format=b64_json
       const imagenResult = await openai.images.generate(imagenParams);
       
       // Calculate response time
@@ -1275,79 +1276,52 @@ export async function generateImage(
         throw new Error("No image data returned from API");
       }
       
-      // For gpt-image-1, we'll get a URL instead of base64 data
-      console.log(`[IMAGE-GEN] Full Imagen result data: ${JSON.stringify(imagenResult.data)}`);
+      // For gpt-image-1, we'll get base64 data directly with response_format=b64_json
+      console.log(`[IMAGE-GEN] Full Imagen result data structure: ${JSON.stringify(Object.keys(imagenResult))}`);
+      console.log(`[IMAGE-GEN] Imagen result data structure: ${typeof imagenResult.data} with length ${Array.isArray(imagenResult.data) ? imagenResult.data.length : 'not an array'}`);
       
+      if (!imagenResult?.data || !Array.isArray(imagenResult.data) || imagenResult.data.length === 0) {
+        throw new Error("No image data returned from API");
+      }
+      
+      // Access the first item in the data array
       const imageData = imagenResult.data[0];
-      console.log(`[IMAGE-GEN] First image data item: ${JSON.stringify(imageData)}`);
+      console.log(`[IMAGE-GEN] Image data keys: ${JSON.stringify(Object.keys(imageData))}`);
       
-      // Check for URL in different formats - OpenAI sometimes changes response format
-      let imageUrl = null;
-      if (imageData && imageData.url) {
-        imageUrl = imageData.url;
-      } else if (imageData && typeof imageData === 'object') {
-        // Try to find URL in any property
-        const possibleUrls = Object.values(imageData).filter(
-          val => typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))
-        );
-        if (possibleUrls.length > 0) {
-          imageUrl = possibleUrls[0] as string;
-        }
+      // Check if we have base64 data in the response
+      if (!imageData.b64_json) {
+        throw new Error("No base64 data found in API response. Data keys: " + JSON.stringify(Object.keys(imageData)));
       }
       
-      if (!imageUrl) {
-        throw new Error("No image URL found in API response: " + JSON.stringify(imageData));
-      }
+      const base64Data = imageData.b64_json;
+      console.log(`[IMAGE-GEN] Successfully received base64 data from gpt-image-1 with length: ${base64Data.length}`);
       
-      console.log(`[IMAGE-GEN] Successfully received image URL from gpt-image-1: ${imageUrl.substring(0, 80)}...`);
+      // Clean the base64 data
+      const cleanedBase64 = cleanBase64(base64Data);
       
+      // Try to infer MIME type from base64 data
+      let mimeType = 'image/png'; // Default MIME type
       try {
-        // Fetch the image from the URL and convert to base64
-        console.log(`[IMAGE-GEN] Fetching image from URL`);
+        // Decode a small portion of the base64 to check the file signature
+        const buffer = Buffer.from(cleanedBase64.substring(0, 100), 'base64');
+        const inferredType = inferMimeTypeFromBuffer(buffer);
         
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) {
-          throw new Error(`Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`);
+        if (inferredType) {
+          console.log(`[IMAGE-GEN] Using inferred MIME type: ${inferredType}`);
+          mimeType = inferredType;
+        } else {
+          console.log(`[IMAGE-GEN] Could not infer MIME type, using default: ${mimeType}`);
         }
-        
-        // Get the image buffer
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const buffer = Buffer.from(imageBuffer);
-        
-        // Convert buffer to base64
-        const base64Data = buffer.toString('base64');
-        console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${base64Data.length}`);
-        
-        // Clean the base64 data
-        const cleanedBase64 = cleanBase64(base64Data);
-        
-        // Try to infer MIME type from base64 data
-        let mimeType = 'image/png'; // Default MIME type
-        try {
-          // Decode a small portion of the base64 to check the file signature
-          const sampleBuffer = Buffer.from(cleanedBase64.substring(0, 100), 'base64');
-          const inferredType = inferMimeTypeFromBuffer(sampleBuffer);
-          
-          if (inferredType) {
-            console.log(`[IMAGE-GEN] Using inferred MIME type: ${inferredType}`);
-            mimeType = inferredType;
-          } else {
-            console.log(`[IMAGE-GEN] Could not infer MIME type, using default: ${mimeType}`);
-          }
-        } catch (inferError) {
-          console.error(`[IMAGE-GEN] Error inferring MIME type:`, inferError);
-        }
-        
-        // Return the cleaned base64 data and inferred or default file type
-        return { 
-          base64: cleanedBase64, 
-          fileType: mimeType,
-          model: "gpt-image-1"
-        };
-      } catch (fetchError) {
-        console.error(`[IMAGE-GEN] Error fetching or processing image from URL:`, fetchError);
-        throw fetchError;
+      } catch (inferError) {
+        console.error(`[IMAGE-GEN] Error inferring MIME type:`, inferError);
       }
+      
+      // Return the cleaned base64 data and inferred or default file type
+      return { 
+        base64: cleanedBase64, 
+        fileType: mimeType,
+        model: "gpt-image-1"
+      };
     } else {
       // Use DALL-E 3 model directly
       console.log(`[IMAGE-GEN] Using dall-e-3 model for image generation`);

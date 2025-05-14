@@ -47,6 +47,7 @@ function Router() {
       <CustomRoute path="/prompt-analyzer-settings" component={PromptAnalyzerSettings} />
       <CustomRoute path="/global-settings" component={GlobalSettings} />
       <CustomRoute path="/image-api-test" component={ImageApiTest} />
+      <CustomRoute path="/image-test" component={ImageApiTest} showNav={false} />
       <CustomRoute component={NotFound} />
     </Switch>
   );
