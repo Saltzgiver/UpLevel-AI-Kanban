@@ -76,7 +76,7 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
   return colorPalette[defaultColor];
 };
 
-// Placeholder Image Dialog Modal Component (not used until image functionality is reimplemented)
+// Image Dialog Modal Component for image previews
 function ImageDialogModal({ 
   selectedImage, 
   setSelectedImage 
@@ -84,9 +84,55 @@ function ImageDialogModal({
   selectedImage: {src: string, alt: string} | null, 
   setSelectedImage: (image: {src: string, alt: string} | null) => void 
 }) {
-  // This component is currently disabled as part of image functionality removal
-  // It will be reimplemented in the future
-  return null;
+  if (!selectedImage) return null;
+  
+  // Log when the modal is opened
+  useEffect(() => {
+    if (selectedImage) {
+      console.log(`🖼️ [ImageDialogModal] Opened with image: ${selectedImage.src}`);
+    }
+    
+    // Log when modal is closed (cleanup function)
+    return () => {
+      if (selectedImage) {
+        console.log(`🖼️ [ImageDialogModal] Closed image: ${selectedImage.src}`);
+      }
+    };
+  }, [selectedImage]);
+
+  return (
+    <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <DialogContent className="max-w-3xl w-[90vw]">
+        <DialogHeader>
+          <DialogTitle>{selectedImage.alt || "Image Preview"}</DialogTitle>
+          <DialogClose />
+        </DialogHeader>
+        <div className="overflow-hidden rounded-md flex items-center justify-center">
+          <img
+            src={selectedImage.src}
+            alt={selectedImage.alt || "Image preview"}
+            className="max-h-[70vh] max-w-full object-contain"
+            onLoad={() => console.log(`🖼️ [ImageDialogModal] Image loaded successfully: ${selectedImage.src}`)}
+            onError={(e) => console.error(`🖼️ [ImageDialogModal] Error loading image: ${selectedImage.src}`, e)}
+          />
+        </div>
+        <div className="flex justify-between mt-2">
+          <p className="text-xs text-muted-foreground">
+            {selectedImage.alt || "AI generated image"}
+          </p>
+          <a 
+            href={selectedImage.src} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+            onClick={() => console.log(`🖼️ [ImageDialogModal] Download/view in new tab: ${selectedImage.src}`)}
+          >
+            <ExternalLink className="h-3 w-3" /> View full size
+          </a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function GPTChat({ 
@@ -489,20 +535,75 @@ export function GPTChat({
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      console.log("[IMAGE-HANDLING] Image rendering requested but functionality is disabled for reimplementation");
+      // Log the image source for debugging
+      console.log(`🖼️ [GPTChat:${cardId}] Rendering image in markdown: ${src}`, { alt });
       
-      // Display a notice that image functionality is temporarily unavailable
-      return (
-        <div className="my-2 rounded-lg overflow-hidden border border-amber-200 bg-amber-50 p-4 text-amber-700">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-medium">Image Generation Temporarily Unavailable</span>
+      // Check if the source URL matches the pattern for attachment API
+      const isAttachmentImage = src.startsWith('/api/attachments/');
+      
+      if (isAttachmentImage) {
+        // Extract the attachment ID from the URL
+        const attachmentId = src.replace('/api/attachments/', '');
+        console.log(`🖼️ [GPTChat:${cardId}] Detected attachment image with ID: ${attachmentId}`);
+        
+        // Create click handler to open the image preview modal
+        const handleImageClick = () => {
+          console.log(`🖼️ [GPTChat:${cardId}] Image clicked, opening modal for: ${src}`);
+          setSelectedImage({ src, alt: alt || 'AI Generated Image' });
+        };
+        
+        // Return the image with click handler for modal
+        return (
+          <div className="my-2 inline-block">
+            <div 
+              className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200"
+              onClick={handleImageClick}
+            >
+              {/* Expand indicator overlay */}
+              <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
+                <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
+                <span>View full size</span>
+              </div>
+              
+              <img 
+                src={src} 
+                alt={alt || 'AI Generated Image'} 
+                className="max-w-full object-cover max-h-64 hover:opacity-95 transition-opacity"
+                onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${src}`)}
+                onError={(e) => {
+                  console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${src}`, e);
+                  // Replace with error message on load failure
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'bg-red-50 border border-red-200 rounded-md p-2 text-red-500 text-xs';
+                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId})`;
+                    parent.appendChild(errorDiv);
+                  }
+                }}
+              />
+            </div>
+            <div className="text-[10px] text-gray-500 mt-0.5">
+              {alt || 'AI Generated Image'}
+            </div>
           </div>
-          <p className="mt-2 text-sm">
-            The image functionality is currently being reimplemented to provide enhanced capabilities. Regular chat functionality remains available.
-          </p>
-        </div>
-      );
+        );
+      } else {
+        // For non-attachment images (external URLs), render them normally
+        // but still allow clicking to view in the modal
+        return (
+          <img 
+            src={src} 
+            alt={alt || 'Image'} 
+            className="max-w-full my-1 cursor-pointer hover:opacity-90"
+            onClick={() => setSelectedImage({ src, alt })}
+            onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] External image loaded: ${src}`)}
+            onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading external image: ${src}`, e)}
+          />
+        );
+      }
     };
     
     return (
