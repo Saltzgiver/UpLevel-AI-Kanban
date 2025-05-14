@@ -197,7 +197,7 @@ export default function ImageApiTest() {
                                 <Info className="h-4 w-4 text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p className="w-[200px]">OpenAI's newest model released May 2025 with higher quality and better understanding</p>
+                                <div className="w-[200px]">OpenAI's newest model released May 2025 with higher quality and better understanding</div>
                               </TooltipContent>
                             </Tooltip>
                           </Label>
@@ -213,7 +213,7 @@ export default function ImageApiTest() {
                                 <Info className="h-4 w-4 text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p className="w-[200px]">Widely available and reliable image generation model</p>
+                                <div className="w-[200px]">Widely available and reliable image generation model</div>
                               </TooltipContent>
                             </Tooltip>
                           </Label>
