@@ -8,7 +8,7 @@
  * Run with: node test-image-chat.js
  */
 
-const fetch = require('node-fetch').default;
+import fetch from 'node-fetch';
 
 // Test card ID - should be in a column with GPT enabled
 const TEST_CARD_ID = 94; // This card exists in the Image column
