@@ -753,14 +753,23 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
     console.log(`[IMAGE-GEN] Making API call with model: ${model}, response format: ${responseFormat}`);
     
     // Make the API call with proper typing
-    const result = await openai.images.generate({
+    // Note: Different models might support different parameters
+    const params: any = {
       model,
       prompt,
       n: 1,
       size: "1024x1024",
-      quality: "standard",
-      response_format: responseFormat as "b64_json" | "url" | null | undefined,
-    });
+      quality: "high" as "high", // Explicitly typed as the literal type 'high'
+    };
+    
+    // Only add responseFormat if the model supports it
+    if (model === "dall-e-3") {
+      console.log(`[IMAGE-GEN] Adding response_format for DALL-E 3`);
+      params.response_format = "url";
+    }
+    
+    console.log(`[IMAGE-GEN] Final API parameters:`, params);
+    const result = await openai.images.generate(params);
     
     console.log(`[IMAGE-GEN] API call successful with model: ${model}`);
     
@@ -805,14 +814,17 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
         
         try {
           // Attempt with DALL-E 3
-          const fallbackResult = await openai.images.generate({
+          const fallbackParams = {
             model: "dall-e-3",
             prompt,
             n: 1,
             size: "1024x1024",
-            quality: "standard",
-            response_format: "url" as "url",
-          });
+            quality: "high", // Using 'high' quality which is supported
+            response_format: "url"
+          };
+          
+          console.log(`[IMAGE-GEN] Fallback API parameters:`, fallbackParams);
+          const fallbackResult = await openai.images.generate(fallbackParams);
           
           console.log(`[IMAGE-GEN] Fallback to DALL-E 3 successful`);
           
