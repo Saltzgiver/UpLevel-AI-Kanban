@@ -32,10 +32,10 @@ async function testImageGeneration() {
     }
     console.log(`Found column: ${column.name}`);
     
-    if (!column.gptEnabled) {
-      throw new Error(`Column ${column.name} does not have GPT enabled`);
+    if (!column.gptAssigned) {
+      throw new Error(`Column ${column.name} does not have GPT assigned`);
     }
-    console.log(`Column has GPT enabled: ${column.gptEnabled}`);
+    console.log(`Column has GPT assigned: ${column.gptAssigned}`);
     console.log(`GPT Name: ${column.gptName || 'Default'}`);
     
     // Create an image generation request
@@ -67,13 +67,18 @@ async function testImageGeneration() {
     console.log(`Found ${chats.length} chats for the card`);
     
     // Get the most recent chats (up to 5)
-    const recentChats = chats
-      .sort((a, b) => new Date(b.timestamp || Date.now()) - new Date(a.timestamp || Date.now()))
+    const recentChats = [...chats]
+      .sort((a, b) => {
+        const timeA = a.timestamp ? new Date(a.timestamp).toString() : new Date().toString();
+        const timeB = b.timestamp ? new Date(b.timestamp).toString() : new Date().toString();
+        return timeB.localeCompare(timeA);
+      })
       .slice(0, 5);
     
     console.log('\nMost recent chat messages:');
     recentChats.forEach((chat, i) => {
-      console.log(`\n[${i+1}] ${chat.role.toUpperCase()} - ${new Date(chat.timestamp || Date.now()).toISOString()}`);
+      const timestamp = chat.timestamp ? new Date(chat.timestamp).toISOString() : new Date().toISOString();
+      console.log(`\n[${i+1}] ${chat.role.toUpperCase()} - ${timestamp}`);
       console.log(chat.content.substring(0, 200) + (chat.content.length > 200 ? '...' : ''));
     });
     
@@ -107,9 +112,11 @@ async function testImageGeneration() {
     
     if (imageAttachments.length > 0) {
       // Display the most recent image attachment
-      const latestImage = imageAttachments.sort((a, b) => 
-        new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now())
-      )[0];
+      const latestImage = [...imageAttachments].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).toString() : new Date().toString();
+        const timeB = b.createdAt ? new Date(b.createdAt).toString() : new Date().toString();
+        return timeB.localeCompare(timeA);
+      })[0];
       
       console.log('\nMost recent image attachment:');
       console.log(`ID: ${latestImage.id}`);
@@ -119,7 +126,7 @@ async function testImageGeneration() {
       console.log(`Content length: ${latestImage.content.length} characters`);
       
       // Check if this was created during our test
-      const attachmentTime = new Date(latestImage.createdAt || Date.now());
+      const attachmentTime = latestImage.createdAt ? new Date(latestImage.createdAt) : new Date();
       const testStartTime = new Date(Date.now() - 20000); // 20 seconds ago
       
       if (attachmentTime > testStartTime) {
