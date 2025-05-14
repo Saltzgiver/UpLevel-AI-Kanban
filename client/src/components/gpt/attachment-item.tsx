@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Download, Trash2, FileText, Image, File, Loader2, Maximize2, Table,
   Folder, Link as LinkIcon, Ticket
@@ -19,6 +19,7 @@ interface AttachmentItemProps {
 export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const { toast } = useToast();
   
   // Check if this is an image attachment
@@ -26,11 +27,27 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
 
   // Check if this is a CSV file
   const isCSV = attachment.fileType.includes('csv') || attachment.filename.endsWith('.csv');
+  
+  // Log attachment details on component mount for debugging
+  useEffect(() => {
+    console.log(`📎 [AttachmentItem] Rendering attachment:`, {
+      id: attachment.id,
+      filename: attachment.filename,
+      fileType: attachment.fileType,
+      isImage: isImage,
+      isCSV: isCSV,
+      contentLength: attachment.content ? attachment.content.length : 0
+    });
+  }, [attachment, isImage, isCSV]);
 
   const handleDownload = () => {
     try {
       // Use direct API endpoint for all files to ensure consistent behavior
-      console.log("Using server API endpoint for file download");
+      console.log(`📥 [AttachmentItem] Downloading attachment:`, {
+        id: attachment.id,
+        filename: attachment.filename,
+        fileType: attachment.fileType
+      });
       
       // Create a direct link to the attachment endpoint
       const link = document.createElement('a');
@@ -46,17 +63,35 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Error downloading attachment:", error);
-      alert("Error downloading file. Please try again.");
+      console.error("❌ [AttachmentItem] Error downloading attachment:", error);
+      toast({
+        title: "Download error",
+        description: "There was a problem downloading this file. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleDelete = async () => {
+    console.log(`🗑️ [AttachmentItem] Deleting attachment:`, {
+      id: attachment.id,
+      filename: attachment.filename,
+      fileType: attachment.fileType
+    });
+    
     setIsDeleting(true);
     
     try {
       await apiRequest("DELETE", `/api/attachments/${attachment.id}`, {});
+      
+      // Invalidate all relevant queries to ensure UI is updated properly
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${attachment.cardId}/attachments`] });
+      
+      console.log(`✅ [AttachmentItem] Successfully deleted attachment:`, {
+        id: attachment.id,
+        filename: attachment.filename
+      });
       
       // Call the onDelete callback if provided
       if (onDelete) {
@@ -65,12 +100,17 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
       
       toast({
         title: "Success",
-        description: "Attachment deleted",
+        description: "Attachment deleted successfully",
       });
     } catch (error) {
+      console.error(`❌ [AttachmentItem] Error deleting attachment:`, {
+        id: attachment.id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
       toast({
         title: "Error",
-        description: "Failed to delete attachment",
+        description: "Failed to delete attachment. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -123,42 +163,70 @@ export function AttachmentItem({ attachment, onDelete }: AttachmentItemProps) {
   
   // Create a URL for attachment content - either using API endpoint for images or data URL for other types
   const getAttachmentUrl = () => {
+    console.log(`🔗 [AttachmentItem] Getting URL for attachment:`, {
+      id: attachment.id,
+      isImage: isImage
+    });
+    
     // Use the direct API endpoint for images to improve performance
     if (isImage) {
-      return `/api/attachments/${attachment.id}`;
+      const imageUrl = `/api/attachments/${attachment.id}`;
+      console.log(`🖼️ [AttachmentItem] Using API endpoint for image:`, imageUrl);
+      return imageUrl;
     }
+    
     // Fall back to data URL for other content types when needed
+    console.log(`📄 [AttachmentItem] Using data URL for non-image attachment:`, {
+      type: attachment.fileType,
+      contentLength: attachment.content ? attachment.content.length : 0
+    });
     return `data:${attachment.fileType};base64,${attachment.content}`;
   };
   
   // Safely decode base64 content for CSV files
   const getCSVContent = () => {
     try {
-      if (!attachment.content) return "";
+      console.log(`📊 [AttachmentItem] Processing CSV content for attachment:`, {
+        id: attachment.id,
+        filename: attachment.filename,
+        contentLength: attachment.content ? attachment.content.length : 0
+      });
+      
+      if (!attachment.content) {
+        console.warn(`⚠️ [AttachmentItem] Empty content for CSV file:`, attachment.id);
+        return "";
+      }
       
       // Check if content is already in text format
       if (attachment.content.trim().startsWith('id,') || 
           attachment.content.trim().startsWith('name,') ||
           attachment.content.includes('\n') || 
           attachment.content.includes(',')) {
+        console.log(`📄 [AttachmentItem] Content appears to be plain text CSV already`);
         return attachment.content;
       }
       
       // Try to decode base64 using a safer method
       try {
+        console.log(`🔄 [AttachmentItem] Attempting to decode base64 content for CSV`);
         // Use a safer approach to decode base64
         const binaryStr = window.atob(attachment.content);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) {
           bytes[i] = binaryStr.charCodeAt(i);
         }
-        return new TextDecoder().decode(bytes);
+        const decoded = new TextDecoder().decode(bytes);
+        console.log(`✅ [AttachmentItem] Successfully decoded CSV content`, {
+          decodedLength: decoded.length,
+          previewStart: decoded.substring(0, 50) + '...'
+        });
+        return decoded;
       } catch (decodeError) {
-        console.error("Base64 decoding failed:", decodeError);
+        console.error(`❌ [AttachmentItem] Base64 decoding failed:`, decodeError);
         return attachment.content;
       }
     } catch (error) {
-      console.error("Error processing CSV content:", error);
+      console.error(`❌ [AttachmentItem] Error processing CSV content:`, error);
       return "Error processing CSV content. Please download the file to view its contents.";
     }
   };
