@@ -722,16 +722,21 @@ export function GPTChat({
         <ChatMessages />
       </div>
 
+      {/* Debug Logger removed from JSX and moved to a component effect */}
+      
       {/* Attachments Section - Display only if we have attachments */}
       {attachments.length > 0 && (
-        <div className="border-t border-gray-100 px-4 py-2">
+        <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
           <div className="flex items-center mb-2">
             <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
             <span className="text-sm font-medium text-gray-700">Attachments ({attachments.length})</span>
+            <div className="ml-auto text-xs text-gray-500">
+              {/* Empty div for layout purposes */}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {attachments.map(attachment => (
-              <div key={attachment.id} className="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5">
+              <div key={attachment.id}>
                 <AttachmentItem 
                   attachment={attachment} 
                   onDelete={() => {
@@ -799,6 +804,31 @@ export function GPTChat({
         >
           <ChatMessages />
         </div>
+
+        {/* Debug Logger for non-embedded view removed from JSX */}
+        
+        {/* Attachments Section - Display only if we have attachments (non-embedded view) */}
+        {attachments.length > 0 && (
+          <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
+            <div className="flex items-center mb-2">
+              <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
+              <span className="text-sm font-medium text-gray-700">Attachments ({attachments.length})</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {attachments.map(attachment => (
+                <div key={attachment.id}>
+                  <AttachmentItem 
+                    attachment={attachment} 
+                    onDelete={() => {
+                      // Refresh the attachments list after deletion
+                      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         {/* Chat Input - Fixed at the bottom */}
         <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
