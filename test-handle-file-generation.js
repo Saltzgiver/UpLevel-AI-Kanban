@@ -10,8 +10,8 @@
 import { storage } from './server/storage';
 import { handleFileGeneration } from './server/openai';
 
-// Test card ID - should be an existing card in the database
-const TEST_CARD_ID = 112;  // Update this to an actual card ID in your database
+// Test card ID - using a valid card ID from the database
+const TEST_CARD_ID = 94;  // ID 94 exists in column 21 ('Image' column)
 
 // Base64 encoded PNG image (1x1 pixel, transparent)
 const SAMPLE_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -30,7 +30,7 @@ async function testHandleFileGenerationWithBase64() {
   
   try {
     // Call the handleFileGeneration function with our test data
-    await openai.handleFileGeneration(
+    await handleFileGeneration(
       TEST_CARD_ID,
       SAMPLE_RESPONSE,
       {
@@ -68,7 +68,7 @@ async function testHandleFileGenerationWithUrl() {
   
   try {
     // Call the handleFileGeneration function with our test data
-    await openai.handleFileGeneration(
+    await handleFileGeneration(
       TEST_CARD_ID,
       SAMPLE_RESPONSE,
       {
