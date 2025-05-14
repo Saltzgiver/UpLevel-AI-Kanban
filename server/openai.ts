@@ -721,9 +721,58 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  * Placeholder for image generation functionality (removed)
  * This will be reimplemented in the future
  */
-export async function generateImage(prompt: string, apiKey?: string): Promise<string> {
-  console.log(`[IMAGE-GEN] Image generation has been disabled for reimplementation`);
-  throw new Error("Image generation functionality has been temporarily removed for reimplementation");
+/**
+ * Generates an image using OpenAI's gpt-image-1 model
+ * 
+ * @param prompt Text prompt to generate the image from
+ * @param apiKey Optional API key, if not provided will use environment variable
+ * @returns Object containing base64 image data and file type
+ */
+export async function generateImage(prompt: string, apiKey?: string): Promise<{ base64: string, fileType: string }> {
+  console.log(`[IMAGE-GEN] Starting image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
+  console.log(`[IMAGE-GEN] API key source: ${apiKey ? 'custom key provided' : 'using environment variable'}`);
+  
+  // Initialize OpenAI client
+  const openai = getOpenAIClient(apiKey);
+  
+  try {
+    console.log(`[IMAGE-GEN] Using gpt-image-1 model for image generation`);
+    console.log(`[IMAGE-GEN] Parameters: model=gpt-image-1, response_format=b64_json, n=1, size=1024x1024`);
+    
+    // Call the OpenAI API to generate the image
+    const result = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: prompt,
+      response_format: "b64_json",
+      n: 1,
+      size: "1024x1024",
+      quality: "standard"
+    });
+    
+    console.log(`[IMAGE-GEN] API call to gpt-image-1 successful`);
+    
+    // Get the base64 data from the response
+    const base64Data = result.data[0].b64_json;
+    
+    if (!base64Data) {
+      throw new Error("No base64 image data returned from API");
+    }
+    
+    console.log(`[IMAGE-GEN] Successfully received base64 data of length: ${base64Data.length}`);
+    
+    // Return the base64 data and file type
+    const response = { 
+      base64: base64Data, 
+      fileType: 'image/png' 
+    };
+    
+    console.log(`[IMAGE-GEN] Returning base64 image data`);
+    return response;
+    
+  } catch (error) {
+    console.error(`[IMAGE-GEN] Error generating image:`, error);
+    throw error;
+  }
 }
 
 /**
