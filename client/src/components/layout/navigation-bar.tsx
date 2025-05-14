@@ -138,6 +138,12 @@ export function NavigationBar({ className }: NavigationBarProps) {
                   <span>Direct Toast Test</span>
                 </DropdownMenuItem>
               </Link>
+              <Link href="/image-api-test" className="w-full">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Image className="mr-2 h-4 w-4" />
+                  <span>Image API Test</span>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />
