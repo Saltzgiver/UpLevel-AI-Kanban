@@ -1242,8 +1242,8 @@ export async function generateImage(
         model: "gpt-image-1",
         prompt: prompt,
         n: 1,
-        size: size,
-        response_format: "b64_json" // This is the key change - gpt-image-1 DOES support b64_json
+        size: size
+        // Note: gpt-image-1 does NOT support the response_format parameter
       };
       
       // Only add quality if it's not auto
@@ -1288,13 +1288,22 @@ export async function generateImage(
       const imageData = imagenResult.data[0];
       console.log(`[IMAGE-GEN] Image data keys: ${JSON.stringify(Object.keys(imageData))}`);
       
-      // Check if we have base64 data in the response
-      if (!imageData.b64_json) {
-        throw new Error("No base64 data found in API response. Data keys: " + JSON.stringify(Object.keys(imageData)));
+      // Check for image URL, as gpt-image-1 returns URLs instead of base64
+      if (!imageData.url) {
+        throw new Error("No image URL found in API response. Data keys: " + JSON.stringify(Object.keys(imageData)));
       }
       
-      const base64Data = imageData.b64_json;
-      console.log(`[IMAGE-GEN] Successfully received base64 data from gpt-image-1 with length: ${base64Data.length}`);
+      // We need to fetch the image and convert it to base64
+      console.log(`[IMAGE-GEN] Fetching image from URL: ${imageData.url}`);
+      
+      // Use node-fetch to get the image
+      const fetch = await import('node-fetch');
+      const response = await fetch.default(imageData.url);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64Data = buffer.toString('base64');
+      
+      console.log(`[IMAGE-GEN] Successfully converted image URL to base64 with length: ${base64Data.length}`);
       
       // Clean the base64 data
       const cleanedBase64 = cleanBase64(base64Data);

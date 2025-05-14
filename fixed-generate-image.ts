@@ -15,6 +15,7 @@ export async function generateImage(
   }
 
   // Initialize OpenAI client
+  const OpenAI = (await import('openai')).default;
   const openai = new OpenAI({ apiKey: openaiApiKey });
 
   // Determine the actual model to use
@@ -42,8 +43,8 @@ export async function generateImage(
         model: "gpt-image-1",
         prompt: prompt,
         n: 1,
-        size: size,
-        response_format: "b64_json" // This is the key change - gpt-image-1 DOES support b64_json
+        size: size
+        // Note: gpt-image-1 does NOT support the response_format parameter
       };
       
       // Only add quality if it's not auto
