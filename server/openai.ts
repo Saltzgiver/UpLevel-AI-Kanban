@@ -1237,14 +1237,23 @@ export async function generateImage(
       const startTime = Date.now();
       console.log(`[IMAGE-GEN] Starting API call at: ${new Date().toISOString()}`);
       
-      // Call OpenAI API with gpt-image-1 model - note that it doesn't support response_format
-      const imagenResult = await openai.images.generate({
+      // Prepare parameters for the API call
+      const imagenParams: any = {
         model: "gpt-image-1",
         prompt: prompt,
         n: 1,
-        size: size,
-        quality: quality === "auto" ? undefined : quality
-      });
+        size: size
+      };
+      
+      // Only add quality if it's not auto
+      if (quality !== "auto") {
+        imagenParams.quality = quality;
+      }
+      
+      console.log(`[IMAGE-GEN] Full API parameters for gpt-image-1: ${JSON.stringify(imagenParams)}`);
+      
+      // Call OpenAI API with gpt-image-1 model - note that it doesn't support response_format
+      const imagenResult = await openai.images.generate(imagenParams);
       
       // Calculate response time
       const endTime = Date.now();

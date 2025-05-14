@@ -22,6 +22,7 @@ export default function ImageApiTest() {
   const [resultType, setResultType] = useState<"success" | "error" | null>(null);
   const [selectedModel, setSelectedModel] = useState<"gpt-image-1" | "dall-e-3" | "auto">("auto");
   const [imageQuality, setImageQuality] = useState<"low" | "medium" | "high" | "auto">("auto");
+  const [apiDebugInfo, setApiDebugInfo] = useState<any>(null);
   const { toast } = useToast();
 
   const handleImageGeneration = async () => {
@@ -41,6 +42,7 @@ export default function ImageApiTest() {
       setResponseTime(null);
       setModelInfo(null);
       setResultType(null);
+      setApiDebugInfo(null);
 
       // Record start time for timing
       const startTime = Date.now();
@@ -85,6 +87,30 @@ export default function ImageApiTest() {
       setImageUrl(data.url || data.base64);
       setModelInfo(data.model || "unknown");
       setResultType("success");
+      
+      // Store debug info for display
+      setApiDebugInfo({
+        openaiRequest: {
+          model: selectedModel,
+          prompt: prompt.substring(0, 30) + (prompt.length > 30 ? "..." : ""),
+          size: imageSize,
+          quality: imageQuality !== "auto" ? imageQuality : undefined,
+          n: 1
+        },
+        openaiResponse: {
+          actualModel: data.model,
+          responseTime: data.responseTimeSeconds,
+          base64Length: data.debugInfo?.base64Length || "unknown",
+          ...data.debugInfo
+        },
+        exactApiRequest: {
+          model: selectedModel,
+          size: imageSize,
+          quality: imageQuality,
+          requestTimestamp: new Date().toISOString()
+        },
+        exactApiResponse: data
+      });
       
       // Show more detailed success information
       const modelUsed = data.model || "unknown";
@@ -282,6 +308,36 @@ export default function ImageApiTest() {
                   <pre className="whitespace-pre-wrap text-sm font-mono">{error}</pre>
                 </div>
               )}
+              
+              {/* API Debug Information Section */}
+              <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-md p-3">
+                <h3 className="text-sm font-medium mb-2 flex items-center">
+                  <Info className="w-4 h-4 mr-1" />
+                  API Request Details
+                </h3>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="col-span-2 mb-2">
+                    <div className="font-semibold">Request Parameters:</div>
+                    <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-900 p-2 rounded text-xs mt-1">
+                      {JSON.stringify({
+                        prompt: prompt.substring(0, 30) + (prompt.length > 30 ? "..." : ""),
+                        model: selectedModel,
+                        size: imageSize,
+                        quality: imageQuality
+                      }, null, 2)}
+                    </pre>
+                  </div>
+                  
+                  {apiDebugInfo && (
+                    <div className="col-span-2">
+                      <div className="font-semibold">API Response Info:</div>
+                      <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-900 p-2 rounded text-xs mt-1">
+                        {JSON.stringify(apiDebugInfo, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
               
               {imageUrl && (
                 <div className="space-y-4">
