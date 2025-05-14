@@ -474,6 +474,17 @@ export function GPTChat({
       console.log(`🔍 [GPTChat:${cardId}] embedded: ${!!embedded}`);
     }, [isProcessing, finalOutput, embedded, cardId]);
     
+    // Debug logging for attachments
+    useEffect(() => {
+      if (attachments.length > 0) {
+        console.log(`📎 [GPTChat:${cardId}] Component has ${attachments.length} attachments:`, 
+          attachments.map(a => ({ id: a.id, filename: a.filename, fileType: a.fileType }))
+        );
+      } else {
+        console.log(`📎 [GPTChat:${cardId}] No attachments available`);
+      }
+    }, [attachments, cardId]);
+    
     // Determine if we should show processing indicator
     // Hide it if we already have a final output (could be stuck in processing state)
     // Also hide it when embedded in a card (per user requirement)
