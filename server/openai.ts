@@ -505,15 +505,17 @@ export async function getPromptSuggestion(
     cardId: number;
     title: string;
     description: string;
-    chats: Chat[];
-  }
+    attachments?: any[];
+  },
+  chats: any[],
+  apiKey?: string
 ): Promise<string | null> {
   try {
     console.log(`Generating prompt suggestion for column instructions: "${sourceColumnInstructions.substring(0, 50)}..."`);
-    console.log(`Card context: ${cardContext.title}, ${cardContext.chats.length} chats`);
+    console.log(`Card context: ${cardContext.title}, ${chats?.length || 0} chats`);
     
     // Skip if no chats to analyze
-    if (!cardContext.chats || cardContext.chats.length < 2) {
+    if (!chats || chats.length < 2) {
       console.log(`Not enough chat history to generate a meaningful suggestion`);
       return null;
     }
