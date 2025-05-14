@@ -681,7 +681,7 @@ export function GPTChat({
             type="text"
             placeholder={gptName === "Comments" 
               ? "Add a comment..." 
-              : `Ask ${gptName || 'AI'} a question or "create an image of..."`}
+              : `Ask ${gptName || 'AI'} a question or try "generate an image of..."`}
             className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
