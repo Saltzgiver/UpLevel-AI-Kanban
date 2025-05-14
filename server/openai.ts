@@ -737,37 +737,51 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
   
   try {
     console.log(`[IMAGE-GEN] Using gpt-image-1 model for image generation`);
-    console.log(`[IMAGE-GEN] Parameters: model=gpt-image-1, response_format=b64_json, n=1, size=1024x1024`);
+    console.log(`[IMAGE-GEN] Parameters: model=gpt-image-1, n=1, size=1024x1024`);
     
     // Call the OpenAI API to generate the image
     const result = await openai.images.generate({
       model: "gpt-image-1",
       prompt: prompt,
-      response_format: "b64_json",
       n: 1,
-      size: "1024x1024",
-      quality: "standard"
+      size: "1024x1024"
     });
     
     console.log(`[IMAGE-GEN] API call to gpt-image-1 successful`);
     
-    // Get the base64 data from the response
-    const base64Data = result.data[0].b64_json;
-    
-    if (!base64Data) {
-      throw new Error("No base64 image data returned from API");
+    // Check if we have data in the response
+    if (!result?.data || !Array.isArray(result.data) || result.data.length === 0) {
+      throw new Error("No image data returned from API");
     }
     
-    console.log(`[IMAGE-GEN] Successfully received base64 data of length: ${base64Data.length}`);
+    // Get the URL from the response - using non-null assertion since we've already checked
+    const imageUrl = result.data[0]?.url;
+    
+    if (!imageUrl) {
+      throw new Error("No image URL returned from API");
+    }
+    
+    console.log(`[IMAGE-GEN] Successfully received image URL: ${imageUrl}`);
+    
+    // Make a request to download the image
+    console.log(`[IMAGE-GEN] Fetching image from URL to convert to base64`);
+    const fetch = await import('node-fetch');
+    const response = await fetch.default(imageUrl);
+    const imageBuffer = await response.arrayBuffer();
+    
+    // Convert the buffer to base64
+    const base64Data = Buffer.from(imageBuffer).toString('base64');
+    
+    console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${base64Data.length}`);
     
     // Return the base64 data and file type
-    const response = { 
+    const returnObj = { 
       base64: base64Data, 
       fileType: 'image/png' 
     };
     
     console.log(`[IMAGE-GEN] Returning base64 image data`);
-    return response;
+    return returnObj;
     
   } catch (error) {
     console.error(`[IMAGE-GEN] Error generating image:`, error);
