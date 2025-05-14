@@ -7,7 +7,7 @@
  * 3. Error handling and user feedback
  */
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function makeRequest(endpoint, method = 'GET', body = undefined) {
   const options = {
