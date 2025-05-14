@@ -1075,33 +1075,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CHAT ROUTES
   app.post("/api/chats", async (req, res) => {
+    console.log("POST /api/chats - Processing new chat message");
     try {
       // Parse the request body without timestamp, let database handle it
       const chatData = insertChatSchema.parse(req.body);
       
       // Create user chat message
       const chat = await storage.createChat(chatData);
+      console.log(`Created chat message for card ${chatData.cardId}`);
       
       // Get card and column
       const card = await storage.getCardById(chatData.cardId);
       if (!card) {
+        console.log(`Card ${chatData.cardId} not found`);
         return res.status(404).json({ message: "Card not found" });
       }
       
       const column = await storage.getColumnById(card.columnId);
       if (!column || !column.gptAssigned) {
+        console.log(`Column ${card.columnId} has no GPT assigned`);
         return res.status(400).json({ message: "Column has no GPT assigned" });
+      }
+      
+      // Define image request patterns
+      const imageRequestPatterns = [
+        /create (?:an|a) image/i,
+        /generate (?:an|a) image/i,
+        /make (?:an|a) image/i,
+        /draw (?:an|a) image/i,
+        /create (?:an|a) picture/i,
+        /generate (?:an|a) picture/i,
+        /make (?:an|a) picture/i,
+        /draw (?:an|a) picture/i,
+        /show me (?:an|a) image/i,
+        /can you create (?:an|a) image/i,
+        /image of/i,
+        /picture of/i,
+        /visualization of/i
+      ];
+      
+      // Check if the message content matches any image request pattern
+      const isImageRequest = imageRequestPatterns.some(pattern => 
+        pattern.test(chatData.content)
+      );
+      
+      if (isImageRequest) {
+        console.log(`Image generation request detected in message: "${chatData.content.substring(0, 50)}${chatData.content.length > 50 ? '...' : ''}"`);
+        console.log(`Checking if column ${column.id} is GPT-assigned: ${column.gptAssigned}`);
       }
       
       // Mark card as processing while GPT is generating a response
       await storage.updateCard(chatData.cardId, { processing: true });
+      console.log(`Set processing flag to true for card ${chatData.cardId}`);
       
       // Return response immediately
       res.status(201).json(chat);
       
       // Process the chat message with GPT after response is sent
       try {
-        await processChat(chatData.cardId, chatData.content, column);
+        if (isImageRequest && column.gptAssigned) {
+          console.log(`Triggering GPT processing for image generation request - Card ${chatData.cardId}`);
+          await triggerGPTProcessing(chatData.cardId, column);
+        } else {
+          // Standard text processing
+          console.log(`Triggering standard chat processing - Card ${chatData.cardId}`);
+          await processChat(chatData.cardId, chatData.content, column);
+        }
       } catch (error) {
         console.error("Error processing chat with GPT:", error);
         // Make sure processing flag is cleared even if there's an error
