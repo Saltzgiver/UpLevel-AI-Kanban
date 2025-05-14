@@ -11,15 +11,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Wrapper component with specific padding for the Image API test page
-function ImageApiTestWrapper(props: { children: React.ReactNode }) {
-  return (
-    <div className="px-6">
-      {props.children}
-    </div>
-  );
-}
-
 export default function ImageApiTest() {
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -57,87 +48,71 @@ export default function ImageApiTest() {
       const startTime = Date.now();
 
       // Call image generation endpoint
-      const response = await fetch("/api/image-generation/test", {
+      const response = await fetch("/api/generate-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          prompt, 
+        body: JSON.stringify({
+          prompt,
           size: imageSize,
           model: selectedModel,
-          quality: imageQuality
+          quality: imageQuality,
         }),
       });
 
-      // Calculate response time
-      const endTime = Date.now();
-      const timeElapsed = (endTime - startTime) / 1000; // in seconds
-      setResponseTime(timeElapsed);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log("API Error Details:", errorData);
-        
-        // Show more detailed error information
-        const errorDetails = errorData.details ? 
-          `\nDetails: ${errorData.details.substring(0, 150)}` : '';
-        const requestInfo = errorData.requestDetails ? 
-          `\nRequest: Model=${errorData.requestDetails.model}, Quality=${errorData.requestDetails.quality}` : '';
-          
-        throw new Error(`${errorData.error || "Failed to generate image"}${errorDetails}${requestInfo}`);
-      }
-
       const data = await response.json();
-      console.log("API Success Response:", data);
-      console.log("API Debug Info:", data.debugInfo);
       
-      // Set result data
-      setImageUrl(data.url || data.base64);
-      setModelInfo(data.model || "unknown");
-      setResultType("success");
-      
-      // Store debug info for display
-      setApiDebugInfo({
-        openaiRequest: {
-          model: selectedModel,
-          prompt: prompt.substring(0, 30) + (prompt.length > 30 ? "..." : ""),
-          size: imageSize,
-          quality: imageQuality !== "auto" ? imageQuality : undefined,
-          n: 1
-        },
-        openaiResponse: {
-          actualModel: data.model,
-          responseTime: data.responseTimeSeconds,
-          base64Length: data.debugInfo?.base64Length || "unknown",
-          ...data.debugInfo
-        },
-        exactApiRequest: {
-          model: selectedModel,
-          size: imageSize,
-          quality: imageQuality,
-          requestTimestamp: new Date().toISOString()
-        },
-        exactApiResponse: data
-      });
-      
-      // Show more detailed success information
-      const modelUsed = data.model || "unknown";
-      const requestedModel = data.debugInfo?.requestedModel || selectedModel;
-      const actualModel = data.debugInfo?.actualModel || modelUsed;
-      
-      toast({
-        title: "Success",
-        description: `Image generated in ${timeElapsed.toFixed(1)} seconds using ${actualModel} ${requestedModel !== actualModel ? `(requested: ${requestedModel})` : ''}`,
-      });
+      // Calculate response time in seconds
+      const endTime = Date.now();
+      setResponseTime((endTime - startTime) / 1000);
+
+      // Handle the response data
+      if (response.ok) {
+        if (data.error) {
+          setError(data.error);
+          setResultType("error");
+          toast({
+            title: "Error",
+            description: "Failed to generate image",
+            variant: "destructive",
+          });
+        } else {
+          // Set URL for display
+          setImageUrl(data.imageUrl); 
+          
+          // Set model info and result type for success state
+          setModelInfo(data.model);
+          setResultType("success");
+          
+          // Store debug info for the debug panel (if returned)
+          if (data.debug) {
+            setApiDebugInfo(data.debug);
+          }
+          
+          toast({
+            title: "Success",
+            description: "Image generated successfully",
+            variant: "default",
+          });
+        }
+      } else {
+        // Handle API errors
+        setError(data.error || "Failed to generate image");
+        setResultType("error");
+        toast({
+          title: "Error",
+          description: "API request failed",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
-      console.error("Image generation error:", err);
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      console.error("Error generating image:", err);
+      setError("An unexpected error occurred");
       setResultType("error");
-      
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to generate image",
+        description: "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -146,389 +121,269 @@ export default function ImageApiTest() {
   };
 
   return (
-    <div className="container py-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">OpenAI Image Generation Test</h1>
-      </div>
+    <div className="px-6">
+      <div className="container py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">OpenAI Image Generation Test</h1>
+        </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Image Generation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Size</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["1024x1024", "1024x1792", "1792x1024"].map((size) => (
-                      <Button
-                        key={size}
-                        variant={imageSize === size ? "default" : "outline"}
-                        onClick={() => setImageSize(size)}
-                        className="text-xs"
-                      >
-                        {size}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Model</label>
-                  <TooltipProvider>
-                    <div className="flex flex-col space-y-3">
-                      <RadioGroup value={selectedModel} onValueChange={(val) => setSelectedModel(val as any)} className="flex flex-col space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="auto" id="auto" />
-                          <Label htmlFor="auto" className="flex items-center gap-2">
-                            Auto (Recommended)
-                            <Badge variant="outline" className="ml-2 text-xs">Default</Badge>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="w-[200px]">Tries the newest model first (gpt-image-1) with fallback to dall-e-3 if needed</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="gpt-image-1" id="gpt-image-1" />
-                          <Label htmlFor="gpt-image-1" className="flex items-center gap-2">
-                            gpt-image-1
-                            <Badge className="ml-2 text-xs bg-green-600 hover:bg-green-700">Newest</Badge>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="w-[200px]">OpenAI's newest model released May 2025 with higher quality and better understanding</div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="dall-e-3" id="dall-e-3" />
-                          <Label htmlFor="dall-e-3" className="flex items-center gap-2">
-                            dall-e-3
-                            <Badge variant="secondary" className="ml-2 text-xs">Stable</Badge>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="w-[200px]">Widely available and reliable image generation model</div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </TooltipProvider>
-                </div>
-              </div>
-              
-              {selectedModel === "gpt-image-1" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Quality (gpt-image-1 only)</label>
-                  <RadioGroup value={imageQuality} onValueChange={(val) => setImageQuality(val as any)} className="flex space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="auto" id="q-auto" />
-                      <Label htmlFor="q-auto">Auto</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="low" id="q-low" />
-                      <Label htmlFor="q-low">Low</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="q-medium" />
-                      <Label htmlFor="q-medium">Medium</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="high" id="q-high" />
-                      <Label htmlFor="q-high">High</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Image Prompt</label>
-                <Textarea
-                  placeholder="Enter a detailed description of the image you want to generate..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Be specific and descriptive for best results.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="justify-between">
-            <div className="text-sm text-muted-foreground">
-              {responseTime !== null && (
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  <span>Response time: {responseTime.toFixed(2)}s</span>
-                </div>
-              )}
-            </div>
-            <Button onClick={handleImageGeneration} disabled={isLoading || !prompt.trim()}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate Image"
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {/* Results Card */}
-        {(imageUrl || error) && (
-          <Card className={resultType === "error" ? "border-destructive" : "border-green-500"}>
+        <div className="grid gap-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                {resultType === "error" ? (
-                  <>
-                    <AlertCircle className="w-5 h-5 mr-2 text-destructive" />
-                    Error
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2 text-green-500" />
-                    Generated Image
-                  </>
-                )}
-              </CardTitle>
+              <CardTitle>Generate Image</CardTitle>
+              <CardDescription>
+                Test the OpenAI image generation API with different models and settings
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {error && (
-                <div className="p-4 rounded bg-destructive/10 text-destructive">
-                  <pre className="whitespace-pre-wrap text-sm font-mono">{error}</pre>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="prompt">Image Prompt</Label>
+                  <Textarea
+                    id="prompt"
+                    placeholder="Describe the image you want to generate..."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    className="min-h-[100px]"
+                  />
                 </div>
-              )}
-              
-              {/* API Debug Information Section */}
-              <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-md p-3">
-                <h3 className="text-sm font-medium mb-2 flex items-center">
-                  <Info className="w-4 h-4 mr-1" />
-                  API Request Details
-                </h3>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="col-span-2 mb-2">
-                    <div className="font-semibold">Request Parameters:</div>
-                    <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-900 p-2 rounded text-xs mt-1">
-                      {JSON.stringify({
-                        prompt: prompt.substring(0, 30) + (prompt.length > 30 ? "..." : ""),
-                        model: selectedModel,
-                        size: imageSize,
-                        quality: imageQuality
-                      }, null, 2)}
-                    </pre>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="model-select">Model</Label>
+                    <Select 
+                      value={selectedModel} 
+                      onValueChange={(value) => setSelectedModel(value as any)}
+                    >
+                      <SelectTrigger id="model-select">
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (Recommended)</SelectItem>
+                        <SelectItem value="gpt-image-1">GPT-Image-1</SelectItem>
+                        <SelectItem value="dall-e-3">DALL-E 3</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   
-                  {apiDebugInfo && (
-                    <div className="col-span-2">
-                      <div className="font-semibold">API Response Info:</div>
-                      <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-900 p-2 rounded text-xs mt-1">
-                        {JSON.stringify(apiDebugInfo, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                  <div>
+                    <Label htmlFor="size-select">Image Size</Label>
+                    <Select 
+                      value={imageSize} 
+                      onValueChange={setImageSize}
+                    >
+                      <SelectTrigger id="size-select">
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1024x1024">1024×1024</SelectItem>
+                        <SelectItem value="1024x1792">1024×1792</SelectItem>
+                        <SelectItem value="1792x1024">1792×1024</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="quality-select">Quality</Label>
+                    <Select 
+                      value={imageQuality} 
+                      onValueChange={(value) => setImageQuality(value as any)}
+                    >
+                      <SelectTrigger id="quality-select">
+                        <SelectValue placeholder="Select quality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-              
-              {imageUrl && (
-                <div className="space-y-4">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <div className="relative cursor-pointer group overflow-hidden border rounded-md">
-                        <img 
-                          src={imageUrl.startsWith('data:') ? imageUrl : imageUrl} 
-                          alt="Generated" 
-                          className="w-full object-contain transition-transform group-hover:scale-105" 
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white font-medium">Click to enlarge</span>
-                        </div>
+            </CardContent>
+            <CardFooter className="flex justify-between border-t px-6 py-4">
+              <div className="text-sm text-muted-foreground">
+                {responseTime !== null && (
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    <span>Response time: {responseTime.toFixed(2)}s</span>
+                  </div>
+                )}
+              </div>
+              <Button 
+                onClick={handleImageGeneration} 
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Generate Image
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {/* Results Card */}
+          {(imageUrl || error) && (
+            <Card className={resultType === "error" ? "border-destructive" : "border-green-500"}>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  {resultType === "error" ? (
+                    <>
+                      <AlertCircle className="w-5 h-5 mr-2 text-destructive" />
+                      Error
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2 text-green-500" />
+                      Generated Image
+                    </>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {error && (
+                  <div className="p-4 rounded bg-destructive/10 text-destructive">
+                    <pre className="whitespace-pre-wrap text-sm font-mono">{error}</pre>
+                  </div>
+                )}
+                
+                {/* API Debug Information Section */}
+                <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-md p-3">
+                  <h3 className="text-sm font-medium mb-2 flex items-center">
+                    <Info className="w-4 h-4 mr-1" />
+                    API Request Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="col-span-2 mb-2">
+                      <div className="font-semibold">Request Parameters:</div>
+                      <div className="mt-1 font-mono bg-muted p-2 rounded">
+                        <div>prompt: "{prompt.substring(0, 50)}..."</div>
+                        <div>model: {selectedModel}</div>
+                        <div>size: {imageSize}</div>
+                        <div>quality: {imageQuality}</div>
                       </div>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-auto">
-                      <img 
-                        src={imageUrl.startsWith('data:') ? imageUrl : imageUrl} 
-                        alt="Generated (full size)" 
-                        className="w-full h-full object-contain" 
-                      />
-                    </DialogContent>
-                  </Dialog>
+                    </div>
+                    
+                    <div>
+                      <span className="font-semibold">Response Time:</span> {responseTime?.toFixed(2)}s
+                    </div>
+                    <div>
+                      <span className="font-semibold">Model Used:</span> {modelInfo || "Unknown"}
+                    </div>
+                    
+                    {apiDebugInfo && (
+                      <div className="col-span-2 mt-2">
+                        <div className="font-semibold mb-1">Response Details:</div>
+                        <pre className="text-xs font-mono bg-muted p-2 rounded max-h-32 overflow-auto">
+                          {JSON.stringify(apiDebugInfo, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Image Display */}
+                {imageUrl && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-medium mb-2">Generated Image:</h3>
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="cursor-pointer border rounded-md overflow-hidden hover:opacity-90 transition-opacity">
+                          <img 
+                            src={imageUrl} 
+                            alt="Generated from prompt" 
+                            className="w-full h-auto object-contain"
+                          />
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-screen-lg w-full">
+                        <div className="p-1">
+                          <img 
+                            src={imageUrl} 
+                            alt="Generated from prompt" 
+                            className="w-full h-auto object-contain"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <div className="mt-2 text-sm text-center text-muted-foreground">
+                      Click the image to view full size
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Diagnostic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Diagnostic Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm space-y-2">
+                <p>
+                  <span className="font-medium">About this test tool:</span> This page allows you to directly test the OpenAI image generation API to verify it's working properly with different models.
+                </p>
+                
+                <p>
+                  <span className="font-medium">Available Image Models:</span>
+                </p>
+                <div className="space-y-2 mt-2 ml-1">
+                  <div className="flex items-start gap-2">
+                    <Badge className="bg-green-600 mt-0.5">gpt-image-1</Badge>
+                    <div className="text-sm">
+                      <p className="font-medium">OpenAI's newest model (May 2025)</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Released in May 2025, this model provides higher quality images with better text rendering, 
+                        improved consistency, and more accurate interpretation of prompts. Supports quality settings 
+                        and transparent backgrounds.
+                      </p>
+                    </div>
+                  </div>
                   
-                  <div className="bg-muted p-3 rounded-md">
-                    <h3 className="text-sm font-medium mb-1">Request Information</h3>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="font-medium">Response Time:</span> {responseTime?.toFixed(2)}s
-                      </div>
-                      <div>
-                        <span className="font-medium">Image Size:</span> {imageSize}
-                      </div>
-                      
-                      <div className="col-span-2 mt-2">
-                        <span className="font-medium text-sm">Model Details</span>
-                        <div className="flex items-center mt-1 gap-2">
-                          <Badge 
-                            className={
-                              modelInfo === "gpt-image-1" 
-                                ? "bg-green-600" 
-                                : modelInfo === "dall-e-3" 
-                                  ? "bg-blue-600"
-                                  : "bg-gray-600"
-                            }
-                          >
-                            {modelInfo || "unknown"}
-                          </Badge>
-                          
-                          <span className="text-xs text-muted-foreground">
-                            {modelInfo === "gpt-image-1" 
-                              ? "OpenAI's newest model (May 2025)" 
-                              : modelInfo === "dall-e-3" 
-                                ? "OpenAI's reliable high-quality model"
-                                : modelInfo === "dall-e-2"
-                                  ? "Final fallback model" 
-                                  : ""}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="col-span-2 mt-2">
-                        <span className="font-medium">Requested Configuration:</span>
-                        <div className="mt-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span>Model:</span> 
-                            <Badge variant="outline" className="text-xs">
-                              {selectedModel}
-                            </Badge>
-                            
-                            {selectedModel !== modelInfo && modelInfo && (
-                              <span className="text-amber-600 text-xs flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" />
-                                Fallback was used
-                              </span>
-                            )}
-                          </div>
-                          
-                          {selectedModel === "gpt-image-1" && (
-                            <div className="flex items-center gap-2">
-                              <span>Quality:</span> 
-                              <Badge variant="outline" className="text-xs">
-                                {imageQuality}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="col-span-2 mt-2">
-                        <span className="font-medium">Technical Details:</span>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            Format: {imageUrl.startsWith('data:') ? 'Base64 Data URL' : 'HTTP URL'}
-                          </Badge>
-                          
-                          {imageUrl.startsWith('data:') && (
-                            <Badge variant="secondary" className="text-xs">
-                              MIME: {imageUrl.split(';')[0].split(':')[1]}
-                            </Badge>
-                          )}
-                          
-                          <Badge variant="secondary" className="text-xs">
-                            Size: ~{Math.round(imageUrl.length / 1024)}KB
-                          </Badge>
-                        </div>
-                      </div>
+                  <div className="flex items-start gap-2">
+                    <Badge className="bg-blue-600 mt-0.5">dall-e-3</Badge>
+                    <div className="text-sm">
+                      <p className="font-medium">Reliable high-quality model</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        OpenAI's established image generation model with excellent reliability. Used as a fallback 
+                        when gpt-image-1 isn't available or encounters an error. Supports multiple image sizes.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <Badge className="bg-gray-600 mt-0.5">dall-e-2</Badge>
+                    <div className="text-sm">
+                      <p className="font-medium">Final fallback model</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Legacy model used as a last resort fallback if both newer models fail. Only used in rare 
+                        cases of API errors or unavailability.
+                      </p>
                     </div>
                   </div>
                 </div>
-              )}
+                
+                <p className="mt-4">
+                  <span className="font-medium">Auto Selection Mode:</span> By default, the system will try to use gpt-image-1 
+                  and fall back to dall-e-3 if needed. You can override this by explicitly selecting a model.
+                </p>
+                
+                <div className="mt-2">
+                  <span className="font-medium">Response time analysis:</span>
+                  <ul className="list-disc pl-5 mt-1 space-y-1">
+                    <li><span className="font-medium text-green-600">5-15 seconds:</span> Real API call to OpenAI (expected)</li>
+                    <li><span className="font-medium text-yellow-600">15+ seconds:</span> API call is likely real but experiencing high latency</li>
+                    <li><span className="font-medium text-red-600">&lt;1 second:</span> Response is likely mocked or intercepted</li>
+                  </ul>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Diagnostic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Diagnostic Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm space-y-2">
-              <p>
-                <span className="font-medium">About this test tool:</span> This page allows you to directly test the OpenAI image generation API to verify it's working properly with different models.
-              </p>
-              
-              <p>
-                <span className="font-medium">Available Image Models:</span>
-              </p>
-              <div className="space-y-2 mt-2 ml-1">
-                <div className="flex items-start gap-2">
-                  <Badge className="bg-green-600 mt-0.5">gpt-image-1</Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">OpenAI's newest model (May 2025)</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Released in May 2025, this model provides higher quality images with better text rendering, 
-                      improved consistency, and more accurate interpretation of prompts. Supports quality settings 
-                      and transparent backgrounds.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-2">
-                  <Badge className="bg-blue-600 mt-0.5">dall-e-3</Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">Reliable high-quality model</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      OpenAI's established image generation model with excellent reliability. Used as a fallback 
-                      when gpt-image-1 isn't available or encounters an error. Supports multiple image sizes.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-2">
-                  <Badge className="bg-gray-600 mt-0.5">dall-e-2</Badge>
-                  <div className="text-sm">
-                    <p className="font-medium">Final fallback model</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Legacy model used as a last resort fallback if both newer models fail. Only used in rare 
-                      cases of API errors or unavailability.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <p className="mt-4">
-                <span className="font-medium">Auto Selection Mode:</span> By default, the system will try to use gpt-image-1 
-                and fall back to dall-e-3 if needed. You can override this by explicitly selecting a model.
-              </p>
-              
-              <p className="mt-2">
-                <span className="font-medium">Response time analysis:</span>
-                <ul className="list-disc pl-5 mt-1 space-y-1">
-                  <li><span className="font-medium text-green-600">5-15 seconds:</span> Real API call to OpenAI (expected)</li>
-                  <li><span className="font-medium text-yellow-600">15+ seconds:</span> API call is likely real but experiencing high latency</li>
-                  <li><span className="font-medium text-red-600">&lt;1 second:</span> Response is likely mocked or intercepted</li>
-                </ul>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );
