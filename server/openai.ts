@@ -728,6 +728,14 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
  * @param apiKey Optional API key, if not provided will use environment variable
  * @returns Object containing base64 image data and file type
  */
+/**
+ * Generates an image using OpenAI's gpt-image-1 model
+ * This implementation is simplified to focus solely on gpt-image-1 model without fallbacks
+ * 
+ * @param prompt Text prompt to generate the image from
+ * @param apiKey Optional API key, if not provided will use environment variable
+ * @returns Object containing base64 image data and file type
+ */
 export async function generateImage(prompt: string, apiKey?: string): Promise<{ base64: string, fileType: string }> {
   console.log(`[IMAGE-GEN] Starting image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
   console.log(`[IMAGE-GEN] API key source: ${apiKey ? 'custom key provided' : 'using environment variable'}`);
@@ -754,7 +762,7 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       throw new Error("No image data returned from API");
     }
     
-    // Get the URL from the response - using non-null assertion since we've already checked
+    // Get the URL from the response
     const imageUrl = result.data[0]?.url;
     
     if (!imageUrl) {
@@ -775,13 +783,13 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
     console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${base64Data.length}`);
     
     // Return the base64 data and file type
-    const returnObj = { 
+    const returnObject = { 
       base64: base64Data, 
       fileType: 'image/png' 
     };
     
     console.log(`[IMAGE-GEN] Returning base64 image data`);
-    return returnObj;
+    return returnObject;
     
   } catch (error) {
     console.error(`[IMAGE-GEN] Error generating image:`, error);
