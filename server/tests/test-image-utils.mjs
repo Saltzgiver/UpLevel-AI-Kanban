@@ -9,8 +9,9 @@
  */
 
 // Import required modules
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { cleanBase64, inferMimeTypeFromBuffer } from '../openai.ts';
 
 // Mock Buffer.from for testing
 const base64ToBuffer = (base64) => {
@@ -56,9 +57,6 @@ const createTestWebP = () => {
 const testCleanBase64 = () => {
   console.log('=== Testing cleanBase64 ===');
   
-  // Import the function dynamically
-  const { cleanBase64 } = require('../openai');
-  
   // Valid base64 test
   const validBase64 = 'SGVsbG8gV29ybGQ='; // "Hello World" in base64
   console.log(`Valid base64 input: ${validBase64}`);
@@ -100,9 +98,6 @@ const testCleanBase64 = () => {
  */
 const testInferMimeTypeFromBuffer = () => {
   console.log('\n=== Testing inferMimeTypeFromBuffer ===');
-  
-  // Import the function dynamically
-  const { inferMimeTypeFromBuffer } = require('../openai');
   
   // Test PNG detection
   const pngBuffer = createTestPNG();
@@ -151,21 +146,9 @@ const testInferMimeTypeFromBuffer = () => {
 try {
   console.log('=== IMAGE UTILS TEST SCRIPT ===');
   
-  // Check if cleanBase64 is exported directly
-  try {
-    testCleanBase64();
-  } catch (error) {
-    console.error('Error testing cleanBase64:', error.message);
-    console.log('NOTE: If you get a "cleanBase64 is not defined" error, you may need to export the function');
-  }
-  
-  // Check if inferMimeTypeFromBuffer is exported directly
-  try {
-    testInferMimeTypeFromBuffer();
-  } catch (error) {
-    console.error('Error testing inferMimeTypeFromBuffer:', error.message);
-    console.log('NOTE: If you get a "inferMimeTypeFromBuffer is not defined" error, you may need to export the function');
-  }
+  // Run the tests with the imported functions
+  testCleanBase64();
+  testInferMimeTypeFromBuffer();
   
   console.log('\n=== IMAGE UTILS TEST SCRIPT COMPLETE ===');
 } catch (error) {

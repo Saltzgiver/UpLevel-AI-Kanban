@@ -85,7 +85,7 @@ export const getOpenAIClient = (apiKey?: string) => {
  * @param base64String The base64 string to clean and validate
  * @returns A cleaned base64 string
  */
-const cleanBase64 = (base64String: string): string => {
+export const cleanBase64 = (base64String: string): string => {
   console.log(`[BASE64-CLEAN] Original string length: ${base64String.length}`);
   
   // Trim leading/trailing whitespace
@@ -123,7 +123,7 @@ const cleanBase64 = (base64String: string): string => {
  * @param buffer A Node.js Buffer containing the file data
  * @returns The MIME type string or null if not recognized
  */
-const inferMimeTypeFromBuffer = (buffer: Buffer): string | null => {
+export const inferMimeTypeFromBuffer = (buffer: Buffer): string | null => {
   // Check if buffer is too small to contain a signature
   if (!buffer || buffer.length < 4) {
     console.log(`[MIME-INFER] Buffer too small (${buffer?.length || 0} bytes) to contain a signature`);
