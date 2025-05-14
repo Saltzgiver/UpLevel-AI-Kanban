@@ -676,6 +676,85 @@ export function GPTChat({
                   {chat.role === 'assistant' ? (
                     <>
                       {/* Debug elements removed to fix mobile rendering issues */}
+                      {/* Pre-process message content to handle file: patterns */}
+
+                      {
+
+                        (() => {
+
+                          // Check if content contains a file: pattern and convert to markdown image
+
+                          const processedContent = chat.content.replace(
+
+                            /file:([^,]+),([^,]+),(.*)/,
+
+                            (match, filename, mimetype, content) => {
+
+                              console.log(`Converting file pattern to markdown image: ${filename}`);
+
+                              if (mimetype.includes('image')) {
+
+                                // For images, use the attachment API if we have matching attachments
+
+                                const matchingAttachment = attachments?.find(a => a.filename === filename);
+
+                                if (matchingAttachment) {
+
+                                  return `![Generated image](/api/attachments/${matchingAttachment.id})`;
+
+                                }
+
+                              }
+
+                              return match; // Return unchanged if not an image or no matching attachment
+
+                            }
+
+                          );
+
+                          
+
+                          // If content was modified, render with the processed content
+
+                          if (processedContent !== chat.content) {
+
+                            return (
+
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
+                          ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
+                          ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
+                          li: (props: any) => <li className="my-0 text-xs" {...props} />,
+                          a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
+                          blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
+                          code: (props: any) => 
+                            props.inline 
+                              ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
+                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                          pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
+                          strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
+                          em: (props: any) => <em className="italic text-xs" {...props} />,
+                          img: (props: any) => renderImageInMarkdown(props.src, props.alt),
+                        }}
+                      >
+                        {processedContent}
+                      </ReactMarkdown>
+
+                            );
+
+                          }
+
+                        })() /* Self-executing function to allow variable declarations */
+
+                      }
+
+
+                      {/* Render normal markdown if no file: pattern was found */}
+
+                      {chat.content.includes('file:') ? null : (
+
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -697,6 +776,8 @@ export function GPTChat({
                       >
                         {chat.content}
                       </ReactMarkdown>
+
+                      )}
                     </>
                   ) : (
                     <div>{chat.content}</div>
