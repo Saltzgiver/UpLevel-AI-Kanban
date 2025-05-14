@@ -3,6 +3,7 @@ import { ChatCompletionContentPart, ChatCompletionMessageParam } from "openai/re
 import { storage } from "./storage";
 import { Column, Attachment, Chat } from "@shared/schema";
 import { extractCSVContent, createCSVAttachmentFromText } from './csv-helper';
+import { getTestPromptSuggestion, PromptSuggestion } from "./test-prompt-assistant";
 
 // Export image request detection patterns for use in both server and client code
 export const imageRequestPatterns = [
@@ -1294,91 +1295,6 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
       // Re-throw the original error since both approaches failed
       throw error;
     }
-  }
-      console.log(`[IMAGE-GEN] Successfully converted image to base64 with length: ${rawBase64Data.length}`);
-      
-      // Clean the base64 data
-      const cleanedBase64 = cleanBase64(rawBase64Data);
-      
-      // Try to infer MIME type from the buffer
-      const nodeBuffer = Buffer.from(imageBuffer);
-      const inferredType = inferMimeTypeFromBuffer(nodeBuffer);
-      
-      // Use inferred type or default to png
-      const mimeType = inferredType || 'image/png';
-      console.log(`[IMAGE-GEN] Image MIME type: ${mimeType}`);
-      
-      // Return the cleaned base64 data and detected file type
-      return { 
-        base64: cleanedBase64, 
-        fileType: mimeType 
-      };
-      
-    } catch (gptImageError) {
-      // If gpt-image-1 fails, fallback to dall-e-3
-      if (gptImageError instanceof Error) {
-        console.log(`[IMAGE-GEN] Error with gpt-image-1: ${gptImageError.message}`);
-      } else {
-        console.log(`[IMAGE-GEN] Unknown error with gpt-image-1`);
-      }
-      
-      console.log(`[IMAGE-GEN] Falling back to dall-e-3 model`);
-      console.log(`[IMAGE-GEN] Parameters: model=dall-e-3, response_format=b64_json, n=1, size=1024x1024`);
-      
-      // Call OpenAI API with dall-e-3 model
-      const dalleResult = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024",
-        response_format: "b64_json"
-      });
-      
-      console.log(`[IMAGE-GEN] API call to dall-e-3 successful`);
-      
-      // Check if we have data in the response
-      if (!dalleResult?.data || !Array.isArray(dalleResult.data) || dalleResult.data.length === 0) {
-        throw new Error("No image data returned from API");
-      }
-      
-      // Get the base64 data from the response
-      const base64Data = dalleResult.data[0]?.b64_json;
-      
-      if (!base64Data) {
-        throw new Error("No base64 image data returned from API");
-      }
-      
-      console.log(`[IMAGE-GEN] Successfully received base64 data from dall-e-3 with length: ${base64Data.length}`);
-      
-      // Clean the base64 data
-      const cleanedBase64 = cleanBase64(base64Data);
-      
-      // Try to infer MIME type from base64 data
-      let mimeType = 'image/png'; // Default MIME type
-      try {
-        // Decode a small portion of the base64 to check the file signature
-        const buffer = Buffer.from(cleanedBase64.substring(0, 100), 'base64');
-        const inferredType = inferMimeTypeFromBuffer(buffer);
-        
-        if (inferredType) {
-          console.log(`[IMAGE-GEN] Using inferred MIME type: ${inferredType}`);
-          mimeType = inferredType;
-        } else {
-          console.log(`[IMAGE-GEN] Could not infer MIME type, using default: ${mimeType}`);
-        }
-      } catch (error) {
-        console.error(`[IMAGE-GEN] Error inferring MIME type:`, error);
-      }
-      
-      // Return the cleaned base64 data and inferred or default file type
-      return { 
-        base64: cleanedBase64, 
-        fileType: mimeType
-      };
-    }
-  } catch (error) {
-    console.error(`[IMAGE-GEN] Error generating image:`, error);
-    throw error;
   }
 }
 
