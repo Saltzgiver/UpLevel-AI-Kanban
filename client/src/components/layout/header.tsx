@@ -16,7 +16,8 @@ import {
   Upload,
   Globe,
   Wand2,
-  Trash2
+  Trash2,
+  Image
 } from "lucide-react";
 import logoPath from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -419,6 +420,12 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
                   <Link href="/direct-toast-test" className="flex items-center cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Direct Toast Test</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/image-api-test" className="flex items-center cursor-pointer">
+                    <Image className="mr-2 h-4 w-4" />
+                    <span>Image API Test</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

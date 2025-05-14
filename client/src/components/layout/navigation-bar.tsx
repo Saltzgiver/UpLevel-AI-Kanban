@@ -10,7 +10,8 @@ import {
   Upload,
   Globe,
   LogOut,
-  Wand2
+  Wand2,
+  Image
 } from "lucide-react";
 import {
   DropdownMenu,
