@@ -20,12 +20,26 @@
             max-width: 100%;
             display: block;
             margin: 0 auto;
+            border: 1px dashed #ccc;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 5px;
+            background-color: #f5f5f5;
         }
         h2 {
             color: #333;
         }
         p {
             color: #666;
+        }
+        .valid {
+            color: green;
+            font-weight: bold;
+        }
+        .invalid {
+            color: red;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -37,12 +51,27 @@
         <h2>Image Attachment ID: 3207</h2>
         <p>Using direct API endpoint:</p>
         <img src="/api/attachments/3207" alt="Image Attachment 3207">
+        <div class="status">
+            Status: <span class="invalid">Invalid (empty 1x1 transparent image)</span>
+        </div>
     </div>
     
     <div class="image-container">
         <h2>Image Attachment ID: 3208</h2>
         <p>Using direct API endpoint:</p>
         <img src="/api/attachments/3208" alt="Image Attachment 3208">
+        <div class="status">
+            Status: <span class="invalid">Potentially corrupted data</span>
+        </div>
+    </div>
+    
+    <div class="image-container">
+        <h2>Image Attachment ID: 3210 (NEW TEST IMAGE)</h2>
+        <p>Using direct API endpoint:</p>
+        <img src="/api/attachments/3210" alt="Image Attachment 3210">
+        <div class="status">
+            Status: <span class="valid">Valid test image with proper data</span>
+        </div>
     </div>
     
     <div class="image-container">
@@ -50,6 +79,7 @@
         <p>The following links should trigger downloads:</p>
         <p><a href="/api/attachments/3207" download>Download Image 3207</a></p>
         <p><a href="/api/attachments/3208" download>Download Image 3208</a></p>
+        <p><a href="/api/attachments/3210" download>Download Image 3210 (NEW TEST IMAGE)</a></p>
     </div>
 </body>
 </html>
