@@ -17,7 +17,9 @@ import {
   Globe,
   Wand2,
   Trash2,
-  Image
+  Image,
+  Menu,
+  X
 } from "lucide-react";
 import logoPath from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger,
+  SheetClose
+} from "@/components/ui/sheet";
 
 interface HeaderProps {
   board: Board;
@@ -59,6 +69,38 @@ interface HeaderProps {
   viewMode: "board" | "list";
   onSelectBoard: (boardId: number) => void;
   currentBoardId: number | null;
+}
+
+// Helper component for mobile menu items
+function MobileMenuItem({ icon, label, onClick, href }: { 
+  icon: React.ReactNode; 
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const content = (
+    <button 
+      className="flex items-center px-4 py-3 w-full text-left hover:bg-gray-50 text-sm"
+      onClick={onClick}
+    >
+      {icon}
+      <span className="ml-2">{label}</span>
+    </button>
+  );
+
+  // If href is provided, wrap with Link component
+  if (href) {
+    return (
+      <SheetClose asChild>
+        <Link href={href} className="w-full">
+          {content}
+        </Link>
+      </SheetClose>
+    );
+  }
+
+  // Otherwise, just return the button with SheetClose
+  return <SheetClose asChild>{content}</SheetClose>;
 }
 
 export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoard, currentBoardId }: HeaderProps) {
@@ -172,29 +214,98 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
     }
   };
 
+  // List of menu items for the mobile side panel
+  const mobileMenuItems = (
+    <>
+      <MobileMenuItem 
+        icon={<Layout className="h-4 w-4" />} 
+        label="Boards" 
+        href="/"
+      />
+      <MobileMenuItem 
+        icon={<Settings className="h-4 w-4" />} 
+        label="Settings" 
+        href="/settings"
+      />
+      <div className="py-2">
+        <div className="h-px bg-gray-200 w-full" />
+      </div>
+      <div className="px-4 py-2 text-xs font-semibold text-gray-500">Developer Tools</div>
+      <MobileMenuItem 
+        icon={<Wand2 className="h-4 w-4" />} 
+        label="Workflow Generator" 
+        href="/workflow-generator-prompt"
+      />
+      <MobileMenuItem 
+        icon={<Globe className="h-4 w-4" />} 
+        label="Global Settings" 
+        href="/global-settings"
+      />
+      <MobileMenuItem 
+        icon={<Image className="h-4 w-4" />} 
+        label="Image API Test" 
+        href="/image-api-test"
+      />
+      <MobileMenuItem 
+        icon={<Image className="h-4 w-4" />} 
+        label="Mobile Image Test" 
+        href="/image-test"
+      />
+    </>
+  );
+
   return (
-    <header className="bg-white border-b border-gray-200 py-2.5 px-4 sticky top-0 left-0 right-0 z-50 shadow-sm w-full">
+    <header className="bg-white border-b border-gray-200 py-2 px-3 sm:py-2.5 sm:px-4 sticky top-0 left-0 right-0 z-50 shadow-sm w-full">
       <div className="w-full flex items-center justify-between">
-        <div className="flex items-center space-x-5">
+        <div className="flex items-center space-x-3 sm:space-x-5">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded overflow-hidden mr-2">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded overflow-hidden mr-2">
               <img 
                 src={logoPath}
                 alt="UpLevel Logo" 
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="font-semibold text-gray-900">UpLevel</span>
+            <span className="font-semibold text-gray-900 text-sm sm:text-base">UpLevel</span>
+          </div>
+          
+          {/* Mobile Menu Button - Only visible on small screens */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="p-0 pt-4 w-[250px]">
+                <SheetHeader className="px-4 pb-4 border-b">
+                  <SheetTitle className="flex items-center">
+                    <div className="w-7 h-7 rounded overflow-hidden mr-2">
+                      <img 
+                        src={logoPath}
+                        alt="UpLevel Logo" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span>UpLevel Menu</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="py-4 overflow-y-auto">
+                  {mobileMenuItems}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
           
           {/* Divider */}
-          <div className="h-5 w-px bg-gray-300"></div>
+          <div className="hidden md:block h-5 w-px bg-gray-300"></div>
           
-          {/* Board Selector Dropdown */}
+          {/* Board Selector Dropdown - Hidden on mobile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center text-gray-700">
+              <Button variant="ghost" className="hidden md:flex items-center text-gray-700">
                 <LayoutList className="h-4 w-4 mr-2" />
                 <span className="mr-1">{viewMode === "board" ? "Boards" : "All Boards"}</span>
                 <ChevronDown className="h-3.5 w-3.5 ml-1" />
@@ -344,8 +455,8 @@ export function Header({ board, boards, onBoardListClick, viewMode, onSelectBoar
             </Button>
           )}
           
-          {/* User Profile Dropdown */}
-          <div>
+          {/* User Profile Dropdown - Only visible on desktop */}
+          <div className="hidden md:block">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 rounded-full flex items-center">
