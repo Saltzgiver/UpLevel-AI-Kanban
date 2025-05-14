@@ -126,27 +126,13 @@ export const getQueryFn: <T>(options: {
       // Error messages are logged to console for debugging
       console.warn(`Request to ${url} failed. Returning empty data to maintain application stability.`);
       
-      // Customize the response based on the URL path to provide appropriate fallback data
-      if (url.includes('/processing-status')) {
-        return { 
-          processing: false, 
-          gptOutput: null
-        };
-      } else if (url.includes('/boards')) {
-        return [];
-      } else if (url.includes('/chats')) {
-        return [];
-      } else if (url.includes('/attachments')) {
-        return [];
-      } else {
-        // Generic fallback for other endpoints
-        return { 
-          processing: false, 
-          gptOutput: null, 
-          chats: [], 
-          attachments: [] 
-        };
-      }
+      // Return a safe empty result data structure
+      return { 
+        processing: false, 
+        gptOutput: null, 
+        chats: [], 
+        attachments: [] 
+      };
     }
   };
 

@@ -41,7 +41,6 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
     
     // Initialize WebSocket connection with more robust error handling
     try {
-      // Fix WebSocket URL construction to prevent 'undefined' port errors
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host || '';
       
@@ -51,7 +50,6 @@ export function TypingIndicator({ cardId, className = '' }: TypingIndicatorProps
         return;
       }
       
-      // Ensure we have a valid WebSocket URL with proper path
       const wsUrl = `${protocol}//${host}/ws`;
       console.log(`🔌 [TypingIndicator] Connecting to WebSocket at ${wsUrl}`);
       
