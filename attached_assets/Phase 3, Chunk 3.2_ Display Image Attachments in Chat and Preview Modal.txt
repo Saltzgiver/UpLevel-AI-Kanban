@@ -1,0 +1,48 @@
+﻿Phase 3, Chunk 3.2: Display Image Attachments in Chat and Preview Modal
+This document outlines the next step in the frontend implementation: displaying the generated image attachments directly within the chat interface and providing a modal for a larger preview.
+Goal: Modify the GPTChat component to correctly render image attachments referenced in assistant messages and implement a modal for viewing larger image previews.
+Context:
+* The file to modify is client/src/components/gpt/gpt-chat.tsx.
+* Assistant messages confirming image generation now include markdown image links in the format ![alt text](/api/attachments/:attachmentId) (as implemented in Phase 1, Chunk 1.3).
+* The GPTChat component uses ReactMarkdown to render chat message content.
+* The application needs a way to display these images inline in the chat and show a larger version when clicked.
+* A modal component for displaying images (ImageDialogModal or similar) is needed.
+* Detailed logging (client-side) is required to track the process.
+Implementation Plan:
+1. Open client/src/components/gpt/gpt-chat.tsx: Access and open the client/src/components/gpt/gpt-chat.tsx file.
+2. Locate Markdown Rendering: Find where ReactMarkdown is used to render chat message content. ReactMarkdown allows overriding default rendering for specific elements like images.
+3. Implement Custom Image Rendering: Provide a custom renderer for image elements within ReactMarkdown.
+   * The custom renderer function will receive props including src and alt.
+   * Check if the src matches the pattern for your backend attachment endpoint (e.g., /api/attachments/).
+   * If it matches, render an <img> tag. Set the src of the <img> to the attachment URL. Set the alt attribute to the alt text from the markdown.
+   * Add an onClick handler to the <img> tag to trigger the image preview modal.
+   * If the src does not match the attachment pattern, render the default image element or handle it as a standard external image link if desired.
+4. Implement Image Preview Modal:
+   * Create or locate a modal component for displaying images (e.g., ImageDialogModal). This component should accept props for the image src and alt text and a boolean prop to control its open/closed state.
+   * In the GPTChat component's state, add state variables to manage the open/closed state of the image modal and the src and alt of the image to display in the modal.
+   * In the custom image renderer's onClick handler, update the state variables to open the modal and set the image source and alt text.
+   * Render the image modal component in GPTChat, passing the state variables as props. Include a way to close the modal (e.g., a close button or clicking outside the image) which updates the modal state variable.
+5. Pass Attachments Data (if needed): Ensure the GPTChat component receives the list of attachments associated with the current card. This data might be needed for the AttachmentItem components (Chunk 3.3) or potentially for the image preview modal if it requires more than just the URL. Verify that the parent component (likely CardModal) fetches and passes this data correctly.
+6. Add Detailed Logging: Add console.log statements:
+   * Within the custom image renderer, logging the src and alt of the image being rendered.
+   * When an image is clicked to open the modal, logging the attachment ID or URL.
+   * When the modal is opened and closed.
+Testing Plan:
+1. Run Application: Start your application locally.
+2. Open GPT-Enabled Card with Image: Open a card in a GPT-assigned column that has a generated image attachment (ensure you have one from testing previous backend chunks).
+3. Verify Inline Image Display: Open the chat for that card.
+   * Expected Outcome: The generated image should appear directly within the chat history, rendered inline where the markdown link was placed. Review browser developer tools (Network tab) to confirm the image is being fetched from your /api/attachments/:id endpoint.
+4. Test Image Preview Modal: Click on the image displayed in the chat.
+   * Expected Outcome: A modal should open displaying a larger version of the image. Verify the correct image is shown and the alt text is accessible (e.g., in the modal title or via accessibility tools).
+5. Test Modal Closing: Close the image preview modal using the provided close mechanism.
+   * Expected Outcome: The modal should close, returning to the chat view.
+6. Test Non-Attachment Images (Optional): If your chat supports external image links via markdown, test rendering a standard image URL (e.g., ![alt text](https://example.com/image.jpg)) to ensure the custom renderer doesn't interfere with external images or handles them appropriately.
+7. Verify Logging: Open your browser's developer console and review the client-side logs to ensure the detailed logging messages from GPTChat related to image rendering and modal interaction are present.
+Upcoming Steps:
+* Phase 3: Frontend - Triggering and Displaying
+   * Chunk 3.3: Update AttachmentItem for Image and File Display
+   * Chunk 3.4: Display Image Thumbnails in Card Preview (Optional)
+* Phase 4: Testing and Refinement
+   * Chunk 4.1: End-to-End Testing and Debugging
+   * Chunk 4.2: Refinement and Error Handling Polish
+   * Chunk 4.3: Update Documentation
