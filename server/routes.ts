@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate the image
       console.log(`[IMAGE-TEST] Calling generateImage function at ${new Date().toISOString()}`);
-      const result = await generateImage(prompt, apiKey);
+      const result = await generateImage(prompt, apiKey, size);
       
       // Log timing for performance analysis
       const endTime = Date.now();
@@ -153,7 +153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         base64: `data:image/${result.fileType};base64,${result.base64}`,
         fileType: result.fileType,
-        responseTimeSeconds: responseTime
+        responseTimeSeconds: responseTime,
+        model: "dall-e-3", // Adding the model info
+        size: size
       });
     } catch (error) {
       console.error("[IMAGE-TEST] Error generating image:", error);

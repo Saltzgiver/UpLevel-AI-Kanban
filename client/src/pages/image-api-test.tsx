@@ -13,6 +13,7 @@ export default function ImageApiTest() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState("1024x1024");
+  const [modelInfo, setModelInfo] = useState<string | null>(null);
   const [resultType, setResultType] = useState<"success" | "error" | null>(null);
   const { toast } = useToast();
 
@@ -31,6 +32,7 @@ export default function ImageApiTest() {
       setError(null);
       setImageUrl(null);
       setResponseTime(null);
+      setModelInfo(null);
       setResultType(null);
 
       // Record start time for timing
@@ -59,6 +61,7 @@ export default function ImageApiTest() {
       
       // Set result data
       setImageUrl(data.url || data.base64);
+      setModelInfo(data.model || "unknown");
       setResultType("success");
       
       toast({
