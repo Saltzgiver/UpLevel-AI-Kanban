@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Display Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .image-container {
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        img {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        h2 {
+            color: #333;
+        }
+        p {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Attachment Display Test</h1>
+    <p>This page tests direct display of image attachments via the updated API endpoint.</p>
+    
+    <div class="image-container">
+        <h2>Image Attachment ID: 3207</h2>
+        <p>Using direct API endpoint:</p>
+        <img src="/api/attachments/3207" alt="Image Attachment 3207">
+    </div>
+    
+    <div class="image-container">
+        <h2>Image Attachment ID: 3208</h2>
+        <p>Using direct API endpoint:</p>
+        <img src="/api/attachments/3208" alt="Image Attachment 3208">
+    </div>
+    
+    <div class="image-container">
+        <h2>Download Links Test</h2>
+        <p>The following links should trigger downloads:</p>
+        <p><a href="/api/attachments/3207" download>Download Image 3207</a></p>
+        <p><a href="/api/attachments/3208" download>Download Image 3208</a></p>
+    </div>
+</body>
+</html>
