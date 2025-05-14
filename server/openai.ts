@@ -567,14 +567,26 @@ export async function processChat(cardId: number, userMessage: string, column: C
       /can you create (?:an|a) image/i,
       /image of/i,
       /picture of/i,
-      /visualization of/i
+      /visualization of/i,
+      // Add more explicit patterns to ensure we catch all image generation requests
+      /new image/i,
+      /another image/i,
+      /create image/i,
+      /generate image/i
     ];
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
+    // Force image generation mode for special cases
+    const forceImageGeneration = 
+      userMessage.toLowerCase().includes("force image generation") || 
+      userMessage.toLowerCase().includes("ignore existing images") ||
+      userMessage.toLowerCase().includes("create new image");
+    
     // Handle image generation requests
-    if (isImageRequest) {
+    if (isImageRequest || forceImageGeneration) {
       console.log(`[IMAGE-HANDLING] Image generation request detected in message: "${userMessage}"`);
+      console.log(`[IMAGE-HANDLING] Force generation mode: ${forceImageGeneration ? 'ON' : 'OFF'}`);
       
       try {
         // Extract the image generation prompt from the user message
