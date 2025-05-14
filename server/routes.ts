@@ -120,14 +120,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`[IMAGE-TEST] Received test image generation request at ${new Date().toISOString()}`);
     
     try {
-      const { prompt, size = "1024x1024" } = req.body;
+      const { 
+        prompt, 
+        size = "1024x1024",
+        model = "auto",
+        quality = "auto"
+      } = req.body;
       
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
       }
       
+      // Validate model parameter
+      if (!["auto", "gpt-image-1", "dall-e-3"].includes(model)) {
+        return res.status(400).json({
+          error: "Invalid model parameter. Must be one of: auto, gpt-image-1, dall-e-3"
+        });
+      }
+      
+      // Validate quality parameter
+      if (!["auto", "low", "medium", "high"].includes(quality)) {
+        return res.status(400).json({
+          error: "Invalid quality parameter. Must be one of: auto, low, medium, high"
+        });
+      }
+      
       console.log(`[IMAGE-TEST] Testing image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
       console.log(`[IMAGE-TEST] Selected size: ${size}`);
+      console.log(`[IMAGE-TEST] Selected model: ${model}`);
+      console.log(`[IMAGE-TEST] Selected quality: ${quality}`);
       
       // Get API key from environment
       const apiKey = process.env.OPENAI_API_KEY;
@@ -141,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate the image
       console.log(`[IMAGE-TEST] Calling generateImage function at ${new Date().toISOString()}`);
-      const result = await generateImage(prompt, apiKey, size);
+      const result = await generateImage(prompt, apiKey, size, model as "gpt-image-1" | "dall-e-3" | "auto", quality as "low" | "medium" | "high" | "auto");
       
       // Log timing for performance analysis
       const endTime = Date.now();
