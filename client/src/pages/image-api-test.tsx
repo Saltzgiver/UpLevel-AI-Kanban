@@ -1,80 +1,79 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 export default function ImageApiTest() {
-  const [prompt, setPrompt] = useState('A beautiful mountain landscape with a lake');
+  const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [responseTime, setResponseTime] = useState<number | null>(null);
-  const [result, setResult] = useState<{
-    success: boolean;
-    imageBase64?: string;
-    imageUrl?: string;
-    fileType?: string;
-    error?: string;
-    logs?: string[];
-  } | null>(null);
-
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [imageSize, setImageSize] = useState("1024x1024");
+  const [resultType, setResultType] = useState<"success" | "error" | null>(null);
   const { toast } = useToast();
 
-  // Function to test the generateImage API directly
-  const testGenerateImage = async () => {
+  const handleImageGeneration = async () => {
+    if (!prompt.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a prompt for the image generation",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      setResult(null);
+      setError(null);
+      setImageUrl(null);
       setResponseTime(null);
-      
-      // Record start time
+      setResultType(null);
+
+      // Record start time for timing
       const startTime = Date.now();
-      
-      // Call the server API endpoint
-      const response = await fetch('/api/test/generate-image', {
-        method: 'POST',
+
+      // Call image generation endpoint
+      const response = await fetch("/api/image-generation/test", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, size: imageSize }),
       });
-      
+
       // Calculate response time
       const endTime = Date.now();
       const timeElapsed = (endTime - startTime) / 1000; // in seconds
       setResponseTime(timeElapsed);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate image');
+        throw new Error(errorData.error || "Failed to generate image");
       }
-      
+
       const data = await response.json();
-      setResult({
-        success: true,
-        imageBase64: data.base64,
-        fileType: data.fileType,
-        logs: data.logs || [],
-      });
+      
+      // Set result data
+      setImageUrl(data.url || data.base64);
+      setResultType("success");
       
       toast({
-        title: 'Image Generated Successfully',
-        description: `Response time: ${timeElapsed.toFixed(2)} seconds`,
+        title: "Success",
+        description: `Image generated in ${timeElapsed.toFixed(1)} seconds`,
       });
-    } catch (error) {
-      console.error('Error testing image generation:', error);
-      setResult({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      });
+    } catch (err) {
+      console.error("Image generation error:", err);
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      setResultType("error");
       
       toast({
-        title: 'Image Generation Failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to generate image",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -82,111 +81,160 @@ export default function ImageApiTest() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-2xl">OpenAI Image API Test</CardTitle>
-          <CardDescription>
-            Test the OpenAI DALL-E image generation API directly to verify it's working properly
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="prompt" className="text-sm font-medium">
-              Image Prompt
-            </label>
-            <Textarea
-              id="prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the image you want to generate..."
-              className="min-h-[100px]"
-            />
-          </div>
-          
-          <Button 
-            onClick={testGenerateImage} 
-            disabled={isLoading || !prompt.trim()}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Image...
-              </>
-            ) : (
-              <>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Generate Image
-              </>
-            )}
-          </Button>
-          
-          {responseTime !== null && (
-            <div className="text-sm text-muted-foreground text-center">
-              Response time: <span className="font-medium">{responseTime.toFixed(2)} seconds</span>
-              {responseTime < 2 && (
-                <div className="mt-1 text-amber-500 flex items-center justify-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  This response was too fast to be a real API call!
+    <div className="container py-8 max-w-4xl">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">OpenAI Image Generation Test</h1>
+      </div>
+
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Image Generation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Image Size</label>
+                <div className="flex space-x-2">
+                  {["1024x1024", "1024x1792", "1792x1024"].map((size) => (
+                    <Button
+                      key={size}
+                      variant={imageSize === size ? "default" : "outline"}
+                      onClick={() => setImageSize(size)}
+                      className="text-xs"
+                    >
+                      {size}
+                    </Button>
+                  ))}
                 </div>
-              )}
-              {responseTime >= 2 && (
-                <div className="mt-1 text-green-500 flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  This response time is consistent with a real API call
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Image Prompt</label>
+                <Textarea
+                  placeholder="Enter a detailed description of the image you want to generate..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Be specific and descriptive for best results.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="justify-between">
+            <div className="text-sm text-muted-foreground">
+              {responseTime !== null && (
+                <div className="flex items-center">
+                  <Clock className="w-4 h-4 mr-1" />
+                  <span>Response time: {responseTime.toFixed(2)}s</span>
                 </div>
               )}
             </div>
-          )}
-          
-          {result && (
-            <>
-              <Separator className="my-4" />
+            <Button onClick={handleImageGeneration} disabled={isLoading || !prompt.trim()}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Image"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Results Card */}
+        {(imageUrl || error) && (
+          <Card className={resultType === "error" ? "border-destructive" : "border-green-500"}>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                {resultType === "error" ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 mr-2 text-destructive" />
+                    Error
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 mr-2 text-green-500" />
+                    Generated Image
+                  </>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <div className="p-4 rounded bg-destructive/10 text-destructive">
+                  <pre className="whitespace-pre-wrap text-sm font-mono">{error}</pre>
+                </div>
+              )}
               
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Result</h3>
-                
-                {result.success ? (
-                  <div className="space-y-4">
-                    <div className="rounded-md overflow-hidden border">
-                      {result.imageBase64 && (
+              {imageUrl && (
+                <div className="space-y-4">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <div className="relative cursor-pointer group overflow-hidden border rounded-md">
                         <img 
-                          src={`data:${result.fileType};base64,${result.imageBase64}`}
-                          alt="Generated image"
-                          className="w-full object-contain max-h-[400px]"
+                          src={imageUrl.startsWith('data:') ? imageUrl : imageUrl} 
+                          alt="Generated" 
+                          className="w-full object-contain transition-transform group-hover:scale-105" 
                         />
-                      )}
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      <div>File type: {result.fileType}</div>
-                      <div>Base64 length: {result.imageBase64?.length || 0} characters</div>
-                    </div>
-                    
-                    {result.logs && result.logs.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium mb-2">Server Logs</h4>
-                        <div className="bg-muted rounded-md p-3 text-xs font-mono overflow-auto max-h-[200px]">
-                          {result.logs.map((log, index) => (
-                            <div key={index} className="mb-1">{log}</div>
-                          ))}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white font-medium">Click to enlarge</span>
                         </div>
                       </div>
-                    )}
+                    </DialogTrigger>
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-auto">
+                      <img 
+                        src={imageUrl.startsWith('data:') ? imageUrl : imageUrl} 
+                        alt="Generated (full size)" 
+                        className="w-full h-full object-contain" 
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <div className="bg-muted p-3 rounded-md">
+                    <h3 className="text-sm font-medium mb-1">Debug Information</h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="font-medium">Response Time:</span> {responseTime?.toFixed(2)}s
+                      </div>
+                      <div>
+                        <span className="font-medium">Image Size:</span> {imageSize}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="font-medium">URL Type:</span> {imageUrl.startsWith('data:') ? 'Base64 Data URL' : 'HTTP URL'}
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-destructive">
-                    <h4 className="font-medium">Error:</h4>
-                    <p>{result.error}</p>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Diagnostic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Diagnostic Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm space-y-2">
+              <p>
+                <span className="font-medium">About this test tool:</span> This page allows you to directly test the OpenAI image generation API to verify it's working properly.
+              </p>
+              <p>
+                <span className="font-medium">Expected behavior:</span> Authentic image generation from OpenAI should take several seconds to complete (typically 5-15 seconds). 
+                If images are generated instantly (under 1 second), it likely indicates a mock/intercepted response.
+              </p>
+              <p>
+                <span className="font-medium">Resolution steps:</span> If you're seeing instantaneous responses, check for fetch interceptors, mock implementations, or test configurations that might be replacing the actual API calls.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
