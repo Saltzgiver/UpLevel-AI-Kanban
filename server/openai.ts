@@ -553,7 +553,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     }
 
-    // Image generation detection (functionality removed for reimplementation)
+    // Image generation detection 
     const imageRequestPatterns = [
       /create (?:an|a) image/i,
       /generate (?:an|a) image/i,
@@ -572,21 +572,90 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
-    // Image generation has been temporarily disabled for reimplementation
+    // Handle image generation requests
     if (isImageRequest) {
-      console.log(`[IMAGE-HANDLING] Image generation request detected but functionality is disabled for reimplementation`);
+      console.log(`[IMAGE-HANDLING] Image generation request detected in message: "${userMessage}"`);
       
-      // Inform the user that image generation is temporarily disabled
-      await storage.createChat({
-        cardId,
-        role: "assistant",
-        content: `⚠️ Image generation is temporarily unavailable as we're improving this feature. Regular chat functionality is still available.`,
-        gptName: column.gptName || "AI Assistant",
-        gptColor: column.gptColor
-      });
+      try {
+        // Extract the image generation prompt from the user message
+        let imagePrompt = userMessage;
+        
+        // Try to extract the actual prompt by removing common prefix patterns
+        for (const pattern of [
+          /^create (?:an?|the) image (?:of|for|showing|with|based on)\s*/i,
+          /^generate (?:an?|the) image (?:of|for|showing|with|based on)\s*/i,
+          /^make (?:an?|the) image (?:of|for|showing|with|based on)\s*/i,
+          /^draw (?:an?|the) image (?:of|for|showing|with|based on)\s*/i,
+          /^create (?:an?|the) picture (?:of|for|showing|with|based on)\s*/i,
+          /^generate (?:an?|the) picture (?:of|for|showing|with|based on)\s*/i,
+          /^make (?:an?|the) picture (?:of|for|showing|with|based on)\s*/i,
+          /^draw (?:an?|the) picture (?:of|for|showing|with|based on)\s*/i,
+          /^show me (?:an?|the) image (?:of|for|showing|with|based on)\s*/i,
+          /^can you create (?:an?|the) image (?:of|for|showing|with|based on)\s*/i,
+          /^image of\s*/i,
+          /^picture of\s*/i,
+          /^visualization of\s*/i
+        ]) {
+          if (pattern.test(imagePrompt)) {
+            imagePrompt = imagePrompt.replace(pattern, '');
+            break;
+          }
+        }
+
+        console.log(`[IMAGE-HANDLING] Extracted image prompt: "${imagePrompt}"`);
+        
+        // Add a chat message to indicate that the image is being generated
+        await storage.createChat({
+          cardId,
+          role: "assistant",
+          content: `🎨 Generating an image based on your request... This might take a moment.`,
+          gptName: column.gptName || "AI Assistant",
+          gptColor: column.gptColor
+        });
+        
+        // Call the generateImage function with the extracted prompt
+        console.log(`[IMAGE-HANDLING] Calling generateImage with prompt: "${imagePrompt}"`);
+        const imageResult = await generateImage(imagePrompt, column.apiKey || undefined);
+        console.log(`[IMAGE-HANDLING] Image generation successful, received base64 data of length: ${imageResult.base64.length}`);
+        
+        // Process the generated image with handleFileGeneration
+        console.log(`[IMAGE-HANDLING] Calling handleFileGeneration to process and save the image`);
+        await handleFileGeneration(cardId, userMessage, {
+          base64: imageResult.base64,
+          fileType: imageResult.fileType
+        });
+        console.log(`[IMAGE-HANDLING] Image processing and saving completed successfully`);
+        
+      } catch (error) {
+        console.error(`[IMAGE-HANDLING] Error during image generation:`, error);
+        
+        // Create error message for the user
+        let errorMessage = "I couldn't generate that image due to a technical issue.";
+        if (error instanceof Error) {
+          // Add more specific error details based on the type of error
+          if (error.message.includes("content policy") || error.message.includes("safety")) {
+            errorMessage = "I couldn't generate that image because it may violate content safety policies. Please try a different prompt.";
+          } else if (error.message.includes("API key")) {
+            errorMessage = "I couldn't generate the image due to an API authentication error. The API key may be invalid or missing.";
+          } else if (error.message.includes("timeout") || error.message.includes("timed out")) {
+            errorMessage = "The image generation process timed out. Please try again with a simpler prompt.";
+          }
+        }
+        
+        // Send the error message to the user
+        await storage.createChat({
+          cardId,
+          role: "assistant",
+          content: `⚠️ ${errorMessage}`,
+          gptName: column.gptName || "AI Assistant",
+          gptColor: column.gptColor
+        });
+      } finally {
+        // Always mark the card as not processing, regardless of success or failure
+        await storage.updateCard(cardId, { processing: false });
+      }
       
-      // Mark the card as not processing
-      await storage.updateCard(cardId, { processing: false });
+      // Return early, as we've handled the image generation request
       return;
     }
 
