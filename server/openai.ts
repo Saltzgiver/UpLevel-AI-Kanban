@@ -371,16 +371,14 @@ export async function triggerGPTProcessing(cardId: number, column: Column): Prom
       gptOutput: `Error processing with GPT: ${userFriendlyError}`
     });
     
-    // Also add as chat message for visibility with GPT name and color
+    // Create a chat message with the error
     await storage.createChat({
       cardId,
       role: "assistant",
       content: `⚠️ Error: ${userFriendlyError}`,
-      gptName: column.gptName || "AI Assistant",
-      gptColor: column.gptColor
+      gptName: "System",
+      gptColor: "red"
     });
-
-    throw error;
   }
 }
 
@@ -418,86 +416,29 @@ export async function processChat(cardId: number, userMessage: string, column: C
       systemContent += `${column.gptInstructions}\n\n`;
     }
     
-    systemContent += 
-      `You are continuing a conversation about a card titled "${card.title}" with description: "${card.description || "No description provided."}"\n\n` +
-      `${card.gptTags ? `This card has the following tags: ${card.gptTags}\n\n` : ""}` +
-      `${card.gptOutput ? `Previous GPT output for this card: ${card.gptOutput}\n\n` : ""}`;
-    
-    // Include attachments if any
-    if (card.attachments && card.attachments.length > 0) {
-      systemContent += "This card has the following attachments:\n";
-      for (const attachment of card.attachments) {
-        systemContent += `- ${attachment.filename} (${attachment.fileType})\n`;
-        
-        // For text-based files (txt, md, etc.), include the content directly
-        if (attachment.fileType.includes('text') || 
-            attachment.filename.endsWith('.txt') || 
-            attachment.filename.endsWith('.md')) {
-          systemContent += `Content of ${attachment.filename}:\n${attachment.content}\n\n`;
-        } 
-        // Special handling for CSV files to help the model understand the structure
-        else if (attachment.filename.endsWith('.csv') || attachment.fileType.includes('csv')) {
-          try {
-            // Attempt to decode the content
-            let csvContent = '';
-            try {
-              csvContent = Buffer.from(attachment.content, 'base64').toString('utf-8');
-            } catch (e) {
-              csvContent = attachment.content; // Fallback to the raw content if not base64
-            }
-            
-            // Add some context about the CSV structure
-            systemContent += `CSV data from ${attachment.filename}:\n`;
-            
-            // Get first few lines to show structure
-            const lines = csvContent.split('\n').slice(0, 10);
-            if (lines.length > 0) {
-              // Assume first line might be header
-              const header = lines[0];
-              systemContent += `Headers: ${header}\n\n`;
-              
-              // Show a few data rows
-              systemContent += `Sample data (first ${Math.min(5, lines.length - 1)} rows):\n`;
-              for (let i = 1; i < Math.min(6, lines.length); i++) {
-                systemContent += `${lines[i]}\n`;
-              }
-              
-              if (lines.length > 6) {
-                systemContent += `...and ${lines.length - 6} more rows\n`;
-              }
-              
-              // Add instructions for CSV analysis
-              systemContent += `\nPlease analyze this CSV data in your response if the user asks about it. You can reference columns by name.\n\n`;
-            } else {
-              systemContent += `CSV appears to be empty.\n\n`;
-            }
-          } catch (error) {
-            console.error("Error processing CSV content:", error);
-            systemContent += `Content of ${attachment.filename} (CSV file - could not be parsed):\n${attachment.content.substring(0, 500)}...\n\n`;
-          }
-        } else if (attachment.fileType.includes('image')) {
-          // For images, we'll include them in the actual message content later
-          systemContent += `Note: This is an image file (${attachment.filename}). You'll be able to view and analyze it.\n\n`;
-        } else {
-          // For other file types, add a generic note
-          systemContent += `Note: This is a ${attachment.fileType} file. You can reference it by filename.\n\n`;
-        }
-      }
+    systemContent += `You are continuing a conversation about a card in a Kanban board. The card details are:\n`;
+    systemContent += `Card Title: ${card.title}\n`;
+    systemContent += `Card Description: ${card.description || "No description provided."}\n\n`;
+
+    // Include the card's existing GPT output if it exists
+    if (card.gptOutput) {
+      systemContent += `Your Previous Analysis: ${card.gptOutput}\n\n`;
     }
     
-    systemContent += "Respond helpfully and concisely to the user's message. " + 
-      "You can reference and analyze the attached files in your response as needed. " + 
-      "For file generation, use this syntax: ```file:filename.ext,mimetype,content```\n\n" + 
-      "If the user asks for an image, respond conversationally as if you've created it. " + 
-      "The system will handle the actual image generation in the background. " + 
-      "For example, if a user says 'create an image of a cat', simply respond with 'I've created an image of a cat for you' " + 
-      "or similar natural language. Don't mention DALL-E or API limitations.";
-    
-    const messages: ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: systemContent
+    // Include information about attachments if any
+    if (card.attachments && card.attachments.length > 0) {
+      systemContent += "The card has the following attached files:\n";
+      for (const attachment of card.attachments) {
+        systemContent += `- ${attachment.filename} (${attachment.fileType})\n`;
       }
+      systemContent += "\n";
+    }
+    
+    systemContent += "Please be helpful, detailed, and respond directly to the user's message.";
+    
+    // Create the messages array
+    const messages: ChatCompletionMessageParam[] = [
+      { role: "system", content: systemContent }
     ];
 
     // Always include chat history for conversations in the same column
@@ -512,7 +453,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
       }
     }
 
-    // Check if this is an image generation request
+    // Image generation detection (functionality removed for reimplementation)
     const imageRequestPatterns = [
       /create (?:an|a) image/i,
       /generate (?:an|a) image/i,
@@ -524,9 +465,6 @@ export async function processChat(cardId: number, userMessage: string, column: C
       /draw (?:an|a) picture/i,
       /show me (?:an|a) image/i,
       /can you create (?:an|a) image/i,
-      /create (?:an|a) dall-?e/i,
-      /generate (?:an|a) dall-?e/i,
-      /create (?:an|a) dall/i,
       /image of/i,
       /picture of/i,
       /visualization of/i
@@ -534,413 +472,22 @@ export async function processChat(cardId: number, userMessage: string, column: C
 
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
-    // If this appears to be an image request and we have an API key (or can use the environment API key)
-    // Special handling for "from_env" value - this is a special value that means "use the environment variable"
+    // Image generation has been temporarily disabled for reimplementation
     if (isImageRequest) {
-      try {
-        // User message already added to chat history in the API endpoint
-        // No need to add it again here
-        
-        // Generate a clean prompt from the user message
-        const promptMatch = userMessage.match(/(?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i) || 
-                           userMessage.match(/(?:create|generate|make|draw) (?:an|a) (?:image|picture|drawing|visualization) (?:of|showing|with|that) (.+)/i);
-        
-        const prompt = promptMatch ? promptMatch[1].trim() : userMessage;
-        
-        // Generate the image - handle special "from_env" value
-        let apiKeyToUse: string | undefined = undefined;
-        if (column.apiKey) {
-          apiKeyToUse = column.apiKey;
-        }
-        console.log(`Using column API key: ${apiKeyToUse || 'Not set, will use environment variable'}`);
-        const imageUrl = await generateImage(prompt, apiKeyToUse);
-        
-        if (!imageUrl) {
-          throw new Error("Failed to generate image");
-        }
-        
-        // Fetch the image and convert to base64
-        console.log(`[IMAGE-HANDLING] Handling image from source: ${imageUrl.substring(0, 30)}...`);
-        
-        let attachment;
-        try {
-          // Check if the URL is a data URL (base64 encoded image)
-          if (imageUrl.startsWith('data:image/')) {
-            console.log(`[IMAGE-HANDLING] Detected data URL format, processing directly`);
-            
-            // Parse the data URL to extract content type and base64 content
-            const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
-            if (!matches || matches.length !== 3) {
-              throw new Error("Invalid data URL format");
-            }
-            
-            const [_, dataContentType, dataBase64] = matches;
-            console.log(`[IMAGE-HANDLING] Content-Type from data URL: ${dataContentType}`);
-            console.log(`[IMAGE-HANDLING] Base64 length: ${dataBase64.length}`);
-            
-            // Validate base64 content
-            if (!dataBase64 || dataBase64.length < 100) {
-              console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${dataBase64.length} chars)`);
-              throw new Error("Invalid base64 image content");
-            }
-            
-            // Create a descriptive filename with correct extension from content type
-            const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-            let extension = dataContentType.split('/')[1] || 'png';
-            
-            // Ensure we have proper file extension
-            if (extension === 'jpeg') {
-              extension = 'jpg'; // Convert to more common extension
-            } else if (extension.includes('+')) {
-              // Handle unusual formats like image/svg+xml
-              extension = extension.split('+')[0];
-            }
-            
-            // Ensure extension is lowercase and trim
-            extension = extension.toLowerCase().trim();
-            
-            const filename = `gpt_image_${safePrompt}_${Date.now()}.${extension}`;
-            console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${dataContentType}`);
-            
-            // For PNG files from base64 data, validate and fix any malformed content
-            let processedContent = dataBase64;
-            if (extension === 'png') {
-              console.log(`[IMAGE-HANDLING] Validating PNG data...`);
-              try {
-                // Check if we need to fix common issues with data:
-                
-                // 1. Remove padding or whitespace
-                processedContent = processedContent.trim();
-                
-                // 2. Ensure the data is properly padded for base64
-                const remainder = processedContent.length % 4;
-                if (remainder > 0) {
-                  processedContent += '='.repeat(4 - remainder);
-                  console.log(`[IMAGE-HANDLING] Fixed base64 padding`);
-                }
-                
-                // 3. Check if the data starts with PNG signature (validate as best we can)
-                const byteSignature = Buffer.from(processedContent.substring(0, 32), 'base64');
-                if (!(byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
-                    byteSignature[2] === 0x4E && byteSignature[3] === 0x47)) {
-                  console.warn(`[IMAGE-HANDLING] PNG data does not seem to have correct signature`);
-                }
-              } catch (err: any) {
-                console.error(`[IMAGE-HANDLING] Error checking PNG data: ${err?.message}`);
-                // Continue despite error - we'll try with the original data
-              }
-            }
-            
-            // Create attachment with potentially fixed content
-            attachment = await storage.createAttachment({
-              cardId,
-              filename,
-              fileType: dataContentType,
-              content: processedContent
-            });
-          } else {
-            // Handle standard HTTP URL
-            console.log(`[IMAGE-HANDLING] Fetching image from URL: ${imageUrl.substring(0, 30)}...`);
-            
-            // Add retry logic for transient network errors
-            let response: Response | null = null;
-            let retryCount = 0;
-            const maxRetries = 2;
-            
-            while (retryCount <= maxRetries) {
-              try {
-                // Add validation/clean up for URL
-                // Check for common issues in URLs
-                if (!imageUrl.startsWith('http')) {
-                  throw new Error(`Invalid URL format: ${imageUrl.substring(0, 30)}...`);
-                }
-                
-                // Use more robust fetch with timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-                
-                response = await fetch(imageUrl, { 
-                  signal: controller.signal,
-                  headers: { 
-                    'Accept': 'image/*,*/*;q=0.8',
-                    'User-Agent': 'AIKanbanBoard/1.0' 
-                  } 
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                  console.error(`[IMAGE-HANDLING] Fetch error: ${response.status} ${response.statusText}`);
-                  if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
-                    // Only retry server errors or rate limits
-                    retryCount++;
-                    console.log(`[IMAGE-HANDLING] Retrying fetch, attempt ${retryCount} of ${maxRetries}`);
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-                    continue;
-                  }
-                  throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-                }
-                
-                // Success - break out of retry loop
-                break;
-              } catch (fetchErr: any) {
-                console.error(`[IMAGE-HANDLING] Fetch attempt ${retryCount + 1} failed: ${fetchErr?.message}`);
-                if (retryCount < maxRetries && 
-                    (fetchErr.name === 'AbortError' || fetchErr.message.includes('network'))) {
-                  retryCount++;
-                  console.log(`[IMAGE-HANDLING] Retrying fetch, attempt ${retryCount} of ${maxRetries}`);
-                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-                  continue;
-                }
-                throw fetchErr; // Re-throw if we're out of retries or it's not a timeout
-              }
-            }
-            
-            // Safety check - should never happen after our while loop
-            if (!response) {
-              throw new Error("Failed to fetch image: No response object");
-            }
-            
-            // Get content type, with robust fallbacks
-            let contentType = response.headers.get('content-type');
-            console.log(`[IMAGE-HANDLING] Content-Type from response: ${contentType || 'not provided'}`);
-            
-            // If no content type or invalid content type, attempt to infer from URL
-            if (!contentType || !contentType.startsWith('image/')) {
-              try {
-                // Try to extract extension from URL (handle query params)
-                const urlPath = imageUrl.split('?')[0];
-                const extension = urlPath.split('.').pop()?.toLowerCase();
-                
-                if (extension === 'png') {
-                  contentType = 'image/png';
-                } else if (extension === 'jpg' || extension === 'jpeg') {
-                  contentType = 'image/jpeg';
-                } else if (extension === 'webp') {
-                  contentType = 'image/webp';
-                } else if (extension === 'svg') {
-                  contentType = 'image/svg+xml';
-                } else if (extension === 'gif') {
-                  contentType = 'image/gif';
-                } else {
-                  // Default to PNG as safest option
-                  contentType = 'image/png';
-                }
-                console.log(`[IMAGE-HANDLING] Inferred content type from URL: ${contentType}`);
-              } catch (urlErr) {
-                // If URL parsing fails, use default
-                contentType = 'image/png';
-                console.log(`[IMAGE-HANDLING] Using default content type: ${contentType}`);
-              }
-            }
-            
-            // Get image buffer with additional checks
-            let imageBuffer;
-            try {
-              imageBuffer = await response.arrayBuffer();
-              console.log(`[IMAGE-HANDLING] Image buffer size: ${imageBuffer.byteLength} bytes`);
-              
-              // Check for valid image data - validate minimum size
-              if (imageBuffer.byteLength < 100) {
-                console.error(`[IMAGE-HANDLING] Initial image data too small: ${imageBuffer.byteLength} bytes`);
-                
-                // Try a second request with different accept headers as fallback
-                console.log(`[IMAGE-HANDLING] Attempting second fetch with different headers`);
-                const secondResponse = await fetch(imageUrl, {
-                  headers: {
-                    'Accept': 'image/png,image/jpeg,image/*',
-                    'User-Agent': 'AIKanbanBoard/1.0 ImageFallback'
-                  }
-                });
-                
-                if (secondResponse.ok) {
-                  const secondBuffer = await secondResponse.arrayBuffer();
-                  
-                  // Only use the second buffer if it's larger than the first
-                  if (secondBuffer.byteLength > imageBuffer.byteLength) {
-                    console.log(`[IMAGE-HANDLING] Second fetch successful with larger size: ${secondBuffer.byteLength} bytes`);
-                    imageBuffer = secondBuffer;
-                    
-                    // Update content type if available
-                    const secondContentType = secondResponse.headers.get('content-type');
-                    if (secondContentType && secondContentType.startsWith('image/')) {
-                      contentType = secondContentType;
-                      console.log(`[IMAGE-HANDLING] Updated content type from second request: ${contentType}`);
-                    }
-                  }
-                }
-                
-                // Final validation after retry attempt
-                if (imageBuffer.byteLength < 100) {
-                  console.error(`[IMAGE-HANDLING] Invalid image data: too small (${imageBuffer.byteLength} bytes) after retries`);
-                  throw new Error("Invalid image data received - too small");
-                }
-              }
-            } catch (bufferErr: any) {
-              console.error(`[IMAGE-HANDLING] Error getting image buffer: ${bufferErr?.message}`);
-              throw new Error(`Failed to get image data: ${bufferErr?.message}`);
-            }
-            
-            // Convert to base64 with robust error handling
-            let base64Image;
-            try {
-              base64Image = Buffer.from(imageBuffer).toString('base64');
-              console.log(`[IMAGE-HANDLING] Base64 length: ${base64Image.length}`);
-              console.log(`[IMAGE-HANDLING] Base64 starts with: ${base64Image.substring(0, 30)}...`);
-              
-              // Validate base64 content
-              if (!base64Image || base64Image.length < 100) {
-                console.error(`[IMAGE-HANDLING] Invalid base64 content: too short (${base64Image.length} chars)`);
-                throw new Error("Failed to convert image to base64");
-              }
-              
-              // Basic validation - ensure it contains only valid base64 characters
-              if (!/^[A-Za-z0-9+/=]+$/.test(base64Image)) {
-                console.warn(`[IMAGE-HANDLING] Base64 content contains invalid characters, cleaning up`);
-                base64Image = base64Image.replace(/[^A-Za-z0-9+/=]/g, '');
-                
-                // Re-check after cleanup
-                if (base64Image.length < 100) {
-                  console.error(`[IMAGE-HANDLING] Cleaned base64 is too short: ${base64Image.length} chars`);
-                  throw new Error("Base64 conversion resulted in invalid data");
-                }
-              }
-              
-              // Ensure proper padding
-              const remainder = base64Image.length % 4;
-              if (remainder > 0) {
-                base64Image += '='.repeat(4 - remainder);
-                console.log(`[IMAGE-HANDLING] Fixed base64 padding`);
-              }
-            } catch (base64Err: any) {
-              console.error(`[IMAGE-HANDLING] Error converting to base64: ${base64Err?.message}`);
-              throw new Error(`Failed to convert image to base64: ${base64Err?.message}`);
-            }
-            
-            // Clean up content type and ensure it's valid
-            // Make sure we have a valid image content type
-            let fileType = contentType.trim();
-            
-            if (!fileType.startsWith('image/')) {
-              fileType = 'image/png'; // Default to PNG for safety
-              console.log(`[IMAGE-HANDLING] Fixing invalid content type, using: ${fileType}`);
-            }
-            
-            // Create a descriptive filename with correct extension
-            const safePrompt = prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-            let extension = fileType.split('/')[1] || 'png';
-            
-            // Ensure we have proper file extension
-            if (extension === 'jpeg') {
-              extension = 'jpg'; // Convert to more common extension
-            } else if (extension.includes('+')) {
-              // Handle unusual formats like image/svg+xml
-              extension = extension.split('+')[0];
-            }
-            
-            // Ensure extension is lowercase and trim
-            extension = extension.toLowerCase().trim();
-                
-            const filename = `dalle_${safePrompt}_${Date.now()}.${extension}`;
-            console.log(`[IMAGE-HANDLING] Created filename: ${filename} with type ${fileType}`);
-            
-            // For PNG files, validate and fix any malformed content
-            let processedContent = base64Image;
-            if (extension === 'png') {
-              console.log(`[IMAGE-HANDLING] Validating PNG data from URL...`);
-              try {
-                // Check if we need to fix common issues with data:
-                
-                // 1. Remove padding or whitespace
-                processedContent = processedContent.trim();
-                
-                // 2. Ensure the data is properly padded for base64
-                const remainder = processedContent.length % 4;
-                if (remainder > 0) {
-                  processedContent += '='.repeat(4 - remainder);
-                  console.log(`[IMAGE-HANDLING] Fixed base64 padding`);
-                }
-                
-                // 3. Check if the data starts with PNG signature (validate as best we can)
-                const byteSignature = Buffer.from(processedContent.substring(0, 32), 'base64');
-                if (!(byteSignature[0] === 0x89 && byteSignature[1] === 0x50 && 
-                    byteSignature[2] === 0x4E && byteSignature[3] === 0x47)) {
-                  console.warn(`[IMAGE-HANDLING] PNG data from URL does not seem to have correct signature`);
-                  
-                  // This is a serious issue - try to re-fetch the image as binary and re-encode
-                  console.log(`[IMAGE-HANDLING] Attempting to re-fetch image as binary...`);
-                  const binaryResponse = await fetch(imageUrl);
-                  if (binaryResponse.ok) {
-                    const buffer = await binaryResponse.arrayBuffer();
-                    if (buffer.byteLength > 100) {
-                      processedContent = Buffer.from(buffer).toString('base64');
-                      console.log(`[IMAGE-HANDLING] Re-encoded image from binary, new size: ${processedContent.length}`);
-                    }
-                  }
-                }
-              } catch (err: any) {
-                console.error(`[IMAGE-HANDLING] Error checking PNG data from URL: ${err?.message}`);
-                // Continue despite error - we'll try with the original data
-              }
-            }
-            
-            // Ensure we have a valid MIME type
-            const cleanFileType = fileType.trim().toLowerCase();
-            if (!cleanFileType.startsWith('image/')) {
-              fileType = `image/${extension}`;
-              console.log(`[IMAGE-HANDLING] Fixed invalid MIME type to: ${fileType}`);
-            }
-            
-            // Create attachment with potentially fixed content
-            attachment = await storage.createAttachment({
-              cardId,
-              filename,
-              fileType,
-              content: processedContent
-            });
-          }
-          
-          console.log(`[IMAGE-HANDLING] Attachment created successfully with ID: ${attachment.id}`);
-        } catch (fetchError) {
-          console.error(`[IMAGE-HANDLING] Error processing image: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
-          throw fetchError;
-        }
-        
-        if (!attachment) {
-          throw new Error("Failed to create attachment");
-        }
-        
-        // Add a message from the assistant with the image
-        // Use "Generated image" as the alt text and a more reliable attachment link format
-        const attachmentUrl = `/api/attachments/${attachment.id}`;
-        await storage.createChat({
-          cardId,
-          role: "assistant",
-          content: `✨ Generated an image based on your request: "${prompt}"\n\n![Generated image](${attachmentUrl})`,
-          gptName: column.gptName || "Image Stylist",
-          gptColor: column.gptColor || "Peach"
-        });
-        
-        // Mark the card as not processing anymore since we've completed the image generation
-        await storage.updateCard(cardId, { processing: false });
-        
-        return;
-      } catch (error) {
-        console.error("Error generating image:", error);
-        
-        // Add error message to chat
-        await storage.createChat({
-          cardId,
-          role: "assistant",
-          content: `⚠️ Error generating image: ${error instanceof Error ? error.message : "Unknown error"}`,
-          gptName: column.gptName || "AI Assistant",
-          gptColor: column.gptColor
-        });
-        
-        // Mark the card as not processing if we're exiting here
-        await storage.updateCard(cardId, { processing: false });
-        return;
-      }
+      console.log(`[IMAGE-HANDLING] Image generation request detected but functionality is disabled for reimplementation`);
+      
+      // Inform the user that image generation is temporarily disabled
+      await storage.createChat({
+        cardId,
+        role: "assistant",
+        content: `⚠️ Image generation is temporarily unavailable as we're improving this feature. Regular chat functionality is still available.`,
+        gptName: column.gptName || "AI Assistant",
+        gptColor: column.gptColor
+      });
+      
+      // Mark the card as not processing
+      await storage.updateCard(cardId, { processing: false });
+      return;
     }
 
     // Prepare the user message content (with images if available)
@@ -955,17 +502,15 @@ export async function processChat(cardId: number, userMessage: string, column: C
       
       // If we have image attachments, format the content with text and images
       if (imageAttachments.length > 0) {
-        // Update the system message to explicitly mention vision capabilities
-        systemContent += "\n\nIMPORTANT: You have vision capabilities and CAN analyze images. Examine all images in detail and include your observations in responses. Images are not separate entities - they are part of this conversation and you can see them directly.";
+        // Update the system message to explicitly mention vision capabilities 
+        systemContent += "\n\nIMPORTANT: You have vision capabilities and MUST analyze all images in your messages. These images are directly visible to you. Pay special attention to the details in these images and include your observations in your response.";
         
         // Update the messages array with the enhanced system content
         messages[0].content = systemContent;
         
+        // Create complex content with text + images for the user message
         userContent = createContentWithImages(userMessage, card.attachments);
-        console.log(`Prepared chat message with ${imageAttachments.length} images for analysis`);
-        
-        // Log image names for debugging
-        console.log(`Images included: ${imageAttachments.map(img => img.filename).join(', ')}`);
+        console.log(`Created complex user message with ${imageAttachments.length} images`);
       } else {
         console.log(`No image attachments found despite having ${card.attachments.length} attachments`);
         console.log(`Attachment types: ${card.attachments.map(att => att.fileType).join(', ')}`);
@@ -973,28 +518,30 @@ export async function processChat(cardId: number, userMessage: string, column: C
       console.log(`======== END CHAT IMAGE ANALYSIS ========`);
     }
     
-    // Add the new user message (potentially with images)
-    messages.push({
-      role: "user",
-      content: userContent
+    // Add the user message to the conversation
+    // This will be either a string or a ContentPart array with images
+    messages.push({ 
+      role: "user", 
+      content: userContent 
     });
     
-    // User message is already saved to the chat history in the API endpoint
-    // No need to save it again here
-
-    console.log(`Sending message to OpenAI with model ${OPENAI_MODEL}, including ${typeof userContent === 'string' ? 0 : userContent.length - 1} images`);
+    console.log(`Sending chat to OpenAI with model ${OPENAI_MODEL}, including ${typeof userContent === 'string' ? 0 : userContent.length - 1} images`);
     
-    // Call OpenAI API
+    // Log the exact model we're using to catch any overrides
+    console.log(`Using OpenAI model: ${OPENAI_MODEL}`);
+    
+    // Call OpenAI API with explicit model
     const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: OPENAI_MODEL, // gpt-4o has vision and all capabilities
       messages,
-      temperature: 0.7,
-      max_tokens: 1000,
+      temperature: 0.7, // Default creative temperature
+      max_tokens: 2000, // Generous response length
     });
-
+    
     const response = completion.choices[0].message.content || "";
-
-    // Save the assistant's response with GPT name and color
+    console.log(`Response received, length: ${response.length} characters`);
+    
+    // Create a chat message with the response
     await storage.createChat({
       cardId,
       role: "assistant",
@@ -1002,22 +549,22 @@ export async function processChat(cardId: number, userMessage: string, column: C
       gptName: column.gptName || "AI Assistant",
       gptColor: column.gptColor
     });
-
-    // Handle file generation if indicated in the response
+    
+    // Handle file generation from content if the model output contains file syntax
     await handleFileGeneration(cardId, response);
     
     // Always update card to reset processing state, even if a chat modal has been closed
     await storage.updateCard(cardId, { processing: false });
-
+    
   } catch (error) {
     console.error("Error processing chat with GPT:", error);
     
-    // More informative error message
+    // Create more informative error message
     const errorMessage = error instanceof Error 
       ? error.message
-      : "Unknown error occurred while processing";
+      : "Unknown error occurred";
     
-    // Check for rate limits or token limits specifically
+    // Check for specific API errors
     let userFriendlyError = errorMessage;
     if (errorMessage.includes("rate limit")) {
       userFriendlyError = "OpenAI API rate limit exceeded. Please try again in a few moments.";
@@ -1027,36 +574,27 @@ export async function processChat(cardId: number, userMessage: string, column: C
       userFriendlyError = "Invalid or missing OpenAI API key. Please update the API key in column settings.";
     }
     
-    // Add user-friendly error message to chat with GPT name and color
-    await storage.createChat({
-      cardId,
-      role: "assistant",
-      content: `⚠️ Error: ${userFriendlyError}`,
-      gptName: column.gptName || "AI Assistant",
-      gptColor: column.gptColor
-    });
-    
-    // Always reset the processing state on error, even if the chat modal has been closed
     try {
-      // Store the error in the gptOutput field since there's no dedicated error field
-      await storage.updateCard(cardId, { 
-        processing: false
-      });
-      
-      // Optionally update the output message to indicate an error
-      await storage.updateCard(cardId, {
-        gptOutput: `Error: ${userFriendlyError}`
+      // Add error message to chat
+      await storage.createChat({
+        cardId,
+        role: "assistant",
+        content: `⚠️ Error: ${userFriendlyError}`,
+        gptName: "System",
+        gptColor: "red"
       });
     } catch (updateError) {
-      console.error("Error updating card processing state:", updateError);
+      console.error("Error adding error message to chat:", updateError);
     }
-
-    throw error;
+    
+    // Always reset the processing state on error, even if the chat modal has been closed
+    await storage.updateCard(cardId, { processing: false });
   }
 }
 
 /**
- * Handles file generation based on response content
+ * Handle file generation from GPT responses
+ * Looks for patterns like ```file:filename.ext,content```
  */
 async function handleFileGeneration(cardId: number, response: string): Promise<void> {
   console.log(`=== FILE GENERATION START: Card ${cardId} ===`);
@@ -1065,82 +603,83 @@ async function handleFileGeneration(cardId: number, response: string): Promise<v
   // Keep track of created CSV content hashes to prevent duplicates
   const processedHashes = new Set<string>();
   
-  // Helper function to hash content and check for duplicates
-  const createCSVIfUnique = async (content: string, filename: string): Promise<boolean> => {
-    // Create a simple hash of the content to check for duplicates
-    // We normalize whitespace to avoid treating similar CSVs as different
-    const normalizedContent = content.trim().replace(/\s+/g, ' ');
-    const contentHash = Buffer.from(normalizedContent).toString('base64');
-    
-    if (processedHashes.has(contentHash)) {
-      console.log(`Skipping duplicate CSV content for ${filename} (already processed)`);
-      return false;
-    }
-    
-    // Store hash and create attachment
-    processedHashes.add(contentHash);
-    const success = await createCSVAttachmentFromText(cardId, content, filename);
-    return success;
-  };
-  
   try {
-    // First, try to extract CSV content using various patterns
-    const csvContent = extractCSVContent(response);
-    if (csvContent) {
-      console.log(`Found CSV content using pattern: ${csvContent.format}`);
-      const success = await createCSVIfUnique(csvContent.content, `data_${Date.now()}.csv`);
-      if (success) {
-        attachmentsCreated++;
+    // Function to create CSV attachment and track for uniqueness
+    const createCSVIfUnique = async (content: string, filename: string): Promise<boolean> => {
+      // Create a simple hash of the content to check for duplicates
+      const contentHash = content.replace(/\s+/g, '').substring(0, 100);
+      if (processedHashes.has(contentHash)) {
+        console.log(`Skipping duplicate CSV content for ${filename}`);
+        return false;
       }
-    }
+      
+      processedHashes.add(contentHash);
+      await createCSVAttachmentFromText(cardId, content, filename);
+      return true;
+    };
     
-    // Proceed with standard file attachment pattern
-    const fileRegex = /```(?:file|attachment):([^,]+),\s*([^,]+),\s*([^`]+)```/g;
+    // Check for code blocks with file syntax
+    const filePattern = /```file:([^,]+),([^,]+),?([\s\S]*?)```/g;
     let match;
-
-    console.log(`Checking for file attachments with standard format`);
-    while ((match = fileRegex.exec(response)) !== null) {
+    
+    while ((match = filePattern.exec(response)) !== null) {
       try {
-        const [_, filename, fileType, content] = match;
+        const filename = match[1].trim();
+        const mimeType = match[2].trim();
+        const content = match[3].trim();
         
-        // Special handling for CSV files to ensure content is properly formatted
-        if (fileType.trim().includes('csv') || filename.trim().endsWith('.csv')) {
-          console.log(`Handling CSV file with standard format: ${filename.trim()}`);
-          
-          // Use our helper for better CSV handling with duplicate detection
-          const success = await createCSVIfUnique(content.trim(), filename.trim());
+        console.log(`Detected file syntax for: ${filename} (${mimeType})`);
+        
+        // Only process CSV files for now
+        if (mimeType.includes('csv') || filename.endsWith('.csv')) {
+          console.log(`Creating CSV attachment from file syntax: ${filename}`);
+          const success = await createCSVIfUnique(content, filename);
           if (success) {
             attachmentsCreated++;
           }
         } else {
-          // Handle all other file types normally
-          console.log(`Creating non-CSV attachment: ${filename.trim()} (${fileType.trim()})`);
-          await storage.createAttachment({
-            cardId,
-            filename: filename.trim(),
-            fileType: fileType.trim(),
-            content: content.trim()
-          });
-          attachmentsCreated++;
+          console.log(`Skipping non-CSV file type: ${mimeType}`);
         }
       } catch (error) {
-        console.error("Error creating attachment:", error);
+        console.error("Error creating attachment from file syntax:", error);
       }
     }
     
-    // Also look for embedded CSV content in ```csv blocks
-    const csvBlockRegex = /```csv\s*\n([\s\S]*?)\n```/gi;
-    let csvMatch;
-    while ((csvMatch = csvBlockRegex.exec(response)) !== null) {
+    // Check for code blocks with CSV content (without file syntax)
+    const codeBlocks = response.match(/```(?:csv)?\s*\n([\s\S]*?)```/g);
+    if (codeBlocks) {
+      console.log(`Found ${codeBlocks.length} potential CSV code blocks`);
+      
+      for (const block of codeBlocks) {
+        try {
+          // Extract just the content from within the code block
+          const csvContent = block.replace(/```(?:csv)?\s*\n/, '').replace(/\s*```$/, '').trim();
+          
+          // Only process if it looks like CSV (contains commas and line breaks)
+          if (csvContent.includes(',') && csvContent.includes('\n') && csvContent.length > 20) {
+            console.log(`Creating CSV attachment from code block, length: ${csvContent.length}`);
+            const success = await createCSVIfUnique(csvContent, `data_${Date.now()}.csv`);
+            if (success) {
+              attachmentsCreated++;
+            }
+          }
+        } catch (error) {
+          console.error("Error creating CSV attachment from code block:", error);
+        }
+      }
+    }
+    
+    // Check for extracted CSV content from the response
+    const csvResult = extractCSVContent(response);
+    if (csvResult) {
       try {
-        console.log(`Found CSV block, attempting to create attachment`);
-        const csvContent = csvMatch[1].trim();
-        const success = await createCSVIfUnique(csvContent, `data_${Date.now()}.csv`);
+        console.log(`Creating CSV attachment from extracted content, format: ${csvResult.format}`);
+        const success = await createCSVIfUnique(csvResult.content, `${csvResult.format}_${Date.now()}.csv`);
         if (success) {
           attachmentsCreated++;
         }
       } catch (error) {
-        console.error("Error creating CSV attachment from code block:", error);
+        console.error("Error creating CSV attachment from extracted content:", error);
       }
     }
     
@@ -1250,144 +789,131 @@ export async function getPromptSuggestion(
         columnNameLower.includes("dall") ||
         columnNameLower.includes("visual")) {
       columnType = "image-generation";
-    } else if (sourceColumnInstructions.toLowerCase().includes("spreadsheet") || 
-               columnNameLower.includes("spreadsheet") || 
-               columnNameLower.includes("csv") ||
-               columnNameLower.includes("sheet") ||
-               columnNameLower.includes("data") ||
-               columnNameLower.includes("table")) {
-      columnType = "spreadsheet-generation";
-    } else if (sourceColumnInstructions.toLowerCase().includes("draft") || 
-               columnNameLower.includes("draft") || 
-               columnNameLower.includes("write") ||
-               columnNameLower.includes("content") ||
-               columnNameLower.includes("text")) {
-      columnType = "text-drafting";
-    } else if (sourceColumnInstructions.toLowerCase().includes("refine") || 
-               columnNameLower.includes("refine") || 
-               columnNameLower.includes("edit") ||
-               columnNameLower.includes("improve") ||
-               columnNameLower.includes("review")) {
-      columnType = "content-refinement";
+    } else if (sourceColumnInstructions.toLowerCase().includes("summary") || 
+               columnNameLower.includes("summary") || 
+               columnNameLower.includes("summarize")) {
+      columnType = "summary";
+    } else if (sourceColumnInstructions.toLowerCase().includes("task") || 
+               columnNameLower.includes("task") ||
+               columnNameLower.includes("todo") ||
+               columnNameLower.includes("to-do")) {
+      columnType = "task-generation";
+    } else if (sourceColumnInstructions.toLowerCase().includes("analysis") || 
+               columnNameLower.includes("analysis") || 
+               columnNameLower.includes("analyze")) {
+      columnType = "analysis";
     }
     
     console.log(`Detected column type: ${columnType}`);
     
-    // Get the current template
-    const template = getTemplate();
+    // Get the appropriate template based on column type
+    const template = await getTemplate(columnType);
+    console.log(`Selected template: ${template ? 'Available' : 'Not available'} for ${columnType}`);
     
-    // Generate the meta-prompt using the template
+    // Generate a meta-prompt to analyze the interactions
     const metaPrompt = generateMetaPrompt(
-      template,
       sourceColumnInstructions,
-      cardContext,
+      cardContext.title,
+      cardContext.description || "",
       chats,
-      columnType
+      columnType,
+      template
     );
-
-    console.log(`\nMeta-Prompt: ${metaPrompt.substring(0, 200)}...[truncated for log]`);
-    console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
     
-    // Handle API key management
-    let finalApiKey = apiKey;
-    
-    if (!finalApiKey || finalApiKey === "from_env") {
-      // Use environment variable as fallback
-      finalApiKey = process.env.OPENAI_API_KEY;
-      console.log("[Prompt Assistant] Using API key from environment");
-    }
-    
-    if (!finalApiKey) {
-      console.error("[Prompt Assistant] No OpenAI API key available");
-      // Fall back to test implementation if no API key is available
-      console.log("[Prompt Assistant] Falling back to test implementation");
-      return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
-    }
+    // Log meta-prompt length for analysis
+    console.log(`Generated meta-prompt: ${metaPrompt.length} characters`);
+    console.log(`Meta-prompt preview: ${metaPrompt.substring(0, 200)}...`);
     
     try {
-      // Initialize OpenAI client with the provided API key
-      const openai = new OpenAI({ apiKey: finalApiKey });
+      // Initialize OpenAI client
+      const openai = getOpenAIClient(apiKey);
       
-      console.log(`[Prompt Assistant] Calling OpenAI API with model: ${OPENAI_MODEL}`);
-      
-      // Call the OpenAI API with our meta-prompt
-      const response = await openai.chat.completions.create({
-        model: OPENAI_MODEL, // Use the global model constant
+      // Request a new prompt suggestion from GPT-4
+      const completion = await openai.chat.completions.create({
+        model: OPENAI_MODEL,
         messages: [
-          { role: "system", content: "You are an expert AI prompt engineer that helps improve GPT prompts based on user interactions and conversation patterns." },
+          { role: "system", content: "You are an expert prompt engineer that helps improve AI instructions." },
           { role: "user", content: metaPrompt }
         ],
-        temperature: 0.4, // Lower temperature for more focused, consistent output
+        temperature: 0.7,
         max_tokens: 1500,
       });
       
-      // Parse the response content
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        console.log("[Prompt Assistant] No content returned from OpenAI API");
-        return null;
+      // Process the response
+      const response = completion.choices[0].message.content || "";
+      console.log(`Received response: ${response.length} characters`);
+      
+      // Extract the structured data using a predictable format marker
+      const formattedResponse = extractFormattedResponse(response);
+      
+      if (formattedResponse) {
+        console.log(`Extracted suggestion: ${formattedResponse.suggestedInstructions.length} characters`);
+        console.log(`Rationale: ${formattedResponse.rationale.substring(0, 100)}...`);
+        console.log(`======== END PROMPT ASSISTANT ANALYSIS ========\n`);
+        return formattedResponse;
+      } else {
+        console.log(`No structured suggestion found in response`);
+        // For unstructured responses, attempt to parse using section markers
+        const parsedResponse = parseUnstructuredResponse(response);
+        if (parsedResponse) {
+          console.log(`Parsed unstructured response successfully`);
+          return parsedResponse;
+        }
       }
       
-      // Log the raw suggestion for debugging (limited length for logs)
-      console.log(`[Prompt Assistant] Raw Suggestion from AI: ${content.substring(0, 200)}...`);
-      
-      // Parse the response according to our expected format
-      try {
-        // Extract the rationale (first line starting with RATIONALE:)
-        const rationaleMatch = content.match(/^RATIONALE:\s*(.+)$/m);
-        if (!rationaleMatch || !rationaleMatch[1]) {
-          console.log("[Prompt Assistant] Could not find rationale in the response");
-          return null;
-        }
-        
-        const rationale = rationaleMatch[1].trim();
-        
-        // Check if this is a "no improvements needed" response
-        if (rationale.toLowerCase().includes("no improvements needed") || 
-            rationale.toLowerCase().includes("no improvement needed")) {
-          console.log("[Prompt Assistant] AI determined no improvements are needed:", rationale);
-          return null;
-        }
-        
-        // Extract the suggested instructions (everything after the RATIONALE line)
-        const matchIndex = content.indexOf(rationaleMatch[0]);
-        if (matchIndex === -1) {
-          console.log("[Prompt Assistant] Could not locate rationale in content");
-          return null;
-        }
-        
-        const instructionsText = content
-          .substring(matchIndex + rationaleMatch[0].length)
-          .trim();
-        
-        if (!instructionsText) {
-          console.log("[Prompt Assistant] Could not find suggested instructions in the response");
-          return null;
-        }
-        
-        console.log("[Prompt Assistant] Successfully generated suggestion with rationale length:", rationale.length);
-        console.log("[Prompt Assistant] Instructions length:", instructionsText.length);
-        
-        // Return the structured response
-        return {
-          rationale,
-          suggestedInstructions: instructionsText
-        };
-        
-      } catch (parseError) {
-        console.error("[Prompt Assistant] Error parsing AI response:", parseError);
-        console.log("[Prompt Assistant] Raw response:", content);
-        return null;
-      }
+      console.log(`Unable to extract a valid suggestion`);
+      return null;
     } catch (apiError) {
-      console.error("[Prompt Assistant] Error calling OpenAI API:", apiError);
-      
-      // If there's an API error, fall back to test implementation
-      console.log("[Prompt Assistant] API error occurred, falling back to test implementation");
-      return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
+      console.error("API error generating prompt suggestion:", apiError);
+      return null;
     }
   } catch (error) {
-    console.error("[Prompt Assistant] Unexpected error in getPromptSuggestion:", error);
-    return getTestPromptSuggestion(sourceColumnInstructions, cardContext, chats);
+    console.error("Error in getPromptSuggestion:", error);
+    return null;
   }
+}
+
+/**
+ * Helper function to extract structured response from GPT output
+ */
+function extractFormattedResponse(response: string): { rationale: string; suggestedInstructions: string } | null {
+  try {
+    // Look for JSON format responses
+    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      const jsonData = JSON.parse(jsonMatch[1]);
+      if (jsonData.suggestedInstructions && jsonData.rationale) {
+        return {
+          suggestedInstructions: jsonData.suggestedInstructions,
+          rationale: jsonData.rationale
+        };
+      }
+    }
+    
+    // Look for section markers format
+    return parseUnstructuredResponse(response);
+  } catch (parseError) {
+    console.error("Error parsing structured response:", parseError);
+    return null;
+  }
+}
+
+/**
+ * Parse response using section markers when not in JSON format
+ */
+function parseUnstructuredResponse(response: string): { rationale: string; suggestedInstructions: string } | null {
+  // Look for rationale section
+  const rationaleMatch = response.match(/(?:Rationale|RATIONALE|Reasoning|REASONING):?\s*([\s\S]*?)(?=(?:Suggested Instructions|SUGGESTED INSTRUCTIONS|New Instructions|NEW INSTRUCTIONS)|$)/i);
+  
+  // Look for suggested instructions section
+  const instructionsMatch = response.match(/(?:Suggested Instructions|SUGGESTED INSTRUCTIONS|New Instructions|NEW INSTRUCTIONS):?\s*([\s\S]*?)(?:\n\n|$)/i);
+  
+  if (rationaleMatch && instructionsMatch) {
+    return {
+      rationale: rationaleMatch[1].trim(),
+      suggestedInstructions: instructionsMatch[1].trim()
+    };
+  }
+  
+  return null;
 }
