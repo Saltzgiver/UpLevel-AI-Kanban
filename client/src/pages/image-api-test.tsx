@@ -206,8 +206,14 @@ export default function ImageApiTest() {
                       <div>
                         <span className="font-medium">Image Size:</span> {imageSize}
                       </div>
-                      <div className="col-span-2">
+                      <div>
+                        <span className="font-medium">Model:</span> {modelInfo || "unknown"}
+                      </div>
+                      <div>
                         <span className="font-medium">URL Type:</span> {imageUrl.startsWith('data:') ? 'Base64 Data URL' : 'HTTP URL'}
+                      </div>
+                      <div className="col-span-2 mt-1 p-1 bg-black/5 rounded">
+                        <span className="font-medium">Note:</span> We're currently using {modelInfo || "dall-e-3"} for all image generation requests
                       </div>
                     </div>
                   </div>
@@ -228,8 +234,19 @@ export default function ImageApiTest() {
                 <span className="font-medium">About this test tool:</span> This page allows you to directly test the OpenAI image generation API to verify it's working properly.
               </p>
               <p>
+                <span className="font-medium">Image Models:</span> This application is configured to use the OpenAI DALL-E 3 model for image generation.
+              </p>
+              <p>
                 <span className="font-medium">Expected behavior:</span> Authentic image generation from OpenAI should take several seconds to complete (typically 5-15 seconds). 
                 If images are generated instantly (under 1 second), it likely indicates a mock/intercepted response.
+              </p>
+              <p>
+                <span className="font-medium">Response time analysis:</span>
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  <li><span className="font-medium text-green-600">5-15 seconds:</span> Real API call to OpenAI (expected)</li>
+                  <li><span className="font-medium text-yellow-600">15+ seconds:</span> API call is likely real but experiencing high latency</li>
+                  <li><span className="font-medium text-red-600">&lt;1 second:</span> Response is likely mocked or intercepted</li>
+                </ul>
               </p>
               <p>
                 <span className="font-medium">Resolution steps:</span> If you're seeing instantaneous responses, check for fetch interceptors, mock implementations, or test configurations that might be replacing the actual API calls.

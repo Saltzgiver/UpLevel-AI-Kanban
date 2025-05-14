@@ -1184,7 +1184,7 @@ export async function handleFileGeneration(
  * @param size Optional size parameter, defaults to 1024x1024
  * @returns Object containing base64 image data and file type
  */
-export async function generateImage(prompt: string, apiKey?: string, size: "1024x1024" | "1792x1024" | "1024x1792" | "1536x1024" | "1024x1536" = "1024x1024"): Promise<{ base64: string, fileType: string }> {
+export async function generateImage(prompt: string, apiKey?: string, size: "1024x1024" | "1792x1024" | "1024x1792" | "1536x1024" | "1024x1536" = "1024x1024"): Promise<{ base64: string, fileType: string, model: string }> {
   // Add stack trace logging to see where this function is being called from
   const stackTrace = new Error().stack;
   console.log(`[IMAGE-GEN] CALL STACK: generateImage called from:\n${stackTrace}`);
@@ -1269,7 +1269,8 @@ export async function generateImage(prompt: string, apiKey?: string, size: "1024
     // Return the cleaned base64 data and inferred or default file type
     return { 
       base64: cleanedBase64, 
-      fileType: mimeType
+      fileType: mimeType,
+      model: "dall-e-3"
     };
   } catch (error) {
     console.error(`[IMAGE-GEN] Error with dalle-3:`, error);
@@ -1321,7 +1322,8 @@ export async function generateImage(prompt: string, apiKey?: string, size: "1024
       // Return the cleaned base64 data and detected file type
       return { 
         base64: cleanedBase64, 
-        fileType: mimeType 
+        fileType: mimeType,
+        model: "dall-e-2" // Fallback model
       };
     } catch (fallbackError) {
       console.error(`[IMAGE-GEN] Error with fallback approach:`, fallbackError);
