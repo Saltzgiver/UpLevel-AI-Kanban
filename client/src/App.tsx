@@ -13,6 +13,7 @@ import GlobalSettings from "@/pages/global-settings";
 import SettingsPage from "@/pages/settings";
 import WorkflowGeneratorPromptPage from "@/pages/workflow-generator-prompt";
 import CreateWorkflowPage from "@/pages/create-workflow";
+import ImageApiTest from "@/pages/image-api-test";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { SuggestionListener } from "@/components/prompt-assistant/SuggestionListener";
 import { GlobalAssignGPTModal } from "@/components/modals/GlobalAssignGPTModal";
@@ -45,6 +46,7 @@ function Router() {
       <CustomRoute path="/direct-toast-test" component={DirectToastTestPage} />
       <CustomRoute path="/prompt-analyzer-settings" component={PromptAnalyzerSettings} />
       <CustomRoute path="/global-settings" component={GlobalSettings} />
+      <CustomRoute path="/image-api-test" component={ImageApiTest} />
       <CustomRoute component={NotFound} />
     </Switch>
   );

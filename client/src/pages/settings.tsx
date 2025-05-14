@@ -97,8 +97,35 @@ export default function SettingsPage() {
       <Tabs defaultValue="developer" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="developer">Developer Tools</TabsTrigger>
+          <TabsTrigger value="testing">Testing Tools</TabsTrigger>
           {/* Can add more tabs here in the future */}
         </TabsList>
+
+        <TabsContent value="testing" className="mt-6">
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>API Testing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Access testing tools for various API features.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-md font-medium mb-2">Image Generation API</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Test the OpenAI DALL-E image generation API directly to verify it's working properly and identify any issues.
+                    </p>
+                    <Button asChild>
+                      <a href="/image-api-test">Open Image API Test</a>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="developer" className="mt-6">
           <Card>

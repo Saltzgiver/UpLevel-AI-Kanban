@@ -1394,6 +1394,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Direct image generation test endpoint for debugging
+  app.post("/api/test/generate-image", async (req, res) => {
+    console.log(`[IMAGE-TEST] Direct image generation test endpoint called`);
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: "A valid prompt string is required"
+        });
+      }
+      
+      // Store logs for returning to the client
+      const logs: string[] = [];
+      const logCapture = (message: string) => {
+        console.log(message);
+        logs.push(message);
+      };
+      
+      logCapture(`[IMAGE-TEST] Testing image generation with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
+      logCapture(`[IMAGE-TEST] Using API key from environment variable, length: ${process.env.OPENAI_API_KEY?.length || 'not found'}`);
+      
+      // Call the actual image generation function
+      const startTime = Date.now();
+      
+      try {
+        const result = await generateImage(prompt);
+        const endTime = Date.now();
+        const responseTime = (endTime - startTime) / 1000;
+        
+        logCapture(`[IMAGE-TEST] Image generated successfully in ${responseTime.toFixed(2)} seconds`);
+        logCapture(`[IMAGE-TEST] Result: base64 length = ${result.base64.length}, fileType = ${result.fileType}`);
+        
+        return res.json({
+          success: true,
+          base64: result.base64,
+          fileType: result.fileType,
+          responseTime,
+          logs
+        });
+      } catch (genError) {
+        logCapture(`[IMAGE-TEST] Error generating image: ${genError instanceof Error ? genError.message : 'Unknown error'}`);
+        throw genError; // Re-throw to be caught by outer try/catch
+      }
+    } catch (error) {
+      console.error(`[IMAGE-TEST] Error in test endpoint:`, error);
+      return res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Unknown error occurred during image generation",
+      });
+    }
+  });
+  
   // CARD PROCESSING STATUS ENDPOINT
   app.get("/api/cards/:id/processing-status", async (req, res) => {
     try {
