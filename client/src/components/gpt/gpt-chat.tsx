@@ -17,6 +17,28 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+// Define image request patterns locally
+// These patterns should match what's used on the server
+const imageRequestPatterns = [
+  /create (?:an|a) image/i,
+  /generate (?:an|a) image/i,
+  /make (?:an|a) image/i,
+  /draw (?:an|a) image/i,
+  /create (?:an|a) picture/i,
+  /generate (?:an|a) picture/i,
+  /make (?:an|a) picture/i,
+  /draw (?:an|a) picture/i,
+  /show me (?:an|a) image/i,
+  /can you create (?:an|a) image/i,
+  /image of/i,
+  /picture of/i,
+  /visualization of/i,
+  // Add more explicit patterns to ensure we catch all image generation requests
+  /new image/i,
+  /another image/i,
+  /create image/i,
+  /generate image/i
+];
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -255,9 +277,16 @@ export function GPTChat({
     if (isProcessing) {
       console.log(`✅ [GPTChat:${cardId}] Processing started - showing typing indicator`);
       setForceShowTyping(true);
+      
+      // Add detailed logging for image generation
+      // The backend sets the card's processing flag when generating images
+      console.log(`🔍 [GPTChat:${cardId}] Card processing state is now TRUE - this could be for image generation`);
     } else {
       console.log(`❌ [GPTChat:${cardId}] Processing ended - hiding typing indicator`);
       setForceShowTyping(false);
+      
+      // Add detailed logging for image generation completion
+      console.log(`🔍 [GPTChat:${cardId}] Card processing state is now FALSE - any image generation has completed`);
     }
   }, [isProcessing, cardId]);
   
@@ -277,6 +306,20 @@ export function GPTChat({
   const handleSendMessage = async () => {
     if (!message.trim()) return;
     
+    // Store a copy of the message text before clearing the input
+    const sentMessage = message.trim();
+    
+    // Log user message content for debugging
+    console.log(`📝 [GPTChat:${cardId}] User message: "${sentMessage}"`);
+    
+    // Check if this is an image request using the imported patterns
+    const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(sentMessage));
+    
+    // Log image request detection
+    if (isImageRequest) {
+      console.log(`🖼️ [GPTChat:${cardId}] Image request detected: "${sentMessage}"`);
+    }
+    
     // Turn on the typing indicator immediately when sending
     // This shows the indicator before the server starts processing
     console.log(`✅ [GPTChat:${cardId}] Setting force show typing to true on message send`);
@@ -287,9 +330,6 @@ export function GPTChat({
     setUserHasScrolled(false);
     
     try {
-      // Store a copy of the message text before clearing the input
-      const sentMessage = message.trim();
-      
       // Create a local optimistic update with the new message
       const optimisticChat = {
         id: Date.now(), // Temporary ID
@@ -303,16 +343,26 @@ export function GPTChat({
       setMessage("");
       
       // Send the message to the server
+      console.log(`🔄 [GPTChat:${cardId}] Sending message to backend...`);
       await apiRequest("POST", `/api/chats`, {
         cardId,
         role: "user",
         content: sentMessage
       });
+      console.log(`✅ [GPTChat:${cardId}] Message sent to backend successfully`);
       
       // Start polling for processing status to get new messages
       queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
       // Also update the board data
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
+      
+      // If it's an image request, we expect the processing to take longer
+      // The backend will handle setting the card's processing flag
+      if (isImageRequest) {
+        console.log(`🖼️ [GPTChat:${cardId}] Image processing started, waiting for backend generation...`);
+        // Keep the typing indicator visible until processing completes
+        // isProcessing will be monitored via useCardProcessing hook
+      }
       
       // Scroll to bottom after sending a message
       // Using smooth scroll for better user experience
@@ -334,6 +384,7 @@ export function GPTChat({
       // when the isProcessing state changes to false in the useEffect above
       
     } catch (error) {
+      console.error(`❌ [GPTChat:${cardId}] Error sending message:`, error);
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -576,7 +627,7 @@ export function GPTChat({
           type="text"
           placeholder={gptName === "Comments" 
             ? "Add a comment..." 
-            : `Ask ${gptName || 'AI'} a question or "create an image of..."`}
+            : `Ask ${gptName || 'AI'} a question or try "generate an image of..."`}
           className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
