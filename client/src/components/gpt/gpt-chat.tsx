@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink, Paperclip } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Chat, Attachment } from "@shared/schema";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { TypingIndicator } from "./typing-indicator";
+import { AttachmentItem } from "./attachment-item";
 import {
   Dialog,
   DialogContent,
@@ -720,6 +721,30 @@ export function GPTChat({
       >
         <ChatMessages />
       </div>
+
+      {/* Attachments Section - Display only if we have attachments */}
+      {attachments.length > 0 && (
+        <div className="border-t border-gray-100 px-4 py-2">
+          <div className="flex items-center mb-2">
+            <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
+            <span className="text-sm font-medium text-gray-700">Attachments ({attachments.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {attachments.map(attachment => (
+              <div key={attachment.id} className="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5">
+                <AttachmentItem 
+                  attachment={attachment} 
+                  onDelete={() => {
+                    // Refresh the attachments list after deletion
+                    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
+                    console.log(`🗑️ [GPTChat:${cardId}] Attachment deleted, refreshing list`);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* Chat Input - Always at the bottom */}
       <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
