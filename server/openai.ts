@@ -1288,22 +1288,29 @@ export async function generateImage(
       const imageData = imagenResult.data[0];
       console.log(`[IMAGE-GEN] Image data keys: ${JSON.stringify(Object.keys(imageData))}`);
       
-      // Check for image URL, as gpt-image-1 returns URLs instead of base64
-      if (!imageData.url) {
-        throw new Error("No image URL found in API response. Data keys: " + JSON.stringify(Object.keys(imageData)));
+      // Check for base64 data first (DALL-E 3 style)
+      let base64Data: string;
+      if (imageData.b64_json) {
+        console.log(`[IMAGE-GEN] Found base64 data in response from gpt-image-1`);
+        base64Data = imageData.b64_json;
+      } 
+      // If no base64, check for URL (expected for gpt-image-1)
+      else if (imageData.url) {
+        console.log(`[IMAGE-GEN] Found image URL in response: ${imageData.url}`);
+        
+        // We need to fetch the image and convert it to base64
+        const fetch = await import('node-fetch');
+        const response = await fetch.default(imageData.url);
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        base64Data = buffer.toString('base64');
+      } 
+      // No usable data in response
+      else {
+        throw new Error("Neither base64 data nor URL found in API response. Data keys: " + JSON.stringify(Object.keys(imageData)));
       }
       
-      // We need to fetch the image and convert it to base64
-      console.log(`[IMAGE-GEN] Fetching image from URL: ${imageData.url}`);
-      
-      // Use node-fetch to get the image
-      const fetch = await import('node-fetch');
-      const response = await fetch.default(imageData.url);
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64Data = buffer.toString('base64');
-      
-      console.log(`[IMAGE-GEN] Successfully converted image URL to base64 with length: ${base64Data.length}`);
+      console.log(`[IMAGE-GEN] Successfully retrieved base64 data with length: ${base64Data.length}`);
       
       // Clean the base64 data
       const cleanedBase64 = cleanBase64(base64Data);
