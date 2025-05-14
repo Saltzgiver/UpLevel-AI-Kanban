@@ -4,6 +4,28 @@ import { storage } from "./storage";
 import { Column, Attachment, Chat } from "@shared/schema";
 import { extractCSVContent, createCSVAttachmentFromText } from './csv-helper';
 
+// Export image request detection patterns for use in both server and client code
+export const imageRequestPatterns = [
+  /create (?:an|a) image/i,
+  /generate (?:an|a) image/i,
+  /make (?:an|a) image/i,
+  /draw (?:an|a) image/i,
+  /create (?:an|a) picture/i,
+  /generate (?:an|a) picture/i,
+  /make (?:an|a) picture/i,
+  /draw (?:an|a) picture/i,
+  /show me (?:an|a) image/i,
+  /can you create (?:an|a) image/i,
+  /image of/i,
+  /picture of/i,
+  /visualization of/i,
+  // Add more explicit patterns to ensure we catch all image generation requests
+  /new image/i,
+  /another image/i,
+  /create image/i,
+  /generate image/i
+];
+
 // Global settings key for the global prompt
 const GLOBAL_PROMPT_SETTING_KEY = "global_prompt";
 
@@ -554,27 +576,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
     }
 
     // Image generation detection 
-    const imageRequestPatterns = [
-      /create (?:an|a) image/i,
-      /generate (?:an|a) image/i,
-      /make (?:an|a) image/i,
-      /draw (?:an|a) image/i,
-      /create (?:an|a) picture/i,
-      /generate (?:an|a) picture/i,
-      /make (?:an|a) picture/i,
-      /draw (?:an|a) picture/i,
-      /show me (?:an|a) image/i,
-      /can you create (?:an|a) image/i,
-      /image of/i,
-      /picture of/i,
-      /visualization of/i,
-      // Add more explicit patterns to ensure we catch all image generation requests
-      /new image/i,
-      /another image/i,
-      /create image/i,
-      /generate image/i
-    ];
-
+    // Using the exported patterns array defined at the top of this file
     const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(userMessage));
     
     // Force image generation mode for special cases
