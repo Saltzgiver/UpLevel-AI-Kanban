@@ -736,36 +736,38 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
   // Determine whether to use DALL-E 3 as fallback based on env variable
   const preferDalleFallback = process.env.PREFER_DALLE_FALLBACK === "true";
   
-  // Set initial model and response format
+  // Set initial model
   let model: "gpt-image-1" | "dall-e-3" = "gpt-image-1";
-  let responseFormat: "b64_json" | "url" = "b64_json";
   
   // If fallback is preferred, use DALL-E 3 directly
   if (preferDalleFallback) {
     console.log(`[IMAGE-GEN] Using DALL-E 3 as preferred model (PREFER_DALLE_FALLBACK=true)`);
     model = "dall-e-3";
-    responseFormat = "url";
   } else {
     console.log(`[IMAGE-GEN] Using gpt-image-1 as primary model`);
   }
   
   try {
-    console.log(`[IMAGE-GEN] Making API call with model: ${model}, response format: ${responseFormat}`);
+    console.log(`[IMAGE-GEN] Making API call with model: ${model}`);
     
-    // Make the API call with proper typing
-    // Note: Different models might support different parameters
+    // Create base parameters common to both models
     const params: any = {
       model,
       prompt,
       n: 1,
       size: "1024x1024",
-      quality: "high" as "high", // Explicitly typed as the literal type 'high'
     };
     
-    // Only add responseFormat if the model supports it
+    // Add model-specific parameters
     if (model === "dall-e-3") {
-      console.log(`[IMAGE-GEN] Adding response_format for DALL-E 3`);
-      params.response_format = "url";
+      // DALL-E 3 specific parameters
+      console.log(`[IMAGE-GEN] Adding DALL-E 3 specific parameters`);
+      params.quality = "standard" as "standard"; // DALL-E 3 uses 'standard' or 'hd'
+      params.response_format = "url" as "url";
+    } else {
+      // gpt-image-1 specific parameters
+      console.log(`[IMAGE-GEN] Adding gpt-image-1 specific parameters`);
+      params.quality = "high" as "high"; // gpt-image-1 uses 'high', 'medium', 'low', or 'auto'
     }
     
     console.log(`[IMAGE-GEN] Final API parameters:`, params);
@@ -814,13 +816,13 @@ export async function generateImage(prompt: string, apiKey?: string): Promise<{ 
         
         try {
           // Attempt with DALL-E 3
-          const fallbackParams = {
+          const fallbackParams: any = {
             model: "dall-e-3",
             prompt,
             n: 1,
             size: "1024x1024",
-            quality: "high", // Using 'high' quality which is supported
-            response_format: "url"
+            quality: "high" as "high", // Explicitly typed as the literal type 'high'
+            response_format: "url" as "url"
           };
           
           console.log(`[IMAGE-GEN] Fallback API parameters:`, fallbackParams);
