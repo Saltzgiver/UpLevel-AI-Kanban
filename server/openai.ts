@@ -590,6 +590,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
     if (isImageRequest || forceImageGeneration) {
       console.log(`[IMAGE-HANDLING] Image generation request detected in message: "${userMessage}"`);
       console.log(`[IMAGE-HANDLING] Force generation mode: ${forceImageGeneration ? 'ON' : 'OFF'}`);
+      console.log(`[processChat] Image request detected for card ${cardId}.`);
       
       try {
         // Extract the image generation prompt from the user message
@@ -618,6 +619,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         }
 
         console.log(`[IMAGE-HANDLING] Extracted image prompt: "${imagePrompt}"`);
+        console.log(`[processChat] Extracted prompt: "${imagePrompt.substring(0, 50)}..."`);
         
         // Add a chat message to indicate that the image is being generated
         await storage.createChat({
@@ -654,19 +656,23 @@ export async function processChat(cardId: number, userMessage: string, column: C
         try {
           // Call the generateImage function with the extracted prompt
           console.log(`[IMAGE-HANDLING] Calling generateImage with prompt: "${imagePrompt}"`);
+          console.log(`[processChat] Calling generateImage for card ${cardId}...`);
           const imageResult = await generateImage(imagePrompt, column.apiKey || undefined);
           console.log(`[IMAGE-HANDLING] Image generation successful, received base64 data of length: ${imageResult.base64.length}`);
+          console.log(`[processChat] generateImage returned for card ${cardId}. Result keys: ${Object.keys(imageResult).join(', ')}`);
           
           // Clear the timeout since we got a successful response
           clearTimeout(processingTimeout);
           
           // Process the generated image with handleFileGeneration
           console.log(`[IMAGE-HANDLING] Calling handleFileGeneration to process and save the image`);
+          console.log(`[processChat] Calling handleFileGeneration for card ${cardId} with imageResult.`);
           await handleFileGeneration(cardId, userMessage, {
             base64: imageResult.base64,
             fileType: imageResult.fileType
           });
           console.log(`[IMAGE-HANDLING] Image processing and saving completed successfully`);
+          console.log(`[processChat] handleFileGeneration completed for card ${cardId}.`);
         } catch (error) {
           // Clear the timeout since we're handling the error already
           clearTimeout(processingTimeout);
@@ -716,9 +722,11 @@ export async function processChat(cardId: number, userMessage: string, column: C
       } finally {
         // Always mark the card as not processing, regardless of success or failure
         await storage.updateCard(cardId, { processing: false });
+        console.log(`[processChat] Processing flag cleared for card ${cardId}.`);
       }
       
       // Return early, as we've handled the image generation request
+      // IMPORTANT: This return statement prevents further processing for image requests
       return;
     }
 
@@ -842,6 +850,8 @@ export async function handleFileGeneration(
   imageData?: { base64?: string, url?: string, fileType?: string }
 ): Promise<void> {
   console.log(`=== FILE GENERATION START: Card ${cardId} ===`);
+  console.log(`[handleFileGeneration] Called for card ${cardId}.`);
+  console.log(`[handleFileGeneration] Received imageData: ${imageData ? JSON.stringify(Object.keys(imageData)) : 'none'}`);
   let attachmentsCreated = 0;
   
   // Keep track of created CSV content hashes to prevent duplicates
