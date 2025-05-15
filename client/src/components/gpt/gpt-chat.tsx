@@ -592,6 +592,32 @@ export function GPTChat({
       // Log the image source for debugging
       console.log(`🖼️ [GPTChat:${cardId}] Rendering image in markdown: ${src}`, { alt });
       
+      // Check for special cases - angle brackets indicate placeholder text, not a real URL
+      if (src.startsWith('<') && src.endsWith('>')) {
+        // Extract the text content from the brackets and create a meaningful fallback
+        const placeholderText = src.substring(1, src.length - 1);
+        console.log(`🖼️ [GPTChat:${cardId}] Found placeholder text instead of image URL: ${placeholderText}`);
+        
+        // Try to refresh attachments on this card
+        const handleRefresh = () => {
+          console.log(`🖼️ [GPTChat:${cardId}] Manually refreshing attachments`);
+          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
+          // Force a refresh of card data as well
+          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
+        };
+        
+        // Return a placeholder with information about the missing image
+        return (
+          <div className="border border-dashed border-gray-300 p-2 rounded-md my-1 text-xs">
+            <div className="mb-1 font-medium">Image description:</div>
+            <div className="text-gray-600">{placeholderText}</div>
+            <div className="mt-2 text-blue-500 cursor-pointer" onClick={handleRefresh}>
+              Refresh to view image
+            </div>
+          </div>
+        );
+      }
+      
       // Check if the source URL matches the pattern for attachment API
       const isAttachmentImage = src.startsWith('/api/attachments/');
       
@@ -726,18 +752,24 @@ export function GPTChat({
 
                           // Check if content contains a file: pattern and convert to markdown image
 
-                          const processedContent = chat.content.replace(
-
-                            /file:([^,]+),([^,]+),(.*)/,
-
-                            (match, filename, mimetype, content) => {
-
-                              console.log(`Converting file pattern to markdown image: ${filename}`);
-
-                              if (mimetype.includes('image')) {
-                                console.log(`Processing image file pattern: ${filename}, mime: ${mimetype}`);
-                                
-                                // For images, try to find the attachment first
+                          // First check if this is a markdown format with angle brackets which indicates a text placeholder
+                          let processedContent = chat.content;
+                          
+                          // Check for the pattern: ![Generated image](<text description>)
+                          if (chat.content.match(/!\[Generated image\]\(<[^>]+>\)/)) {
+                            console.log(`Detected angle bracket placeholder in image markdown`);
+                            // No replacement needed here - will be handled by renderImageInMarkdown
+                          } 
+                          // Otherwise try the file: pattern
+                          else {
+                            processedContent = chat.content.replace(
+                              /file:([^,]+),([^,]+),(.*)/,
+                              (match, filename, mimetype, content) => {
+                                console.log(`Converting file pattern to markdown image: ${filename}`);
+                                if (mimetype.includes('image')) {
+                                  console.log(`Processing image file pattern: ${filename}, mime: ${mimetype}`);
+                                  
+                                  // For images, try to find the attachment first
                                 const matchingAttachment = attachments?.find(a => a.filename === filename);
                                 
                                 if (matchingAttachment) {
@@ -771,10 +803,9 @@ export function GPTChat({
                               }
 
                               return match; // Return unchanged if not an image or no matching attachment
-
                             }
-
                           );
+                          }  // Close the else block
 
                           
 
