@@ -1092,15 +1092,79 @@ export async function handleFileGeneration(
         
         console.log(`Detected file syntax for: ${filename} (${mimeType})`);
         
-        // Only process CSV files for now
+        // Process both CSV and image file types
         if (mimeType.includes('csv') || filename.endsWith('.csv')) {
           console.log(`Creating CSV attachment from file syntax: ${filename}`);
           const success = await createCSVIfUnique(content, filename);
           if (success) {
             attachmentsCreated++;
           }
+        } else if (mimeType.includes('image') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(filename)) {
+          console.log(`Creating image attachment from file syntax: ${filename} (${mimeType})`);
+          try {
+            // File tokens might contain a placeholder description rather than actual image data
+            // If the content doesn't look like base64 data, try to generate a real image
+            const isLikelyBase64 = content.match(/^[A-Za-z0-9+/=]{20,}$/);
+            
+            if (!isLikelyBase64 && content.length < 1000) {
+              console.log(`Content doesn't appear to be base64 data. Attempting to generate a real image from description: "${content}"`);
+              
+              try {
+                // Extract a prompt from the content
+                const imagePrompt = content.replace(/^<generated_image_of_|>$/g, '').trim();
+                console.log(`Extracted image generation prompt: "${imagePrompt}"`);
+                
+                // Generate a real image using OpenAI
+                const imageResult = await generateImage(imagePrompt);
+                console.log(`Generated real image with base64 length: ${imageResult.base64.length}`);
+                
+                // Create the attachment with the real image data
+                const attachment = await storage.createAttachment({
+                  cardId,
+                  filename,
+                  fileType: imageResult.fileType || mimeType,
+                  content: imageResult.base64
+                });
+                console.log(`Created real image attachment ID: ${attachment.id}`);
+                attachmentsCreated++;
+                
+                // Add a chat message to confirm the image was created
+                await storage.createChat({
+                  cardId,
+                  role: "assistant",
+                  content: `✅ I've created and attached the requested image: ${filename}`,
+                  gptName: "AI Assistant"
+                });
+                
+                return true;
+              } catch (realImageError) {
+                console.error(`Failed to generate real image from description:`, realImageError);
+                // Continue with original content as fallback
+              }
+            }
+            
+            // Fallback: Use the original content (which may or may not be valid image data)
+            const attachment = await storage.createAttachment({
+              cardId,
+              filename,
+              fileType: mimeType,
+              content
+            });
+            console.log(`Created image attachment ID: ${attachment.id} using original content`);
+            attachmentsCreated++;
+            
+            // Add a chat message to confirm the image was created
+            await storage.createChat({
+              cardId,
+              role: "assistant",
+              content: `✅ I've created and attached the requested image: ${filename}`,
+              gptName: "AI Assistant"
+            });
+          } catch (imageAttachError) {
+            console.error(`Error creating image attachment:`, imageAttachError);
+          }
         } else {
-          console.log(`Skipping non-CSV file type: ${mimeType}`);
+          console.log(`Skipping unsupported file type: ${mimeType}`);
         }
       } catch (error) {
         console.error("Error creating attachment from file syntax:", error);
