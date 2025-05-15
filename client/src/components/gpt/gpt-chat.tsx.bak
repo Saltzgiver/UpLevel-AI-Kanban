@@ -592,6 +592,50 @@ export function GPTChat({
       // Log the image source for debugging
       console.log(`🖼️ [GPTChat:${cardId}] Rendering image in markdown: ${src}`, { alt });
       
+      // Handle empty source with "Generated image" alt text - indicates an image reference
+      // without a proper URL but we can try to find the matching attachment
+      if ((!src || src === '') && alt === 'Generated image') {
+        console.log(`🖼️ [GPTChat:${cardId}] Empty source with 'Generated image' alt text - looking for attachment`);
+        
+        // Find any image attachments sorted by most recent first
+        if (attachments && attachments.length > 0) {
+          const imageAttachments = attachments.filter(a => a.mimetype?.includes('image'));
+          
+          if (imageAttachments.length > 0) {
+            const sortedAttachments = [...imageAttachments].sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            
+            const mostRecentAttachment = sortedAttachments[0];
+            console.log(`🖼️ [GPTChat:${cardId}] Found recent image attachment: ${mostRecentAttachment.id}`);
+            
+            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
+            
+            return (
+              <div className="my-2 inline-block">
+                <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
+                  <div className="absolute top-1 right-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm">
+                    AI Generated
+                  </div>
+                  <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
+                    <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
+                    <span>View full size</span>
+                  </div>
+                  <img 
+                    src={imageSrc} 
+                    alt="AI Generated Image" 
+                    className="max-w-full max-h-64 object-cover" 
+                    onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                    onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${mostRecentAttachment.id}`)}
+                    onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${mostRecentAttachment.id}`, e)}
+                  />
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+      
       // Check for special cases - angle brackets indicate placeholder text, not a real URL
       if (src.startsWith('<') && src.endsWith('>')) {
         // Extract the text content from the brackets and create a meaningful fallback
@@ -858,11 +902,11 @@ export function GPTChat({
 
                           
 
-                          // If content was modified, render with the processed content
-
-                          if (processedContent !== chat.content) {
-
-                            return (
+                          // Process content if needed, otherwise use original
+                          const processedContent = chat.content;
+                          
+                          // Render with markdown component
+                          return (
 
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}

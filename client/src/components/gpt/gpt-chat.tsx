@@ -588,181 +588,149 @@ export function GPTChat({
     );
     
     // Function to render attachment images in messages
-    const renderImageInMarkdown = (src: string, alt: string) => {
-      // Log the image source for debugging
-      console.log(`🖼️ [GPTChat:${cardId}] Rendering image in markdown: ${src}`, { alt });
+    
+  // Function to render attachment images in messages
+  const renderImageInMarkdown = (src: string, alt: string) => {
+    // Log the image source for debugging
+    console.log(`🖼️ [GPTChat:${cardId}] Rendering image in markdown: ${src}`, { alt });
+    
+    // Handle empty source with "Generated image" alt text - indicates an image reference
+    // without a proper URL but we can try to find the matching attachment
+    if ((!src || src === '') && alt === 'Generated image') {
+      console.log(`🖼️ [GPTChat:${cardId}] Empty source with 'Generated image' alt text - looking for attachment`);
       
-      // Handle empty source with "Generated image" alt text - indicates an image reference
-      // without a proper URL but we can try to find the matching attachment
-      if ((!src || src === '') && alt === 'Generated image') {
-        console.log(`🖼️ [GPTChat:${cardId}] Empty source with 'Generated image' alt text - looking for attachment`);
+      // Find any image attachments sorted by most recent first
+      if (attachments && attachments.length > 0) {
+        const imageAttachments = attachments.filter(a => a.fileType?.includes('image'));
         
-        // Find any image attachments sorted by most recent first
-        if (attachments && attachments.length > 0) {
-          const imageAttachments = attachments.filter(a => a.mimetype?.includes('image'));
+        if (imageAttachments.length > 0) {
+          const sortedAttachments = [...imageAttachments].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
           
-          if (imageAttachments.length > 0) {
-            const sortedAttachments = [...imageAttachments].sort((a, b) => 
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            );
-            
-            const mostRecentAttachment = sortedAttachments[0];
-            console.log(`🖼️ [GPTChat:${cardId}] Found recent image attachment: ${mostRecentAttachment.id}`);
-            
-            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
-            
-            return (
-              <div className="my-2 inline-block">
-                <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
-                  <div className="absolute top-1 right-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm">
-                    AI Generated
-                  </div>
-                  <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
-                    <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
-                    <span>View full size</span>
-                  </div>
-                  <img 
-                    src={imageSrc} 
-                    alt="AI Generated Image" 
-                    className="max-w-full max-h-64 object-cover" 
-                    onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
-                    onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${mostRecentAttachment.id}`)}
-                    onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${mostRecentAttachment.id}`, e)}
-                  />
-                </div>
-              </div>
-            );
-          }
-        }
-      }
-      
-      // Check for special cases - angle brackets indicate placeholder text, not a real URL
-      if (src.startsWith('<') && src.endsWith('>')) {
-        // Extract the text content from the brackets and create a meaningful fallback
-        const placeholderText = src.substring(1, src.length - 1);
-        console.log(`🖼️ [GPTChat:${cardId}] Found placeholder text instead of image URL: ${placeholderText}`);
-        
-        // Try to locate an attachment based on the description 
-        const matchingAttachment = attachments?.find(a => {
-          // Look for attachments with content type image and created recently
-          const isImage = a.fileType?.startsWith('image/');
-          // Check if the filename might match the description
-          const isRelevant = a.filename?.toLowerCase().includes('card') ||
-                            a.filename?.toLowerCase().includes(placeholderText.toLowerCase().substring(0, 5));
-          return isImage && isRelevant;
-        });
-        
-        if (matchingAttachment) {
-          console.log(`🖼️ [GPTChat:${cardId}] Found matching attachment for description:`, matchingAttachment);
-          // Use the attachment we found
+          const mostRecentAttachment = sortedAttachments[0];
+          console.log(`🖼️ [GPTChat:${cardId}] Found recent image attachment: ${mostRecentAttachment.id}`);
+          
+          const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
+          
           return (
             <div className="my-2 inline-block">
               <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
-                <img 
-                  src={`/api/attachments/${matchingAttachment.id}`} 
-                  alt={alt || 'Generated Image'} 
-                  className="max-w-full max-h-40 rounded-md"
-                  onClick={() => setSelectedImage({ 
-                    src: `/api/attachments/${matchingAttachment.id}`, 
-                    alt: alt || 'AI Generated Image' 
-                  })} 
-                />
+                <div className="absolute top-1 right-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm">
+                  AI Generated
+                </div>
                 <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
                   <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
                   <span>View full size</span>
                 </div>
+                <img 
+                  src={imageSrc} 
+                  alt="AI Generated Image" 
+                  className="max-w-full max-h-64 object-cover" 
+                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                  onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${mostRecentAttachment.id}`)}
+                  onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${mostRecentAttachment.id}`, e)}
+                />
               </div>
             </div>
           );
         }
-        
-        // Try to refresh attachments on this card
-        const handleRefresh = () => {
-          console.log(`🖼️ [GPTChat:${cardId}] Manually refreshing attachments`);
-          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
-          // Force a refresh of card data as well
-          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
-        };
-        
-        // Return a placeholder with information about the missing image
-        return (
-          <div className="border border-dashed border-gray-300 p-2 rounded-md my-1 text-xs">
-            <div className="mb-1 font-medium">Image description:</div>
-            <div className="text-gray-600">{placeholderText}</div>
-            <div className="mt-2 text-blue-500 cursor-pointer" onClick={handleRefresh}>
-              Refresh to view image
-            </div>
-          </div>
-        );
       }
+    }
+    
+    // Check for special cases - angle brackets indicate placeholder text, not a real URL
+    if (src.startsWith('<') && src.endsWith('>')) {
+      // Extract the text content from the brackets and create a meaningful fallback
+      const placeholderText = src.substring(1, src.length - 1);
+      console.log(`🖼️ [GPTChat:${cardId}] Found placeholder text instead of image URL: ${placeholderText}`);
       
-      // Check if the source URL matches the pattern for attachment API
-      const isAttachmentImage = src.startsWith('/api/attachments/');
+      // Try to locate an attachment based on the description 
+      const matchingAttachment = attachments?.find(a => {
+        // Look for attachments with content type image and created recently
+        const isImage = a.fileType?.startsWith('image/');
+        // Check if the filename might match the description
+        const isRelevant = a.filename?.toLowerCase().includes('card') ||
+                          a.filename?.toLowerCase().includes(placeholderText.toLowerCase().substring(0, 5));
+        return isImage && isRelevant;
+      });
       
-      if (isAttachmentImage) {
-        // Extract the attachment ID from the URL
-        const attachmentId = src.replace('/api/attachments/', '');
-        console.log(`🖼️ [GPTChat:${cardId}] Detected attachment image with ID: ${attachmentId}`);
-        
-        // Create click handler to open the image preview modal
-        const handleImageClick = () => {
-          console.log(`🖼️ [GPTChat:${cardId}] Image clicked, opening modal for: ${src}`);
-          setSelectedImage({ src, alt: alt || 'AI Generated Image' });
-        };
-        
-        // Return the image with click handler for modal
+      if (matchingAttachment) {
+        console.log(`🖼️ [GPTChat:${cardId}] Found matching attachment for description:`, matchingAttachment);
+        // Use the attachment we found
         return (
           <div className="my-2 inline-block">
-            <div 
-              className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200"
-              onClick={handleImageClick}
-            >
-              {/* Expand indicator overlay */}
+            <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
+              <div className="absolute top-1 right-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm">
+                AI Generated
+              </div>
               <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
                 <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
                 <span>View full size</span>
               </div>
-              
               <img 
-                src={src} 
-                alt={alt || 'AI Generated Image'} 
-                className="max-w-full object-cover max-h-64 hover:opacity-95 transition-opacity"
-                onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${src}`)}
-                onError={(e) => {
-                  console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${src}`, e);
-                  // Replace with error message on load failure
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'bg-red-50 border border-red-200 rounded-md p-2 text-red-500 text-xs';
-                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId})`;
-                    parent.appendChild(errorDiv);
-                  }
-                }}
+                src={`/api/attachments/${matchingAttachment.id}`} 
+                alt="AI Generated Image" 
+                className="max-w-full max-h-64 object-cover"
+                onClick={() => setSelectedImage({ src: `/api/attachments/${matchingAttachment.id}`, alt: 'AI Generated Image' })}
+                onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${matchingAttachment.id}`)}
+                onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${matchingAttachment.id}`, e)}
               />
-            </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">
-              {alt || 'AI Generated Image'}
             </div>
           </div>
         );
-      } else {
-        // For non-attachment images (external URLs), render them normally
-        // but still allow clicking to view in the modal
-        return (
-          <img 
-            src={src} 
-            alt={alt || 'Image'} 
-            className="max-w-full my-1 cursor-pointer hover:opacity-90"
-            onClick={() => setSelectedImage({ src, alt })}
-            onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] External image loaded: ${src}`)}
-            onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading external image: ${src}`, e)}
-          />
-        );
       }
-    };
+      
+      // Fallback for when we can't find a matching attachment
+      return (
+        <div className="bg-gray-100 p-2 rounded my-1 text-xs italic">
+          [Image: {placeholderText}]
+          <div className="text-[10px] mt-1 text-gray-500">
+            <RefreshCcw className="inline-block h-3 w-3 mr-1" />
+            <span>Image generation in progress or unavailable</span>
+          </div>
+        </div>
+      );
+    }
+    
+    // Regular image URL - could be an attachment or external URL
+    if (src && src.startsWith('/api/attachments/')) {
+      console.log(`🖼️ [GPTChat:${cardId}] Rendering attachment image: ${src}`);
+      return (
+        <div className="my-2 inline-block">
+          <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
+            <div className="absolute top-1 right-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm">
+              AI Generated
+            </div>
+            <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
+              <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
+              <span>View full size</span>
+            </div>
+            <img 
+              src={src} 
+              alt={alt || "AI Generated Image"} 
+              className="max-w-full max-h-64 object-cover"
+              onClick={() => setSelectedImage({ src, alt: alt || 'AI Generated Image' })}
+              onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${src}`)}
+              onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${src}`, e)}
+            />
+          </div>
+        </div>
+      );
+    }
+    
+    // Default case - just render as a regular image
+    return (
+      <div className="my-2 inline-block">
+        <img 
+          src={src} 
+          alt={alt} 
+          className="max-w-full max-h-64 rounded-md"
+          onClick={() => setSelectedImage({ src, alt })}
+        />
+      </div>
+    );
+  };
+;
     
     return (
       <div className="space-y-6 flex flex-col">
@@ -902,11 +870,11 @@ export function GPTChat({
 
                           
 
-                          // If content was modified, render with the processed content
-
-                          if (processedContent !== chat.content) {
-
-                            return (
+                          // Process content if needed, otherwise use original
+                          const processedContent = chat.content;
+                          
+                          // Render with markdown component
+                          return (
 
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
