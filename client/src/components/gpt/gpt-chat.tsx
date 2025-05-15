@@ -186,12 +186,13 @@ export function GPTChat({
             <div className="flex items-start space-x-2">
               <div className="flex-1">
                 <p className="text-sm font-medium mb-1">Final Output</p>
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  className="text-xs prose-sm max-w-none"
-                >
-                  {finalOutput}
-                </ReactMarkdown>
+                <div className="text-xs prose-sm max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {finalOutput}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           </div>
@@ -327,7 +328,7 @@ export function GPTChat({
             chats.map((chat) => (
               <div key={chat.id} className="flex flex-col space-y-1">
                 <div className="flex items-start space-x-2">
-                  {chat.isUser ? (
+                  {chat.role === "user" ? (
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-[10px] bg-gray-100">U</AvatarFallback>
                     </Avatar>
@@ -341,10 +342,10 @@ export function GPTChat({
                   
                   <div className="flex-1 space-y-1">
                     <p className="text-[10px] font-medium">
-                      {chat.isUser ? "You" : gptName}
+                      {chat.role === "user" ? "You" : gptName}
                     </p>
                     
-                    {chat.isUser ? (
+                    {chat.role === "user" ? (
                       <p className="text-xs">{chat.content}</p>
                     ) : (
                       (() => {

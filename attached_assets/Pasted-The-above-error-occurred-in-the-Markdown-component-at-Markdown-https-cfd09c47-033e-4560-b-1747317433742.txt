@@ -1,0 +1,41 @@
+The above error occurred in the <Markdown> component:
+
+    at Markdown (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-markdown.js?v=c28e153d:7079:21)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at GPTChat (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/gpt/gpt-chat.tsx:113:3)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at CardModal (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/ui/card-modal.tsx:41:3)
+    at div
+    at BoardComponent (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/board/board.tsx:41:34)
+    at div
+    at main
+    at div
+    at Home (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/pages/home.tsx:28:21)
+    at main
+    at div
+    at PageLayout (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/layout/page-layout.tsx:18:30)
+    at component
+    at Route (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c28e153d:265:16)
+    at CustomRoute (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/App.tsx?v=DkNkqomzQV1RMFR0KRoeT:37:35)
+    at Switch (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c28e153d:321:17)
+    at Router
+    at DndProvider (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/components/board/board.tsx:28:31)
+    at ModalProvider (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/src/contexts/ModalContext.tsx:26:33)
+    at QueryClientProvider (https://cfd09c47-033e-4560-be8b-14616a02637f-00-3lzr12l6l41pj.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=c28e153d:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Unexpected `className` prop, remove it (see  for more info)
