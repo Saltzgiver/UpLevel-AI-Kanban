@@ -1034,7 +1034,7 @@ export async function handleFileGeneration(
           content
         });
         
-        console.log(`[IMAGE-PROCESS] Successfully created image attachment with ID: ${attachment.id}`);
+        console.log(`[IMAGE-PROCESS] Successfully created image attachment with ID: ${attachment.id}, filename: ${filename}, fileType: ${fileType}, content length: ${content.length}`);
         attachmentsCreated++;
         
         // Create a confirmation chat message with baseline values
