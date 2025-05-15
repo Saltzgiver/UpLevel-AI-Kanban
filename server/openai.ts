@@ -1026,7 +1026,9 @@ export async function handleFileGeneration(
         console.log(`[IMAGE-PROCESS] Generated filename: ${filename}`);
         
         // Create attachment in the database
-        console.log(`[IMAGE-PROCESS] Creating attachment: cardId=${cardId}, fileType=${fileType}, filename=${filename}, content length=${content.length}`);
+        console.log(`[IMAGE-PROCESS] Creating attachment details: cardId=${cardId}, fileType=${fileType}, filename=${filename}, content length=${content.length}`);
+        // Log the first 100 characters of content for debugging
+        console.log(`[IMAGE-PROCESS] Content preview: ${content.substring(0, 100)}...`);
         const attachment = await storage.createAttachment({
           cardId,
           filename,
@@ -1041,7 +1043,9 @@ export async function handleFileGeneration(
         const chatMessage: {
           cardId: number;
           role: string;
-          content: string;
+          content: `✨ Generated an image based on your request: "${originalPrompt}".
+
+![Generated image](/api/attachments/${attachment.id})`
           gptName?: string;
           gptColor?: string;
         } = {

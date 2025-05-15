@@ -481,7 +481,15 @@ export function GPTChat({
           attachments.map(a => ({ id: a.id, filename: a.filename, fileType: a.fileType }))
         );
       } else {
-        console.log(`📎 [GPTChat:${cardId}] No attachments available`);
+        console.log(`📎 [GPTChat:${cardId}] No attachments available. Attachments prop:`, attachments);
+      // Try to invalidate the attachments query to force a refresh
+      if (cardId && typeof cardId === "number") {
+        console.log(`📎 [GPTChat:${cardId}] Forcing refresh of attachments`);
+        // Use setTimeout to avoid React state updates during render
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
+        }, 100);
+      }
       }
     }, [attachments, cardId]);
     
@@ -529,6 +537,34 @@ export function GPTChat({
         console.log(`❌ [GPTChat:${cardId}] Processing indicator should NOT be visible`);
       }
     }, [shouldShowProcessing, cardId]);
+  
+  // Fetch attachments when component mounts or cardId changes
+  useEffect(() => {
+    if (cardId && typeof cardId === "number") {
+      console.log(`📎 [GPTChat:${cardId}] Fetching attachments for card`);
+      
+      // Ensure we have the latest attachments
+      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
+      
+      // Also check for any specific attachment URLs in the chat messages
+      const attachmentUrls = chats
+        .filter(chat => chat.content && chat.content.includes('/api/attachments/'))
+        .map(chat => {
+          const matches = chat.content.match(/\/api\/attachments\/([0-9]+)/g);
+          return matches ? matches.map(url => parseInt(url.split('/').pop())) : [];
+        })
+        .flat()
+        .filter(id => id && !isNaN(id));
+      
+      if (attachmentUrls.length > 0) {
+        console.log(`📎 [GPTChat:${cardId}] Found attachment URLs in messages:`, attachmentUrls);
+        // Force refresh of all attachment resources
+        attachmentUrls.forEach(id => {
+          queryClient.invalidateQueries({ queryKey: [`/api/attachments/${id}`] });
+        });
+      }
+    }
+  }, [cardId, chats]);
     
     const processingIndicator = shouldShowProcessing && (
       <div className="flex items-start mb-3">

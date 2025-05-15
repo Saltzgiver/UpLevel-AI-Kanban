@@ -1387,23 +1387,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attachments/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      console.log(`Fetching attachment with ID: ${id}`);
+      console.log(`[ATTACHMENT-API] Fetching attachment with ID: ${id}`);
       
       // Use 0 as a placeholder for cardId since we're fetching by attachment ID
       const attachments = await storage.getAttachmentsByCardId(0, id);
       
       if (!attachments || attachments.length === 0) {
-        console.error(`Attachment not found with ID: ${id}`);
+        console.error(`[ATTACHMENT-API] Attachment not found with ID: ${id}`);
         return res.status(404).json({ message: "Attachment not found" });
       }
       
       const attachment = attachments[0];
-      console.log(`Attachment found:`, { 
+      console.log(`[ATTACHMENT-API] Found attachment:`, { 
         id: attachment.id,
         filename: attachment.filename,
         fileType: attachment.fileType,
         contentLength: attachment.content ? attachment.content.length : 0
       });
+      
+      // Set cache headers to improve performance
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      res.setHeader('ETag', `"${id}-${attachment.filename}"`);
       
       // Serve file contents for direct viewing (images) or download (other files)
       try {
