@@ -654,14 +654,7 @@ export async function processChat(cardId: number, userMessage: string, column: C
         try {
           // Call the generateImage function with the extracted prompt
           console.log(`[IMAGE-HANDLING] Calling generateImage with prompt: "${imagePrompt}"`);
-          // Use gpt-image-1 model with size 1024x1024 and medium quality
-          const imageResult = await generateImage(
-            imagePrompt, 
-            column.apiKey || undefined,
-            "1024x1024", // Size parameter
-            "gpt-image-1", // Model parameter
-            "medium" // Quality parameter
-          );
+          const imageResult = await generateImage(imagePrompt, column.apiKey || undefined);
           console.log(`[IMAGE-HANDLING] Image generation successful, received base64 data of length: ${imageResult.base64.length}`);
           
           // Clear the timeout since we got a successful response
@@ -1002,33 +995,13 @@ export async function handleFileGeneration(
           .replace(/_+/g, '_')
           .substring(0, 30);
         const timestamp = Date.now();
-        let extension = fileType.split('/')[1] || 'png';
-        
-        // Ensure proper image extensions for images
-        if (fileType.startsWith('image/')) {
-          // Force specific extensions for common image types to ensure proper display
-          if (fileType === 'image/png') {
-            extension = 'png';
-          } else if (fileType === 'image/jpeg' || fileType === 'image/jpg') {
-            extension = 'jpg';
-          } else if (fileType === 'image/webp') {
-            extension = 'webp';
-          } else if (fileType === 'image/gif') {
-            extension = 'gif';
-          }
-          
-          console.log(`[IMAGE-PROCESS] Using image extension: ${extension} for MIME type: ${fileType}`);
-        } else {
-          console.log(`[IMAGE-PROCESS] Using default extension: ${extension} for MIME type: ${fileType}`);
-        }
+        const extension = fileType.split('/')[1] || 'png';
         
         const filename = `${modelPart}_${promptPart}_${timestamp}.${extension}`;
         console.log(`[IMAGE-PROCESS] Generated filename: ${filename}`);
         
         // Create attachment in the database
-        console.log(`[IMAGE-PROCESS] Creating attachment details: cardId=${cardId}, fileType=${fileType}, filename=${filename}, content length=${content.length}`);
-        // Log the first 100 characters of content for debugging
-        console.log(`[IMAGE-PROCESS] Content preview: ${content.substring(0, 100)}...`);
+        console.log(`[IMAGE-PROCESS] Creating attachment: cardId=${cardId}, fileType=${fileType}, filename=${filename}, content length=${content.length}`);
         const attachment = await storage.createAttachment({
           cardId,
           filename,
@@ -1036,10 +1009,10 @@ export async function handleFileGeneration(
           content
         });
         
-        console.log(`[IMAGE-PROCESS] Successfully created image attachment with ID: ${attachment.id}, filename: ${filename}, fileType: ${fileType}, content length: ${content.length}`);
+        console.log(`[IMAGE-PROCESS] Successfully created image attachment with ID: ${attachment.id}`);
         attachmentsCreated++;
         
-        // Create a confirmation chat message with standardized formatting to match test implementation
+        // Create a confirmation chat message with baseline values
         const chatMessage: {
           cardId: number;
           role: string;
@@ -1049,7 +1022,6 @@ export async function handleFileGeneration(
         } = {
           cardId,
           role: "assistant",
-          // Using a standard format that the frontend will recognize consistently
           content: `✨ Generated an image based on your request: "${originalPrompt}".\n\n![Generated image](/api/attachments/${attachment.id})`
         };
         
