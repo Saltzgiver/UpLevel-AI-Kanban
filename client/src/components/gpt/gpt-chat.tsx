@@ -598,6 +598,40 @@ export function GPTChat({
         const placeholderText = src.substring(1, src.length - 1);
         console.log(`🖼️ [GPTChat:${cardId}] Found placeholder text instead of image URL: ${placeholderText}`);
         
+        // Try to locate an attachment based on the description 
+        const matchingAttachment = attachments?.find(a => {
+          // Look for attachments with content type image and created recently
+          const isImage = a.fileType?.startsWith('image/');
+          // Check if the filename might match the description
+          const isRelevant = a.filename?.toLowerCase().includes('card') ||
+                            a.filename?.toLowerCase().includes(placeholderText.toLowerCase().substring(0, 5));
+          return isImage && isRelevant;
+        });
+        
+        if (matchingAttachment) {
+          console.log(`🖼️ [GPTChat:${cardId}] Found matching attachment for description:`, matchingAttachment);
+          // Use the attachment we found
+          return (
+            <div className="my-2 inline-block">
+              <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
+                <img 
+                  src={`/api/attachments/${matchingAttachment.id}`} 
+                  alt={alt || 'Generated Image'} 
+                  className="max-w-full max-h-40 rounded-md"
+                  onClick={() => setSelectedImage({ 
+                    src: `/api/attachments/${matchingAttachment.id}`, 
+                    alt: alt || 'AI Generated Image' 
+                  })} 
+                />
+                <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
+                  <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
+                  <span>View full size</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        
         // Try to refresh attachments on this card
         const handleRefresh = () => {
           console.log(`🖼️ [GPTChat:${cardId}] Manually refreshing attachments`);
@@ -755,8 +789,11 @@ export function GPTChat({
                           // First check if this is a markdown format with angle brackets which indicates a text placeholder
                           let processedContent = chat.content;
                           
-                          // Check for the pattern: ![Generated image](<text description>)
-                          if (chat.content.match(/!\[Generated image\]\(<[^>]+>\)/)) {
+                          // First determine if this is an image markdown with angle brackets
+                          const anglePattern = /!\[Generated image\]\(<[^>]+>\)/;
+                          const hasAngleBrackets = chat.content.match(anglePattern);
+                          
+                          if (hasAngleBrackets) {
                             console.log(`Detected angle bracket placeholder in image markdown`);
                             // No replacement needed here - will be handled by renderImageInMarkdown
                           } 
@@ -846,9 +883,9 @@ export function GPTChat({
                       }
 
 
-                      {/* Render normal markdown if no file: pattern was found */}
+                      {/* Render normal markdown if no special pattern was found */}
 
-                      {chat.content.includes('file:') ? null : (
+                      {(chat.content.includes('file:') || chat.content.match(/!\[Generated image\]\(<[^>]+>\)/)) ? null : (
 
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
