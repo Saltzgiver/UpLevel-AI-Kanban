@@ -1039,18 +1039,17 @@ export async function handleFileGeneration(
         console.log(`[IMAGE-PROCESS] Successfully created image attachment with ID: ${attachment.id}, filename: ${filename}, fileType: ${fileType}, content length: ${content.length}`);
         attachmentsCreated++;
         
-        // Create a confirmation chat message with baseline values
+        // Create a confirmation chat message with standardized formatting to match test implementation
         const chatMessage: {
           cardId: number;
           role: string;
-          content: `✨ Generated an image based on your request: "${originalPrompt}".
-
-![Generated image](/api/attachments/${attachment.id})`
+          content: string;
           gptName?: string;
           gptColor?: string;
         } = {
           cardId,
           role: "assistant",
+          // Using a standard format that the frontend will recognize consistently
           content: `✨ Generated an image based on your request: "${originalPrompt}".\n\n![Generated image](/api/attachments/${attachment.id})`
         };
         

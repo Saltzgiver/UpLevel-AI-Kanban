@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink, Paperclip } from "lucide-react";
+import { ChevronDown, ChevronUp, Send, Loader2, Sparkles, X, Maximize2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Chat, Attachment } from "@shared/schema";
@@ -9,8 +9,6 @@ import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { TypingIndicator } from "./typing-indicator";
-import { AttachmentItem } from "./attachment-item";
 import {
   Dialog,
   DialogContent,
@@ -18,28 +16,6 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-// Define image request patterns locally
-// These patterns should match what's used on the server
-const imageRequestPatterns = [
-  /create (?:an|a) image/i,
-  /generate (?:an|a) image/i,
-  /make (?:an|a) image/i,
-  /draw (?:an|a) image/i,
-  /create (?:an|a) picture/i,
-  /generate (?:an|a) picture/i,
-  /make (?:an|a) picture/i,
-  /draw (?:an|a) picture/i,
-  /show me (?:an|a) image/i,
-  /can you create (?:an|a) image/i,
-  /image of/i,
-  /picture of/i,
-  /visualization of/i,
-  // Add more explicit patterns to ensure we catch all image generation requests
-  /new image/i,
-  /another image/i,
-  /create image/i,
-  /generate image/i
-];
 
 // Define color palette
 type ColorName = "Peach" | "Sky" | "Lavender" | "Mint" | "Aqua";
@@ -77,7 +53,7 @@ const getColorStyle = (colorName: string | null | undefined, defaultColor: Color
   return colorPalette[defaultColor];
 };
 
-// Image Dialog Modal Component for image previews
+// Shared Image Dialog Modal Component to be used by GPTChat
 function ImageDialogModal({ 
   selectedImage, 
   setSelectedImage 
@@ -85,50 +61,40 @@ function ImageDialogModal({
   selectedImage: {src: string, alt: string} | null, 
   setSelectedImage: (image: {src: string, alt: string} | null) => void 
 }) {
-  if (!selectedImage) return null;
-  
-  // Log when the modal is opened
-  useEffect(() => {
-    if (selectedImage) {
-      console.log(`🖼️ [ImageDialogModal] Opened with image: ${selectedImage.src}`);
-    }
-    
-    // Log when modal is closed (cleanup function)
-    return () => {
-      if (selectedImage) {
-        console.log(`🖼️ [ImageDialogModal] Closed image: ${selectedImage.src}`);
-      }
-    };
-  }, [selectedImage]);
-
   return (
     <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-      <DialogContent className="max-w-3xl w-[90vw]">
-        <DialogHeader>
-          <DialogTitle>{selectedImage.alt || "Image Preview"}</DialogTitle>
-          <DialogClose />
+      <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogHeader className="p-4 bg-gray-50">
+          <DialogTitle className="flex items-center justify-between">
+            <span className="text-gray-800 font-medium">
+              {selectedImage?.alt || 'Image Viewer'}
+            </span>
+            <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </DialogTitle>
         </DialogHeader>
-        <div className="overflow-hidden rounded-md flex items-center justify-center">
-          <img
-            src={selectedImage.src}
-            alt={selectedImage.alt || "Image preview"}
-            className="max-h-[70vh] max-w-full object-contain"
-            onLoad={() => console.log(`🖼️ [ImageDialogModal] Image loaded successfully: ${selectedImage.src}`)}
-            onError={(e) => console.error(`🖼️ [ImageDialogModal] Error loading image: ${selectedImage.src}`, e)}
-          />
+        <div className="p-6 flex items-center justify-center bg-black/5">
+          {selectedImage && (
+            <img 
+              src={selectedImage.src} 
+              alt={selectedImage.alt} 
+              className="max-w-full max-h-[70vh] object-contain" 
+            />
+          )}
         </div>
-        <div className="flex justify-between mt-2">
-          <p className="text-xs text-muted-foreground">
-            {selectedImage.alt || "AI generated image"}
-          </p>
+        <div className="p-3 bg-gray-50 flex justify-between border-t">
+          <span className="text-xs text-gray-500">
+            Click outside to close
+          </span>
           <a 
-            href={selectedImage.src} 
+            href={selectedImage?.src || '#'} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
-            onClick={() => console.log(`🖼️ [ImageDialogModal] Download/view in new tab: ${selectedImage.src}`)}
+            className="text-xs flex items-center text-blue-600 hover:text-blue-800"
           >
-            <ExternalLink className="h-3 w-3" /> View full size
+            <ExternalLink className="h-3 w-3 mr-1" />
+            Open original
           </a>
         </div>
       </DialogContent>
@@ -149,10 +115,7 @@ export function GPTChat({
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{src: string, alt: string} | null>(null);
-  // Add forceShowTyping state at this level so it can be shared between handleSendMessage and the ChatMessages
-  const [forceShowTyping, setForceShowTyping] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Track if user has manually scrolled up
@@ -216,70 +179,6 @@ export function GPTChat({
     }
   }, []);
   
-  // Scroll to bottom function - used in multiple places
-  const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  };
-
-  // Initial scroll to bottom when component mounts and when messages change
-  useEffect(() => {
-    // For embedded view (in card modal), we want to be aggressive about scrolling to bottom
-    if (embedded) {
-      // Immediate scroll
-      scrollToBottom();
-      
-      // Multiple delayed scrolls to catch any content that renders late
-      const timers = [
-        setTimeout(scrollToBottom, 50),
-        setTimeout(scrollToBottom, 150),
-        setTimeout(scrollToBottom, 300),
-        setTimeout(scrollToBottom, 500),  // Extra long timeout just in case
-      ];
-      
-      return () => {
-        // Clean up timers
-        timers.forEach(timer => clearTimeout(timer));
-      };
-    } else {
-      // For non-embedded view, just do a single scroll
-      scrollToBottom();
-    }
-  }, [chats.length, embedded]);
-  
-  // Use a more aggressive approach with the ResizeObserver and MutationObserver
-  useEffect(() => {
-    if (chatContainerRef.current && embedded) {
-      // MutationObserver watches for DOM changes in the chat container
-      const mutationObserver = new MutationObserver(() => {
-        scrollToBottom();
-      });
-      
-      // ResizeObserver watches for size changes in the chat container
-      const resizeObserver = new ResizeObserver(() => {
-        scrollToBottom();
-      });
-      
-      // Observe the chat container for changes
-      mutationObserver.observe(chatContainerRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true
-      });
-      
-      // Observe for size changes too
-      resizeObserver.observe(chatContainerRef.current);
-      
-      // Clean up observers on unmount
-      return () => {
-        mutationObserver.disconnect();
-        resizeObserver.disconnect();
-      };
-    }
-  }, [embedded]);
-  
   // Auto-scroll to bottom when messages change, but only in specific cases:
   // 1. When new messages arrive AND user hasn't manually scrolled up
   // 2. When processing state changes (starts or stops)
@@ -319,64 +218,17 @@ export function GPTChat({
   // Reference to track previous finalOutput status
   const prevFinalOutputRef = useRef(finalOutput);
 
-  // Watch for changes in isProcessing state and update the typing indicator accordingly
-  useEffect(() => {
-    if (isProcessing) {
-      console.log(`✅ [GPTChat:${cardId}] Processing started - showing typing indicator`);
-      setForceShowTyping(true);
-      
-      // Add detailed logging for image generation
-      // The backend sets the card's processing flag when generating images
-      console.log(`🔍 [GPTChat:${cardId}] Card processing state is now TRUE - this could be for image generation`);
-    } else {
-      console.log(`❌ [GPTChat:${cardId}] Processing ended - hiding typing indicator`);
-      setForceShowTyping(false);
-      
-      // Add detailed logging for image generation completion
-      console.log(`🔍 [GPTChat:${cardId}] Card processing state is now FALSE - any image generation has completed`);
-    }
-  }, [isProcessing, cardId]);
-  
-  // Monitor changes to the chats array - this ensures the typing indicator disappears
-  // immediately when a new message is received, even if the processing state is delayed
-  const chatsLength = useRef(chats.length);
-  useEffect(() => {
-    // If the number of chats has increased (a new message arrived)
-    if (chats.length > chatsLength.current) {
-      console.log(`📨 [GPTChat:${cardId}] New message received - hiding typing indicator immediately`);
-      setForceShowTyping(false);
-    }
-    // Update the reference to the current length
-    chatsLength.current = chats.length;
-  }, [chats, cardId]);
-
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    
-    // Store a copy of the message text before clearing the input
-    const sentMessage = message.trim();
-    
-    // Log user message content for debugging
-    console.log(`📝 [GPTChat:${cardId}] User message: "${sentMessage}"`);
-    
-    // Check if this is an image request using the imported patterns
-    const isImageRequest = imageRequestPatterns.some(pattern => pattern.test(sentMessage));
-    
-    // Log image request detection
-    if (isImageRequest) {
-      console.log(`🖼️ [GPTChat:${cardId}] Image request detected: "${sentMessage}"`);
-    }
-    
-    // Turn on the typing indicator immediately when sending
-    // This shows the indicator before the server starts processing
-    console.log(`✅ [GPTChat:${cardId}] Setting force show typing to true on message send`);
-    setForceShowTyping(true);
     
     setIsSending(true);
     // Reset user scroll state when sending a new message
     setUserHasScrolled(false);
     
     try {
+      // Store a copy of the message text before clearing the input
+      const sentMessage = message.trim();
+      
       // Create a local optimistic update with the new message
       const optimisticChat = {
         id: Date.now(), // Temporary ID
@@ -390,26 +242,16 @@ export function GPTChat({
       setMessage("");
       
       // Send the message to the server
-      console.log(`🔄 [GPTChat:${cardId}] Sending message to backend...`);
       await apiRequest("POST", `/api/chats`, {
         cardId,
         role: "user",
         content: sentMessage
       });
-      console.log(`✅ [GPTChat:${cardId}] Message sent to backend successfully`);
       
       // Start polling for processing status to get new messages
       queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/processing-status`] });
       // Also update the board data
       queryClient.invalidateQueries({ queryKey: [`/api/boards`] });
-      
-      // If it's an image request, we expect the processing to take longer
-      // The backend will handle setting the card's processing flag
-      if (isImageRequest) {
-        console.log(`🖼️ [GPTChat:${cardId}] Image processing started, waiting for backend generation...`);
-        // Keep the typing indicator visible until processing completes
-        // isProcessing will be monitored via useCardProcessing hook
-      }
       
       // Scroll to bottom after sending a message
       // Using smooth scroll for better user experience
@@ -420,25 +262,13 @@ export function GPTChat({
             behavior: 'smooth'
           });
         }
-        
-        // Keep focus on the input field after sending the message
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
       }, 100);
-      
-      // The typing indicator will be turned off automatically 
-      // when the isProcessing state changes to false in the useEffect above
-      
     } catch (error) {
-      console.error(`❌ [GPTChat:${cardId}] Error sending message:`, error);
       toast({
         title: "Error",
         description: "Failed to send message",
         variant: "destructive"
       });
-      // Turn off typing indicator on error
-      setForceShowTyping(false);
     } finally {
       setIsSending(false);
     }
@@ -447,15 +277,10 @@ export function GPTChat({
   // Chat messages component - separated for cleaner structure
   const ChatMessages = () => {
     if (chats.length === 0 && !isProcessing) {
-      // Determine the message based on whether this is a GPT column or not
-      const message = gptName === "Comments" 
-        ? "No comments yet. Leave a comment about this card." 
-        : "No messages yet. Ask the AI a question to start the conversation.";
-        
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-sm text-center text-muted-foreground p-4">
-            {message}
+            No messages yet. Ask the AI a question to start the conversation.
           </div>
         </div>
       );
@@ -467,262 +292,296 @@ export function GPTChat({
       .filter(item => item.chat.role === 'assistant')
       .pop()?.index;
     
-    // Debug logging for processing state
-    useEffect(() => {
-      console.log(`🔍 [GPTChat:${cardId}] isProcessing changed to: ${isProcessing}`);
-      console.log(`🔍 [GPTChat:${cardId}] finalOutput exists: ${!!finalOutput}`);
-      console.log(`🔍 [GPTChat:${cardId}] embedded: ${!!embedded}`);
-    }, [isProcessing, finalOutput, embedded, cardId]);
-    
-    // Debug logging for attachments
-    useEffect(() => {
-      if (attachments.length > 0) {
-        console.log(`📎 [GPTChat:${cardId}] Component has ${attachments.length} attachments:`, 
-          attachments.map(a => ({ id: a.id, filename: a.filename, fileType: a.fileType }))
-        );
-      } else {
-        console.log(`📎 [GPTChat:${cardId}] No attachments available. Attachments prop:`, attachments);
-      // Try to invalidate the attachments query to force a refresh
-      if (cardId && typeof cardId === "number") {
-        console.log(`📎 [GPTChat:${cardId}] Forcing refresh of attachments`);
-        // Use setTimeout to avoid React state updates during render
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
-        }, 100);
-      }
-      }
-    }, [attachments, cardId]);
-    
     // Determine if we should show processing indicator
     // Hide it if we already have a final output (could be stuck in processing state)
     // Also hide it when embedded in a card (per user requirement)
+    const shouldShowProcessing = isProcessing && !finalOutput && !embedded;
     
-    // We use the forceShowTyping state from the parent component
-    // This state is managed directly in the handleSendMessage function
-    
-    // Modified processing detection logic: 
-    // Allow typing indicators to appear even in embedded mode
-    const regularProcessingIndicator = isProcessing && !finalOutput;
-    
-    // Combine both signals - show if either is true
-    const shouldShowProcessing = regularProcessingIndicator || forceShowTyping;
-    
-    // Log whether processing indicator should show
-    useEffect(() => {
-      console.log(`🔍 [GPTChat:${cardId}] shouldShowProcessing: ${shouldShowProcessing} (regular: ${regularProcessingIndicator}, forced: ${forceShowTyping})`);
-    }, [shouldShowProcessing, regularProcessingIndicator, forceShowTyping, cardId]);
-    
-    // Direct processing indicator implementation - simpler and more reliable
-    const getBgColor = () => {
-      if (gptColor === 'Mint') return 'bg-[#DDFFE7]';
-      if (gptColor === 'Sky') return 'bg-[#E1F2FE]';
-      if (gptColor === 'Peach') return 'bg-[#FEE9D7]';
-      if (gptColor === 'Lavender') return 'bg-[#F6E6FF]';
-      return 'bg-[#E0F9FF]'; // Default Aqua
-    };
-    
-    const getTextColor = () => {
-      if (gptColor === 'Mint') return 'text-[#1A9E5E]';
-      if (gptColor === 'Sky') return 'text-[#2E7EC9]';
-      if (gptColor === 'Peach') return 'text-[#E25B3D]';
-      if (gptColor === 'Lavender') return 'text-[#C235D1]';
-      return 'text-[#3992B0]'; // Default Aqua
-    };
-    
-    // Log when the indicator renders or doesn't render
-    useEffect(() => {
-      if (shouldShowProcessing) {
-        console.log(`✅ [GPTChat:${cardId}] Processing indicator SHOULD be visible`);
-      } else {
-        console.log(`❌ [GPTChat:${cardId}] Processing indicator should NOT be visible`);
-      }
-    }, [shouldShowProcessing, cardId]);
-  
-  // Fetch attachments when component mounts or cardId changes
-  useEffect(() => {
-    if (cardId && typeof cardId === "number") {
-      console.log(`📎 [GPTChat:${cardId}] Fetching attachments for card`);
-      
-      // Ensure we have the latest attachments
-      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
-      
-      // Also check for any specific attachment URLs in the chat messages
-      const attachmentUrls = chats
-        .filter(chat => chat.content && chat.content.includes('/api/attachments/'))
-        .map(chat => {
-          const matches = chat.content.match(/\/api\/attachments\/([0-9]+)/g);
-          return matches 
-            ? matches.map(url => {
-                const parts = url.split('/');
-                const lastPart = parts[parts.length - 1];
-                return parseInt(lastPart);
-              })
-            : [];
-        })
-        .flat()
-        .filter(id => id && !isNaN(id));
-      
-      if (attachmentUrls.length > 0) {
-        console.log(`📎 [GPTChat:${cardId}] Found attachment URLs in messages:`, attachmentUrls);
-        // Force refresh of all attachment resources
-        attachmentUrls.forEach(id => {
-          queryClient.invalidateQueries({ queryKey: [`/api/attachments/${id}`] });
-        });
-      }
-    }
-  }, [cardId, chats]);
-    
+    // Processing indicator
     const processingIndicator = shouldShowProcessing && (
-      <div className="flex items-start mb-3">
-        <div className={`flex items-center gap-2 p-2.5 ${getBgColor()} rounded-lg max-w-[80%] animate-pulse-gentle transition-opacity`}>
-          <div className="relative h-4 w-10">
-            <span className={`absolute left-0 w-2 h-2 rounded-full bg-current ${getTextColor()} animate-typing1 opacity-70`}></span>
-            <span className={`absolute left-3 w-2 h-2 rounded-full bg-current ${getTextColor()} animate-typing2 opacity-70`}></span>
-            <span className={`absolute left-6 w-2 h-2 rounded-full bg-current ${getTextColor()} animate-typing3 opacity-70`}></span>
-          </div>
-          <span className={`text-sm font-medium ${getTextColor()}`}>
-            {gptName} is thinking...
-          </span>
-        </div>
+      <div className="flex items-center justify-center py-3">
+        <Loader2 className="h-4 w-4 animate-spin text-green-600 mr-2" />
+        <span className="text-sm text-green-700">Processing with AI...</span>
       </div>
     );
     
     // Function to render attachment images in messages
     const renderImageInMarkdown = (src: string, alt: string) => {
-      // Log the image source for debugging
-      console.log(`🖼️ [GPTChat:${cardId}] Rendering image in markdown: ${src}`, { alt });
+      console.log("Image source received:", src);
       
-      // Check for special cases - angle brackets indicate placeholder text, not a real URL
-      if (src.startsWith('<') && src.endsWith('>')) {
-        // Extract the text content from the brackets and create a meaningful fallback
-        const placeholderText = src.substring(1, src.length - 1);
-        console.log(`🖼️ [GPTChat:${cardId}] Found placeholder text instead of image URL: ${placeholderText}`);
-        
-        // Try to locate an attachment based on the description 
-        const matchingAttachment = attachments?.find(a => {
-          // Look for attachments with content type image and created recently
-          const isImage = a.fileType?.startsWith('image/');
-          // Check if the filename might match the description
-          const isRelevant = a.filename?.toLowerCase().includes('card') ||
-                            a.filename?.toLowerCase().includes(placeholderText.toLowerCase().substring(0, 5));
-          return isImage && isRelevant;
-        });
+      // First, check if we need to handle a generic "Generated image" alt text
+      if (alt === "Generated image" && src === "") {
+        // Find the most recent attachment (which is likely to be the one mentioned in the text)
+        if (attachments && attachments.length > 0) {
+          // Sort attachments by timestamp (descending) to get the most recent first
+          const sortedAttachments = [...attachments].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          const mostRecentAttachment = sortedAttachments[0];
+          console.log("Using most recent attachment for generic image reference:", mostRecentAttachment?.id);
+          
+          if (mostRecentAttachment) {
+            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
+            return (
+              <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                  AI Generated
+                </div>
+                <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  <span>Click to expand</span>
+                </div>
+                <div 
+                  className="cursor-pointer" 
+                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                >
+                  <img 
+                    src={imageSrc} 
+                    alt={'AI Generated Image'} 
+                    className="max-w-full object-cover h-48 w-auto" 
+                    onLoad={(e) => {
+                      console.log("Image successfully loaded:", mostRecentAttachment.id);
+                    }}
+                    onError={(e) => {
+                      console.error("Attachment image failed to load:", mostRecentAttachment.id);
+                      // Replace with error message on load failure
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-red-500 text-xs p-2';
+                        errorDiv.textContent = `Failed to load image (ID: ${mostRecentAttachment.id})`;
+                        parent.appendChild(errorDiv);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+
+      // Next, check for direct references to attachment IDs in the card's attachments
+      const imageMatch = alt.match(/dalle_.*?_(\d+)\.png$/);
+      if (imageMatch) {
+        // Look for matching attachment in the card's attachments
+        const matchingAttachment = attachments.find(att => 
+          att.filename.includes(alt) || 
+          att.filename.toLowerCase().includes(alt.toLowerCase())
+        );
         
         if (matchingAttachment) {
-          console.log(`🖼️ [GPTChat:${cardId}] Found matching attachment for description:`, matchingAttachment);
-          // Use the attachment we found
+          const imageSrc = `/api/attachments/${matchingAttachment.id}`;
+          console.log("Found direct matching attachment by filename:", matchingAttachment.id);
           return (
-            <div className="my-2 inline-block">
-              <div className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200">
+            <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+              <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                AI Generated
+              </div>
+              <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                <Maximize2 className="h-3 w-3 mr-1" />
+                <span>Click to expand</span>
+              </div>
+              <div 
+                className="cursor-pointer" 
+                onClick={() => setSelectedImage({ src: imageSrc, alt: alt || 'AI Generated Image' })}
+              >
                 <img 
-                  src={`/api/attachments/${matchingAttachment.id}`} 
-                  alt={alt || 'Generated Image'} 
-                  className="max-w-full max-h-40 rounded-md"
-                  onClick={() => setSelectedImage({ 
-                    src: `/api/attachments/${matchingAttachment.id}`, 
-                    alt: alt || 'AI Generated Image' 
-                  })} 
+                  src={imageSrc} 
+                  alt={alt || 'AI Generated Image'} 
+                  className="max-w-full object-cover h-48 w-auto"
+                  onLoad={(e) => {
+                    console.log("Image successfully loaded:", matchingAttachment.id);
+                  }}
+                  onError={(e) => {
+                    console.error("Attachment image failed to load:", matchingAttachment.id);
+                    // Replace with error message on load failure
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'text-red-500 text-xs p-2';
+                      errorDiv.textContent = `Failed to load image (ID: ${matchingAttachment.id})`;
+                      parent.appendChild(errorDiv);
+                    }
+                  }}
                 />
-                <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
-                  <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
-                  <span>View full size</span>
-                </div>
               </div>
             </div>
           );
         }
-        
-        // Try to refresh attachments on this card
-        const handleRefresh = () => {
-          console.log(`🖼️ [GPTChat:${cardId}] Manually refreshing attachments`);
-          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
-          // Force a refresh of card data as well
-          queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
-        };
-        
-        // Return a placeholder with information about the missing image
-        return (
-          <div className="border border-dashed border-gray-300 p-2 rounded-md my-1 text-xs">
-            <div className="mb-1 font-medium">Image description:</div>
-            <div className="text-gray-600">{placeholderText}</div>
-            <div className="mt-2 text-blue-500 cursor-pointer" onClick={handleRefresh}>
-              Refresh to view image
-            </div>
-          </div>
-        );
       }
       
-      // Check if the source URL matches the pattern for attachment API
-      const isAttachmentImage = src.startsWith('/api/attachments/');
-      
-      if (isAttachmentImage) {
-        // Extract the attachment ID from the URL
-        const attachmentId = src.replace('/api/attachments/', '');
-        console.log(`🖼️ [GPTChat:${cardId}] Detected attachment image with ID: ${attachmentId}`);
+      // Check if this is an attachment reference using includes to capture all possible formats
+      if (src && src.includes('attachment:')) {
+        // Extract attachment ID from various potential formats
+        let attachmentId: number | undefined = undefined;
         
-        // Create click handler to open the image preview modal
-        const handleImageClick = () => {
-          console.log(`🖼️ [GPTChat:${cardId}] Image clicked, opening modal for: ${src}`);
-          setSelectedImage({ src, alt: alt || 'AI Generated Image' });
-        };
+        // Try to extract the attachment ID with a regex pattern to handle all cases
+        // This pattern matches both "attachment:123" and "(attachment:123)"
+        const match = src.match(/(?:\()?attachment:(\d+)(?:\))?/);
         
-        // Return the image with click handler for modal
+        if (match && match[1]) {
+          attachmentId = parseInt(match[1]);
+          console.log("Extracted attachment ID:", attachmentId, "from src:", src);
+        } else {
+          // Fallback to direct parsing if the regex didn't work
+          if (src.startsWith('attachment:')) {
+            // Direct format: attachment:123
+            attachmentId = parseInt(src.substring('attachment:'.length));
+          } else if (src.startsWith('(attachment:') && src.endsWith(')')) {
+            // Markdown link format: (attachment:123)
+            attachmentId = parseInt(src.substring('(attachment:'.length, src.length - 1));
+          }
+        }
+        
+        if (isNaN(attachmentId as number) || attachmentId === undefined) {
+          console.error("Invalid attachment ID:", src);
+          return (
+            <div className="text-red-500 text-xs p-2 border border-red-200 rounded bg-red-50">
+              Invalid image reference: {src}
+            </div>
+          );
+        }
+        
+        console.log("Rendering attachment image:", { src, attachmentId, url: `/api/attachments/${attachmentId as number}` });
+        
+        // Use the attachment ID to create the proper image URL
+        const imageSrc = `/api/attachments/${attachmentId as number}`;
         return (
-          <div className="my-2 inline-block">
+          <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+            <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+              AI Generated
+            </div>
+            <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+              <Maximize2 className="h-3 w-3 mr-1" />
+              <span>Click to expand</span>
+            </div>
             <div 
-              className="relative cursor-pointer group overflow-hidden rounded-md border border-gray-200"
-              onClick={handleImageClick}
+              className="cursor-pointer" 
+              onClick={() => setSelectedImage({ src: imageSrc, alt: alt || 'AI Generated Image' })}
             >
-              {/* Expand indicator overlay */}
-              <div className="absolute top-1 left-1 z-10 bg-black/60 text-white px-1 py-0.5 text-[8px] rounded-sm flex items-center opacity-70 group-hover:opacity-100">
-                <Maximize2 className="h-2.5 w-2.5 mr-0.5" />
-                <span>View full size</span>
-              </div>
-              
               <img 
-                src={src} 
+                src={imageSrc}
                 alt={alt || 'AI Generated Image'} 
-                className="max-w-full object-cover max-h-64 hover:opacity-95 transition-opacity"
-                onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] Image loaded successfully: ${src}`)}
+                className="max-w-full object-cover h-48 w-auto"
+                onLoad={(e) => {
+                  console.log("Image successfully loaded:", attachmentId as number);
+                }}
                 onError={(e) => {
-                  console.error(`🖼️ [GPTChat:${cardId}] Error loading image: ${src}`, e);
+                  console.error("Attachment image failed to load:", attachmentId as number);
                   // Replace with error message on load failure
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   const parent = target.parentElement;
                   if (parent) {
                     const errorDiv = document.createElement('div');
-                    errorDiv.className = 'bg-red-50 border border-red-200 rounded-md p-2 text-red-500 text-xs';
-                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId})`;
+                    errorDiv.className = 'text-red-500 text-xs p-2';
+                    errorDiv.textContent = `Failed to load image (ID: ${attachmentId as number})`;
                     parent.appendChild(errorDiv);
                   }
                 }}
               />
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">
-              {alt || 'AI Generated Image'}
-            </div>
           </div>
         );
-      } else {
-        // For non-attachment images (external URLs), render them normally
-        // but still allow clicking to view in the modal
+      } else if (!src || src === '') {
+        // Special case: empty src could be an incomplete markdown
+        console.error("Empty image source in markdown");
+        
+        // Look for an attachment that matches the context of the message
+        // This is a fallback mechanism for generic image references
+        if (attachments && attachments.length > 0) {
+          // First try the latest attachment
+          const sortedAttachments = [...attachments].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          const mostRecentAttachment = sortedAttachments[0];
+          console.log("Using most recent attachment as fallback for empty src:", mostRecentAttachment?.id);
+          
+          if (mostRecentAttachment) {
+            const imageSrc = `/api/attachments/${mostRecentAttachment.id}`;
+            return (
+              <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+                <div className="absolute top-0 right-0 bg-black/60 text-white px-1 text-xs rounded-bl">
+                  AI Generated
+                </div>
+                <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  <span>Click to expand</span>
+                </div>
+                <div 
+                  className="cursor-pointer" 
+                  onClick={() => setSelectedImage({ src: imageSrc, alt: 'AI Generated Image' })}
+                >
+                  <img 
+                    src={imageSrc} 
+                    alt={'AI Generated Image'} 
+                    className="max-w-full object-cover h-48 w-auto"
+                    onLoad={(e) => {
+                      console.log("Image successfully loaded from fallback:", mostRecentAttachment.id);
+                    }}
+                    onError={(e) => {
+                      console.error("Fallback attachment image failed to load:", mostRecentAttachment.id);
+                      // Show the original fallback message
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50';
+                        errorDiv.textContent = `Image reference missing. Refresh may be needed.`;
+                        parent.appendChild(errorDiv);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          }
+        }
+        
         return (
-          <img 
-            src={src} 
-            alt={alt || 'Image'} 
-            className="max-w-full my-1 cursor-pointer hover:opacity-90"
-            onClick={() => setSelectedImage({ src, alt })}
-            onLoad={() => console.log(`🖼️ [GPTChat:${cardId}] External image loaded: ${src}`)}
-            onError={(e) => console.error(`🖼️ [GPTChat:${cardId}] Error loading external image: ${src}`, e)}
-          />
+          <div className="text-amber-600 text-xs p-2 border border-amber-200 rounded bg-amber-50">
+            Image reference missing. Refresh may be needed.
+          </div>
         );
       }
+      
+      // Regular image URL
+      console.log("Rendering regular image URL:", src);
+      return (
+        <div className="my-2 rounded-lg overflow-hidden border border-gray-200 relative">
+          <div className="absolute top-0 left-0 bg-black/60 text-white px-1 text-xs rounded-br flex items-center">
+            <Maximize2 className="h-3 w-3 mr-1" />
+            <span>Click to expand</span>
+          </div>
+          <div 
+            className="cursor-pointer" 
+            onClick={() => setSelectedImage({ src, alt })}
+          >
+            <img 
+              src={src} 
+              alt={alt} 
+              className="max-w-full h-48 w-auto object-cover rounded-lg"
+              onError={(e) => {
+                console.error("Regular image failed to load:", src);
+              }}
+            />
+          </div>
+        </div>
+      );
     };
     
     return (
       <div className="space-y-6 flex flex-col">
-        {/* We don't show processing indicator here anymore - only at the bottom */}
+        {/* Display processing indicator if applicable */}
+        {processingIndicator}
         
         {/* Display all chat messages */}
         {chats.map((chat, index) => {
@@ -743,11 +602,29 @@ export function GPTChat({
                 }`}>
                   {chat.role === 'assistant' 
                     ? (isLastAIMessage 
-                      ? (<span className="flex items-center">
+                      ? (console.log(`FRONTEND DEBUG - Chat rendering message:`, {
+                          chatId: chat.id,
+                          messageGptName: chat.gptName, 
+                          messageGptColor: chat.gptColor,
+                          propGptName: gptName,
+                          propGptColor: gptColor,
+                          usedName: chat.gptName || gptName,
+                          usedColor: chat.gptColor || gptColor
+                        }), 
+                        <span className="flex items-center">
                           <Sparkles className={`h-3 w-3 mr-1 ${getColorStyle(chat.gptColor || gptColor).text}`} /> 
                           {chat.gptName || gptName}
                         </span>)
-                      : (<span>{chat.gptName || gptName}</span>)) 
+                      : (console.log(`FRONTEND DEBUG - Chat rendering non-latest:`, {
+                          chatId: chat.id,
+                          messageGptName: chat.gptName, 
+                          messageGptColor: chat.gptColor,
+                          propGptName: gptName,
+                          propGptColor: gptColor,
+                          usedName: chat.gptName || gptName,
+                          usedColor: chat.gptColor || gptColor
+                        }), 
+                        <span>{chat.gptName || gptName}</span>)) 
                     : 'You'}
                 </div>
                 <div className="text-[10px] text-gray-400 ml-2">
@@ -777,85 +654,19 @@ export function GPTChat({
                   )}
                   {chat.role === 'assistant' ? (
                     <>
-                      {/* Debug elements removed to fix mobile rendering issues */}
-                      {/* Pre-process message content to handle file: patterns */}
-
-                      {
-
-                        (() => {
-
-                          // Check if content contains a file: pattern and convert to markdown image
-
-                          // First check if this is a markdown format with angle brackets which indicates a text placeholder
-                          let processedContent = chat.content;
-                          
-                          // First determine if this is an image markdown with angle brackets
-                          const anglePattern = /!\[Generated image\]\(<[^>]+>\)/;
-                          const hasAngleBrackets = chat.content.match(anglePattern);
-                          
-                          if (hasAngleBrackets) {
-                            console.log(`Detected angle bracket placeholder in image markdown`);
-                            // No replacement needed here - will be handled by renderImageInMarkdown
-                          } 
-                          // Otherwise try the file: pattern
-                          else {
-                            processedContent = chat.content.replace(
-                              /file:([^,]+),([^,]+),(.*)/,
-                              (match, filename, mimetype, content) => {
-                                console.log(`Converting file pattern to markdown image: ${filename}`);
-                                if (mimetype.includes('image')) {
-                                  console.log(`Processing image file pattern: ${filename}, mime: ${mimetype}`);
-                                  
-                                  // For images, try to find the attachment first
-                                const matchingAttachment = attachments?.find(a => a.filename === filename);
-                                
-                                if (matchingAttachment) {
-                                  console.log(`Found matching attachment with ID: ${matchingAttachment.id}`);
-                                  return `![Generated image](/api/attachments/${matchingAttachment.id})`;
-                                } else {
-                                  // If we don't have the attachment in our list, we need to fetch all possible attachments for this card
-                                  console.log(`No matching attachment found for ${filename}, fetching all card attachments`);
-                                  
-                                  // Force a refresh of card attachments
-                                  if (cardId && typeof cardId === "number") {
-                                    console.log(`Forcing refresh of attachments for card ${cardId}`);
-                                    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
-                                    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
-                                  }
-                                  
-                                  // Since we can't find an attachment with this filename, we need to create a better fallback
-                                  // Try to extract attachment ID from the content if it's a URL
-                                  if (chat.content && chat.content.includes('/api/attachments/')) {
-                                    const attachmentMatches = chat.content.match(/\/api\/attachments\/([0-9]+)/);
-                                    if (attachmentMatches && attachmentMatches[1]) {
-                                      const attachmentId = parseInt(attachmentMatches[1]);
-                                      console.log(`Found attachment ID in content: ${attachmentId}`);
-                                      return `![Generated image](/api/attachments/${attachmentId})`;
-                                    }
-                                  }
-                                  
-                                  // Return a direct markdown image string (this is a fallback)
-                                  return `![Generated image](${content && content.length < 100 ? content : `/api/attachments/image/${filename}`})`;
-                                }
-                              }
-
-                              return match; // Return unchanged if not an image or no matching attachment
-                            }
-                          );
-                          }  // Close the else block
-
-                          
-
-                          // If content was modified, render with the processed content
-
-                          if (processedContent !== chat.content) {
-
-                            return (
-
+                      {/* Additional debug element to show raw message content */}
+                      <div className="hidden">
+                        <div className="border border-red-300 rounded p-1 mb-2 text-[10px] bg-red-50">
+                          <pre>DEBUG CONTENT: {JSON.stringify(chat.content)}</pre>
+                        </div>
+                      </div>
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
+                          p: (props: any) => {
+                            console.log("Rendering paragraph with props:", props);
+                            return <p className="my-0.5 text-xs" {...props} />;
+                          },
                           ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
                           ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
                           li: (props: any) => <li className="my-0 text-xs" {...props} />,
@@ -868,48 +679,14 @@ export function GPTChat({
                           pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
                           strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
                           em: (props: any) => <em className="italic text-xs" {...props} />,
-                          img: (props: any) => renderImageInMarkdown(props.src, props.alt),
-                        }}
-                      >
-                        {processedContent}
-                      </ReactMarkdown>
-
-                            );
-
-                          }
-
-                        })() /* Self-executing function to allow variable declarations */
-
-                      }
-
-
-                      {/* Render normal markdown if no special pattern was found */}
-
-                      {(chat.content.includes('file:') || chat.content.match(/!\[Generated image\]\(<[^>]+>\)/)) ? null : (
-
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          p: (props: any) => <p className="my-0.5 text-xs" {...props} />,
-                          ul: (props: any) => <ul className="list-disc pl-3 my-0.5 text-xs" {...props} />,
-                          ol: (props: any) => <ol className="list-decimal pl-3 my-0.5 text-xs" {...props} />,
-                          li: (props: any) => <li className="my-0 text-xs" {...props} />,
-                          a: (props: any) => <a className="text-blue-600 hover:underline text-xs" {...props} />,
-                          blockquote: (props: any) => <blockquote className="border-l-2 border-gray-300 pl-2 my-0.5 text-xs" {...props} />,
-                          code: (props: any) => 
-                            props.inline 
-                              ? <code className="bg-gray-100 px-0.5 rounded text-[10px] font-mono" {...props} />
-                              : <code className="block bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
-                          pre: (props: any) => <pre className="bg-gray-100 p-1 rounded text-[10px] font-mono my-0.5 overflow-x-auto" {...props} />,
-                          strong: (props: any) => <strong className="font-bold text-xs" {...props} />,
-                          em: (props: any) => <em className="italic text-xs" {...props} />,
-                          img: (props: any) => renderImageInMarkdown(props.src, props.alt),
+                          img: (props: any) => {
+                            console.log("Rendering image with props:", props);
+                            return renderImageInMarkdown(props.src, props.alt);
+                          },
                         }}
                       >
                         {chat.content}
                       </ReactMarkdown>
-
-                      )}
                     </>
                   ) : (
                     <div>{chat.content}</div>
@@ -921,185 +698,165 @@ export function GPTChat({
             </div>
           );
         })}
-        
-        {/* Add typing indicator at the end of all messages */}
-        {processingIndicator}
       </div>
     );
   };
 
-  // Prepare the content based on whether it's embedded or not
-  const chatContent = embedded ? (
-    <div className="flex flex-col h-full">
-      {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
-      {chats.length > 3 && !userHasScrolled && (
-        <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
-          <ChevronUp className="h-3 w-3 mx-auto" />
-          Scroll for earlier messages
-        </div>
-      )}
-      
-      <div 
-        ref={chatContainerRef}
-        className="flex-1 px-4 py-3 flex flex-col scroll-smooth chat-message-container"
-      >
-        <ChatMessages />
-      </div>
-
-      {/* Debug Logger removed from JSX and moved to a component effect */}
-      
-      {/* Attachments Section - Display only if we have attachments */}
-      {attachments.length > 0 && (
-        <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
-          <div className="flex items-center mb-2">
-            <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
-            <span className="text-sm font-medium text-gray-700">Attachments ({attachments.length})</span>
-            <div className="ml-auto text-xs text-gray-500">
-              {/* Empty div for layout purposes */}
+  // If embedded in another component (specifically the card modal), 
+  // just return the messages and input without header/container
+  if (embedded) {
+    return (
+      <>
+        <div className="flex flex-col h-full">
+          {/* Scroll indicator - only shown when there is scrollable content and user hasn't scrolled */}
+          {chats.length > 3 && !userHasScrolled && (
+            <div className="text-center text-xs text-gray-400 animate-pulse mb-1">
+              <ChevronUp className="h-3 w-3 mx-auto" />
+              Scroll for earlier messages
             </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {attachments.map(attachment => (
-              <div key={attachment.id}>
-                <AttachmentItem 
-                  attachment={attachment} 
-                  onDelete={() => {
-                    // Refresh the attachments list after deletion
-                    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
-                    console.log(`🗑️ [GPTChat:${cardId}] Attachment deleted, refreshing list`);
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Chat Input - Always at the bottom */}
-      <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder={gptName === "Comments" 
-            ? "Add a comment..." 
-            : `Ask ${gptName || 'AI'} a question or try "generate an image of..."`}
-          className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isSending}
-        />
-        
-        <Button
-          size="sm"
-          className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-            isSending 
-              ? 'bg-gray-300 text-gray-600' 
-              : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
-          onClick={handleSendMessage}
-          disabled={isSending}
-        >
-          {isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
           )}
-        </Button>
-      </div>
-    </div>
-  ) : (
-    <div className="flex flex-col">
-      <div className="px-3 py-2 border-b border-gray-100">
-        <div className="text-sm font-medium text-gray-700">
-          {gptName === "Comments" ? "Comments" : `Conversation with ${gptName || 'AI Assistant'}`}
-        </div>
-      </div>
-      
-      <div className="flex flex-col">
-        <div 
-          ref={chatContainerRef}
-          className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth chat-message-container"
-        >
-          <ChatMessages />
-        </div>
-
-        {/* Debug Logger for non-embedded view removed from JSX */}
-        
-        {/* Attachments Section - Display only if we have attachments (non-embedded view) */}
-        {attachments.length > 0 && (
-          <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
-            <div className="flex items-center mb-2">
-              <Paperclip className="h-4 w-4 text-gray-500 mr-2" />
-              <span className="text-sm font-medium text-gray-700">Attachments ({attachments.length})</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {attachments.map(attachment => (
-                <div key={attachment.id}>
-                  <AttachmentItem 
-                    attachment={attachment} 
-                    onDelete={() => {
-                      // Refresh the attachments list after deletion
-                      queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Chat Input - Fixed at the bottom */}
-        <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
-          <Input
-            ref={inputRef}
-            type="text"
-            placeholder={gptName === "Comments" 
-              ? "Add a comment..." 
-              : `Ask ${gptName || 'AI'} a question or try "generate an image of..."`}
-            className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            disabled={isSending}
-          />
           
-          <Button
-            size="sm"
-            className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
-              isSending 
-                ? 'bg-gray-300 text-gray-600' 
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-            onClick={handleSendMessage}
-            disabled={isSending}
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 px-4 py-3 flex flex-col scroll-smooth"
           >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+            <ChatMessages />
+          </div>
+          
+          {/* Chat Input - Always at the bottom */}
+          <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60 sticky bottom-0 z-10 rounded-b-lg">
+            <Input
+              type="text"
+              placeholder={`Ask ${gptName || 'AI'} a question or "create an image of..."`}
+              className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={isSending}
+            />
+            
+            <Button
+              size="sm"
+              className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+                isSending 
+                  ? 'bg-gray-300 text-gray-600' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+              onClick={handleSendMessage}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
-  );
 
-  // Return a single component with only one instance of the ImageDialogModal
+        {/* Image Dialog Modal - Shared between embedded and standalone views */}
+        <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden">
+            <DialogHeader className="p-4 bg-gray-50">
+              <DialogTitle className="flex items-center justify-between">
+                <span className="text-gray-800 font-medium">
+                  {selectedImage?.alt || 'Image Viewer'}
+                </span>
+                <DialogClose className="w-6 h-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+                  <X className="h-4 w-4" />
+                </DialogClose>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="p-6 flex items-center justify-center bg-black/5">
+              {selectedImage && (
+                <img 
+                  src={selectedImage.src} 
+                  alt={selectedImage.alt} 
+                  className="max-w-full max-h-[70vh] object-contain" 
+                />
+              )}
+            </div>
+            <div className="p-3 bg-gray-50 flex justify-between border-t">
+              <span className="text-xs text-gray-500">
+                Click outside to close
+              </span>
+              <a 
+                href={selectedImage?.src || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-xs flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open in new tab
+              </a>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Standard standalone component
   return (
     <>
-      {chatContent}
-      {/* Only include the shared image dialog component once for both embedded and standard views */}
+      <div className="flex flex-col">
+        <div className="px-3 py-2 border-b border-gray-100">
+          <div className="text-sm font-medium text-gray-700">
+            Conversation with {gptName || 'AI Assistant'}
+          </div>
+        </div>
+        
+        <div className="flex flex-col">
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 px-4 py-4 space-y-6 flex flex-col h-[300px] scroll-smooth"
+          >
+            <ChatMessages />
+          </div>
+          
+          {/* Chat Input - Fixed at the bottom */}
+          <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50/60">
+            <Input
+              type="text"
+              placeholder={`Ask ${gptName || 'AI'} a question or "create an image of...""`}
+              className="text-sm border-gray-200 focus:border-gray-300 focus:ring-gray-200 rounded-full"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={isSending}
+            />
+            
+            <Button
+              size="sm"
+              className={`rounded-full p-2 h-9 w-9 flex-shrink-0 ${
+                isSending 
+                  ? 'bg-gray-300 text-gray-600' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+              onClick={handleSendMessage}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Use the shared image dialog component */}
       <ImageDialogModal selectedImage={selectedImage} setSelectedImage={setSelectedImage} />
     </>
   );
