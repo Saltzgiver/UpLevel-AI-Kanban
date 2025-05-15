@@ -551,7 +551,13 @@ export function GPTChat({
         .filter(chat => chat.content && chat.content.includes('/api/attachments/'))
         .map(chat => {
           const matches = chat.content.match(/\/api\/attachments\/([0-9]+)/g);
-          return matches ? matches.map(url => parseInt(url.split('/').pop())) : [];
+          return matches 
+            ? matches.map(url => {
+                const parts = url.split('/');
+                const lastPart = parts[parts.length - 1];
+                return parseInt(lastPart);
+              })
+            : [];
         })
         .flat()
         .filter(id => id && !isNaN(id));
@@ -729,17 +735,28 @@ export function GPTChat({
                               console.log(`Converting file pattern to markdown image: ${filename}`);
 
                               if (mimetype.includes('image')) {
-
-                                // For images, use the attachment API if we have matching attachments
-
+                                console.log(`Processing image file pattern: ${filename}, mime: ${mimetype}`);
+                                
+                                // For images, try to find the attachment first
                                 const matchingAttachment = attachments?.find(a => a.filename === filename);
-
+                                
                                 if (matchingAttachment) {
-
+                                  console.log(`Found matching attachment with ID: ${matchingAttachment.id}`);
                                   return `![Generated image](/api/attachments/${matchingAttachment.id})`;
-
+                                } else {
+                                  // If we don't have the attachment in our list, we need to fetch all possible attachments for this card
+                                  console.log(`No matching attachment found for ${filename}, fetching all card attachments`);
+                                  
+                                  // Force a refresh of card attachments
+                                  if (cardId && typeof cardId === "number") {
+                                    console.log(`Forcing refresh of attachments for card ${cardId}`);
+                                    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}/attachments`] });
+                                    queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
+                                  }
+                                  
+                                  // Return a direct markdown image string (this is a fallback)
+                                  return `![Generated image](${content && content.length < 100 ? content : `/api/attachments/image/${filename}`})`;
                                 }
-
                               }
 
                               return match; // Return unchanged if not an image or no matching attachment
