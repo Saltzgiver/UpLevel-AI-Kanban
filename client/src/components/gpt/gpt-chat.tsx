@@ -754,6 +754,17 @@ export function GPTChat({
                                     queryClient.invalidateQueries({ queryKey: [`/api/cards/${cardId}`] });
                                   }
                                   
+                                  // Since we can't find an attachment with this filename, we need to create a better fallback
+                                  // Try to extract attachment ID from the content if it's a URL
+                                  if (chat.content && chat.content.includes('/api/attachments/')) {
+                                    const attachmentMatches = chat.content.match(/\/api\/attachments\/([0-9]+)/);
+                                    if (attachmentMatches && attachmentMatches[1]) {
+                                      const attachmentId = parseInt(attachmentMatches[1]);
+                                      console.log(`Found attachment ID in content: ${attachmentId}`);
+                                      return `![Generated image](/api/attachments/${attachmentId})`;
+                                    }
+                                  }
+                                  
                                   // Return a direct markdown image string (this is a fallback)
                                   return `![Generated image](${content && content.length < 100 ? content : `/api/attachments/image/${filename}`})`;
                                 }
