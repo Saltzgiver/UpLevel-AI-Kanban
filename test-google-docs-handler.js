@@ -6,7 +6,7 @@
  */
 
 // Access environment variables
-process.env.ZAPIER_MCP_ENDPOINT = process.env.ZAPIER_MCP_ENDPOINT || 'https://actions.zapier.com/mcp/REDACTED/sse';
+if (!process.env.ZAPIER_MCP_ENDPOINT) { console.error('ZAPIER_MCP_ENDPOINT environment variable is not set'); process.exit(1); }
 
 // Import required modules
 import fetch from 'node-fetch';

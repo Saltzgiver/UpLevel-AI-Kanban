@@ -1,7 +1,8 @@
 /**
  * Simple direct test for Google Docs search
  */
-const endpoint = 'https://actions.zapier.com/mcp/REDACTED/sse';
+const endpoint = process.env.ZAPIER_MCP_ENDPOINT;
+if (!endpoint) { console.error('ZAPIER_MCP_ENDPOINT environment variable is not set'); process.exit(1); }
 const query = 'Project Doc';
 
 // Build URL with query parameters

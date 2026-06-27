@@ -6,7 +6,8 @@ async function searchDoc() {
   try {
     console.log('Making direct request to Zapier MCP endpoint to search for "Project Doc"...');
     
-    const endpoint = 'https://actions.zapier.com/mcp/REDACTED/sse';
+    const endpoint = process.env.ZAPIER_MCP_ENDPOINT;
+    if (!endpoint) throw new Error('ZAPIER_MCP_ENDPOINT environment variable is not set');
     const query = 'Project Doc';
     
     // Build URL with query parameters (GET method)

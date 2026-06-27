@@ -4,8 +4,8 @@
  */
 
 // Ensure the MCP endpoint is set
-process.env.ZAPIER_MCP_ENDPOINT = process.env.ZAPIER_MCP_ENDPOINT || 'https://actions.zapier.com/mcp/REDACTED/sse';
 const endpoint = process.env.ZAPIER_MCP_ENDPOINT;
+if (!endpoint) { console.error('ZAPIER_MCP_ENDPOINT environment variable is not set'); process.exit(1); }
 
 // Simple function to make a request
 async function testEndpoint() {

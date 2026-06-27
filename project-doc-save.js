@@ -2,7 +2,8 @@
  * Test for retrieving "Project Doc" and saving the response to a file
  */
 import fs from 'fs';
-const endpoint = process.env.ZAPIER_MCP_ENDPOINT || 'https://actions.zapier.com/mcp/REDACTED/sse';
+const endpoint = process.env.ZAPIER_MCP_ENDPOINT;
+if (!endpoint) { console.error('ZAPIER_MCP_ENDPOINT environment variable is not set'); process.exit(1); }
 
 async function searchGoogleDocAndSave(query) {
   console.log(`🔍 Searching for Google Doc with query: "${query}"`);
