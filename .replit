@@ -53,3 +53,6 @@ author = 22091254
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node start-on-port-3000.js"
+
+[agent]
+integrations = ["github:1.0.0"]
